@@ -1,39 +1,196 @@
 <section class="section" id="sec-llm">
 <div class="sec-title">LLMs, SLMs &amp; RLHF</div>
-<div class="sec-desc">The current frontier — massive language models that emergently acquire reasoning, coding, and instruction-following capabilities at scale. Understanding why they work (and why they fail) is increasingly essential.</div>
+<div class="sec-desc">The current frontier — massive language models that emergently acquire reasoning, coding, and instruction-following capabilities at scale. Understanding architecture, alignment, prompt engineering, hallucination, and agentic patterns is now the core applied ML skill.</div>
+
+<!-- PART 1 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Architecture &amp; Scaling</div>
+
 <div class="g2">
 <div class="card cb"><div class="card-title">Architecture of a Modern LLM</div>
-<ul class="bul"><li>Decoder-only Transformer (GPT-style)</li><li>Causal (masked) self-attention — each token attends to previous tokens only</li><li>RoPE positional encodings (extends to long contexts better)</li><li>GroupedQuery Attention (GQA): fewer KV heads than Q heads → faster inference</li><li>RMSNorm (not LayerNorm) — faster</li><li>SwiGLU activation in FFN layers</li><li>Flash Attention for memory-efficient attention</li></ul></div>
-<div class="card cg"><div class="card-title">Scaling Laws</div>
+<ul class="bul">
+  <li>Decoder-only Transformer (GPT-style) — causal self-attention, each token attends to past only</li>
+  <li><strong>RoPE positional encodings</strong> — rotates Q/K vectors by position; extends to longer contexts than learned embeddings</li>
+  <li><strong>Grouped-Query Attention (GQA)</strong> — multiple Q heads share fewer K/V heads → faster inference, smaller KV cache</li>
+  <li><strong>RMSNorm</strong> — drops mean subtraction vs LayerNorm; ~10% faster</li>
+  <li><strong>SwiGLU activation</strong> in FFN — gated linear unit; empirically outperforms GELU</li>
+  <li><strong>Flash Attention</strong> — IO-aware tiling: 4× faster attention, 10× less memory, no accuracy loss</li>
+</ul></div>
+<div class="card cg"><div class="card-title">Scaling Laws (Chinchilla)</div>
 <div class="formula math-formula">$$\begin{aligned}
-Loss \propto (C/Copt)^{-\alpha C} \quad \text{[compute scaling]} \\
-Chinchilla: N_params \approx 20 \times N_tokens (optimal)
+\text{Chinchilla optimal: } N_{tokens} \approx 20 \times N_{params} \\
+\text{Llama-3 8B trained on 15T tokens (5× Chinchilla)} \\
+L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 \end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Hoffman et al. (Chinchilla): for a given compute budget, train a smaller model on more tokens, not a larger model on fewer</li><li>Emergent abilities: capabilities appear suddenly at certain scale thresholds</li><li>Power law relationship between model size, data, compute, and performance</li></ul></div>
+<ul class="bul" style="margin-top:8px">
+  <li>For a fixed compute budget: smaller model + more tokens beats larger model + fewer tokens</li>
+  <li><strong>Emergent abilities:</strong> capabilities (CoT, in-context learning, arithmetic) appear abruptly at scale thresholds — not gradual</li>
+  <li>Modern SLMs <em>deliberately overtrain</em> past Chinchilla optimal for better inference-time efficiency (smaller model, same quality)</li>
+</ul></div>
 </div>
-<div class="card ca"><div class="card-title">RLHF — Reinforcement Learning from Human Feedback</div>
+
+<!-- PART 2 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Alignment: RLHF, DPO &amp; ORPO</div>
+
+<div class="card ca"><div class="card-title">RLHF — The Classic Pipeline</div>
 <div class="formula math-formula">$$\begin{aligned}
-\text{Stage 1: Pre-train LLM on massive text corpus} \\
-\text{Stage 2: Supervised Fine-Tuning (SFT) on high-quality demonstrations} \\
-\text{Stage 3: Train Reward Model (RM) on human preference pairs (A vs B)} \\
-\text{Stage 4: PPO: } \max\, \mathbb{E}[\text{RM(response)}] - \beta\cdot\text{KL}(\pi \| \pi_{\text{SFT}})
+&\text{Stage 1: Pre-train on massive text (self-supervised next-token prediction)} \\
+&\text{Stage 2: SFT on high-quality (prompt, response) demonstrations} \\
+&\text{Stage 3: Train Reward Model on human preference pairs } (y_w \succ y_l) \\
+&\text{Stage 4 PPO: } \max_{\pi_\theta}\,\mathbb{E}\!\left[r(y) - \beta\cdot\mathrm{KL}(\pi_\theta\|\pi_\text{SFT})\right]
 \end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">The KL penalty prevents the model from drifting too far from the SFT base — without it, the model would learn to "hack" the reward model with degenerate outputs. RLHF is what makes ChatGPT/Claude helpful, harmless, and honest — not just a next-token predictor.</div></div>
-<div class="card"><div class="card-title">SLMs (Small Language Models)</div>
-<div class="card-body">Models under 7B parameters that achieve competitive performance on specific tasks. Trend: distilling capabilities of large models into small ones for deployment.</div>
-<table class="tbl" style="margin-top:8px"><tr><th>Model</th><th>Params</th><th>Architecture</th></tr>
-<tr><td>Llama-3.2 3B</td><td>3B</td><td>GQA, RoPE; state-of-the-art at 3B</td></tr>
-<tr><td>Phi-4-mini</td><td>3.8B</td><td>Microsoft; textbook data quality</td></tr>
-<tr><td>Gemma-3 4B</td><td>4B</td><td>Google; strong reasoning</td></tr>
-<tr><td>Qwen-2.5 7B</td><td>7B</td><td>Alibaba; coding + multilingual</td></tr>
-<tr><td>Mistral 7B</td><td>7B</td><td>Sliding window attention; efficient</td></tr></table></div>
-<div class="card"><div class="card-title">Inference Techniques</div>
-<table class="tbl"><tr><th>Technique</th><th>What It Does</th><th>Effect</th></tr>
-<tr><td>KV Cache</td><td>Cache key-value pairs across tokens</td><td>Avoids recomputation; essential for fast generation</td></tr>
-<tr><td>Quantization (INT8/INT4)</td><td>Reduce weight precision</td><td>2–4× smaller; minimal accuracy loss</td></tr>
-<tr><td>Flash Attention</td><td>Memory-efficient attention via tiling</td><td>4× faster, 10× less memory</td></tr>
-<tr><td>Speculative decoding</td><td>Small model drafts, large model verifies</td><td>2–3× faster inference</td></tr>
-<tr><td>Continuous batching</td><td>Dynamic batching as requests arrive</td><td>Higher GPU utilization</td></tr>
-<tr><td>RAG</td><td>Retrieve relevant docs; inject into context</td><td>Reduces hallucination; updates without retraining</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The LLM training pipeline: pre-train on internet-scale data (self-supervised, next-token prediction) → SFT on demonstration data → RLHF to align with human preferences. RLHF is what transforms a weird text-completer into a helpful assistant. For production deployment: 4-bit quantization + vLLM/TGI for batched serving + RAG for knowledge freshness. Hallucination is the core challenge — mitigated by grounding via RAG, careful prompt engineering, and confidence calibration."</p></div>
+<div class="card-body" style="margin-top:8px">The KL penalty prevents "reward hacking" — without it the policy generates degenerate, high-scoring outputs that fool the reward model. PPO requires running the LLM during training (on-policy) — computationally expensive.</div></div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">DPO — Direct Preference Optimization</div>
+<div class="formula math-formula">$$\mathcal{L}_\text{DPO} = -\mathbb{E}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$</div>
+<ul class="bul" style="margin-top:8px">
+  <li>Skips the separate reward model — solves for the optimal policy directly from preference pairs</li>
+  <li><strong>y_w</strong> = preferred response; <strong>y_l</strong> = rejected response; β = deviation budget from π_ref</li>
+  <li>Simpler to train than PPO, often comparable quality</li>
+  <li><strong>Weakness:</strong> offline — cannot explore new responses; requires high-quality paired preference data</li>
+</ul></div>
+<div class="card cc"><div class="card-title">ORPO — Odds Ratio Preference Optimization</div>
+<div class="formula math-formula">$$\mathcal{L}_\text{ORPO} = \mathcal{L}_\text{SFT} - \lambda\cdot\mathbb{E}\!\left[\log\sigma\!\left(\log\frac{\text{odds}(y_w|x)}{\text{odds}(y_l|x)}\right)\right]$$</div>
+<ul class="bul" style="margin-top:8px">
+  <li>Merges SFT and preference alignment into a <strong>single training stage</strong></li>
+  <li>No reference model needed — 50% less memory than DPO</li>
+  <li>Penalises rejected responses while rewarding preferred ones directly in the SFT loss</li>
+  <li>Widely used in Mistral, Phi-3, and resource-constrained fine-tuning pipelines</li>
+</ul></div>
+</div>
+
+<table class="tbl" style="margin-top:4px"><tr><th>Method</th><th>Reward Model?</th><th>Reference Model?</th><th>RL Loop?</th><th>Best When</th></tr>
+<tr><td>RLHF (PPO)</td><td>Yes</td><td>Yes (SFT)</td><td>Yes</td><td>Flagship models, complex long-horizon alignment</td></tr>
+<tr><td>DPO</td><td>No</td><td>Yes (SFT)</td><td>No</td><td>Good preference data, single-GPU fine-tuning</td></tr>
+<tr><td>ORPO</td><td>No</td><td>No</td><td>No</td><td>Resource-constrained; combined SFT + alignment pass</td></tr>
+</table>
+
+<!-- PART 3 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 3 — Prompt Engineering Patterns</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Core Techniques</div>
+<table class="tbl"><tr><th>Technique</th><th>What It Does</th><th>When to Use</th></tr>
+<tr><td><strong>Zero-shot</strong></td><td>Instruction only</td><td>Simple tasks, GPT-4-class models</td></tr>
+<tr><td><strong>Few-shot (k-shot)</strong></td><td>k examples in prompt</td><td>Format adherence, classification, style</td></tr>
+<tr><td><strong>Chain-of-Thought (CoT)</strong></td><td>"Let's think step by step"</td><td>Reasoning, math, multi-step logic</td></tr>
+<tr><td><strong>Self-Consistency</strong></td><td>Sample N CoT paths → majority vote</td><td>Arithmetic, formal reasoning</td></tr>
+<tr><td><strong>Tree of Thought</strong></td><td>LLM explores branching paths, backtracks</td><td>Planning, search-like problems</td></tr>
+<tr><td><strong>ReAct</strong></td><td>Interleave Thought + Action + Observation</td><td>Agents needing real-world tool calls</td></tr>
+</table></div>
+<div class="card cg"><div class="card-title">RAG Pipeline Design</div>
+<div class="card-body">Inject retrieved external knowledge into the context at inference time — reduces hallucination and keeps knowledge fresh without retraining.</div>
+<ol class="num" style="margin-top:8px">
+  <li><strong>Chunk documents</strong> — fixed (512 tokens) or semantic boundaries</li>
+  <li><strong>Embed chunks</strong> — dense vectors (text-embedding-3, E5-large)</li>
+  <li><strong>Index</strong> in vector DB (FAISS, Pinecone, Weaviate, Chroma)</li>
+  <li><strong>At query time</strong>: embed query → top-k ANN retrieval → inject into prompt</li>
+  <li><strong>Optional rerank</strong>: cross-encoder scores query-chunk pairs → reorder top-k</li>
+  <li><strong>LLM generates</strong> with retrieved context as grounding</li>
+</ol></div>
+</div>
+
+<div class="card"><div class="card-title">Context Window Management</div>
+<table class="tbl"><tr><th>Challenge</th><th>Technique</th><th>Trade-off</th></tr>
+<tr><td>Context too long</td><td>Truncation / sliding window</td><td>Simple but may lose early important context</td></tr>
+<tr><td>Long documents</td><td>Map-reduce: summarise chunks → combine summaries</td><td>Loses fine-grained detail</td></tr>
+<tr><td>Retrieval quality</td><td>Hybrid search: dense (vector) + sparse (BM25)</td><td>Better recall, more infrastructure</td></tr>
+<tr><td>Multi-hop queries</td><td>Iterative retrieval: retrieve → subquery → retrieve</td><td>Better multi-step Q&amp;A</td></tr>
+<tr><td>"Lost in middle" bias</td><td>Put key info at start or end of context</td><td>Models attend less to middle positions</td></tr>
+</table></div>
+
+<!-- PART 4 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-orange,#f5a623);margin:28px 0 12px;padding:0">Part 4 — Hallucination: Causes &amp; Mitigation</div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">Why LLMs Hallucinate</div>
+<ul class="bul">
+  <li><strong>Training objective mismatch:</strong> next-token prediction rewards fluency and plausibility, not factual accuracy</li>
+  <li><strong>Knowledge gaps:</strong> sparse facts in training data get confabulated</li>
+  <li><strong>Sycophancy:</strong> RLHF trains models to please humans — confidence even under uncertainty</li>
+  <li><strong>Context blindness:</strong> model defaults to parametric memory over provided context</li>
+  <li><strong>Temporal drift:</strong> world changes after training cutoff; model returns stale facts</li>
+</ul></div>
+<div class="card cr"><div class="card-title">Mitigation Strategies</div>
+<table class="tbl"><tr><th>Strategy</th><th>Mechanism</th><th>Limitation</th></tr>
+<tr><td>RAG</td><td>Ground answers in retrieved documents</td><td>Only helps if relevant docs are retrieved</td></tr>
+<tr><td>Calibrated uncertainty</td><td>Prompt: "Say 'I don't know' if unsure"</td><td>Sycophancy still hard to suppress</td></tr>
+<tr><td>Self-consistency</td><td>Sample N answers; disagreement = low confidence flag</td><td>Expensive; misses coherent hallucinations</td></tr>
+<tr><td>Citation grounding</td><td>Require model to cite source per claim</td><td>Model can still fabricate citations</td></tr>
+<tr><td>Tool use</td><td>Offload lookups to search / structured DB</td><td>Adds latency and infrastructure</td></tr>
+</table></div>
+</div>
+
+<!-- PART 5 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 5 — Agentic LLM Patterns</div>
+
+<div class="card"><div class="card-title">ReAct — Reasoning + Acting</div>
+<div class="card-body">Interleaves Thought (explicit reasoning), Action (tool call), and Observation (tool result). Grounding reasoning in real observations reduces hallucination vs pure chain-of-thought.</div>
+<div class="anim-wrap"><div class="anim-title">ReAct loop: Thought → Action → Observation → repeat → Answer</div>
+<svg viewBox="0 0 500 110" xmlns="http://www.w3.org/2000/svg">
+<rect x="10" y="35" width="85" height="36" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.8"/>
+<text x="52" y="52" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="Syne" font-weight="700">Thought</text>
+<text x="52" y="65" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">Reason about task</text>
+<rect x="120" y="35" width="80" height="36" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.8"/>
+<text x="160" y="52" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="Syne" font-weight="700">Action</text>
+<text x="160" y="65" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">Call tool / search</text>
+<rect x="225" y="35" width="90" height="36" rx="6" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.8"/>
+<text x="270" y="52" text-anchor="middle" fill="#f5a623" font-size="10" font-family="Syne" font-weight="700">Observation</text>
+<text x="270" y="65" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">Tool result</text>
+<rect x="340" y="35" width="85" height="36" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.8"/>
+<text x="382" y="52" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="Syne" font-weight="700">Thought</text>
+<text x="382" y="65" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">Reason + loop</text>
+<rect x="450" y="42" width="42" height="24" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.8"/>
+<text x="471" y="58" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="Syne" font-weight="700">Answer</text>
+<line x1="95" y1="53" x2="118" y2="53" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#a1)"/>
+<line x1="200" y1="53" x2="223" y2="53" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#a1)"/>
+<line x1="315" y1="53" x2="338" y2="53" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#a1)"/>
+<line x1="425" y1="53" x2="448" y2="53" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#a1)"/>
+<path d="M382 73 Q382 95 270 95 Q160 95 160 73" stroke="#4e5a7a" stroke-width="1" fill="none" stroke-dasharray="4,3"/>
+<text x="270" y="108" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">loop until done or max steps</text>
+<defs><marker id="a1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8e97b8"/></marker></defs>
+</svg></div></div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">Multi-Agent Patterns</div>
+<table class="tbl"><tr><th>Pattern</th><th>Structure</th><th>Use Case</th></tr>
+<tr><td>Orchestrator–Worker</td><td>Planner breaks task → specialist agents execute subtasks</td><td>Research, code generation pipelines</td></tr>
+<tr><td>Critic–Generator</td><td>Generator drafts → Critic reviews → iterate</td><td>Long-form writing, code review</td></tr>
+<tr><td>Parallelisation</td><td>Fan-out N agents same task → aggregate</td><td>Self-consistency, redundant evaluation</td></tr>
+</table></div>
+<div class="card cc"><div class="card-title">Agent Memory Types</div>
+<table class="tbl"><tr><th>Type</th><th>Storage</th><th>Scope</th></tr>
+<tr><td>In-context</td><td>System prompt + conversation</td><td>Single session; context window limited</td></tr>
+<tr><td>External (episodic)</td><td>Vector DB</td><td>Persistent; searched by similarity</td></tr>
+<tr><td>Semantic / knowledge</td><td>SQL / graph DB</td><td>Structured facts, entity relationships</td></tr>
+<tr><td>Procedural</td><td>Tool / function definitions</td><td>Encoded in agent's tool spec</td></tr>
+</table></div>
+</div>
+
+<!-- PART 6 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 6 — Evaluation &amp; Inference Optimization</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">LLM Benchmarks</div>
+<table class="tbl"><tr><th>Benchmark</th><th>Tests</th><th>Notes</th></tr>
+<tr><td>MMLU</td><td>57-subject multiple choice</td><td>Standard knowledge coverage; GPT-4 ~86%</td></tr>
+<tr><td>MT-Bench</td><td>Multi-turn conversation</td><td>LLM-as-judge (GPT-4 rates 1–10)</td></tr>
+<tr><td>HumanEval</td><td>Python code generation</td><td>Pass@k metric</td></tr>
+<tr><td>RAGAS</td><td>RAG faithfulness + relevancy</td><td>Reference-free; designed for RAG</td></tr>
+<tr><td>LLM-as-Judge</td><td>Pairwise preference scoring</td><td>Correlates with human; watch positional bias</td></tr>
+</table></div>
+<div class="card ca"><div class="card-title">Inference Optimization</div>
+<table class="tbl"><tr><th>Technique</th><th>Effect</th></tr>
+<tr><td>KV Cache</td><td>Avoids recomputing K/V for generated tokens</td></tr>
+<tr><td>INT4 Quantization</td><td>4× smaller; ~1% accuracy drop</td></tr>
+<tr><td>Speculative Decoding</td><td>Small model drafts → large model verifies; 2–3× faster</td></tr>
+<tr><td>Continuous Batching</td><td>Dynamic request batching; higher GPU utilisation</td></tr>
+<tr><td>vLLM PagedAttention</td><td>OS-style KV cache paging; near-zero fragmentation</td></tr>
+</table></div>
+</div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "The LLM training pipeline: pre-train (next-token prediction) → SFT (teach format) → alignment (RLHF/DPO/ORPO, teach values). DPO is now preferred over PPO for most fine-tuning — skips the reward model, just needs preference pairs. For production: 4-bit quantisation + vLLM for batched serving + RAG for knowledge freshness. Hallucination is the core failure mode — mitigated by RAG grounding, structured outputs, and self-consistency sampling."</p>
+<p><strong>Common mistake:</strong> Confusing SFT and alignment. SFT teaches <em>format</em> (follow instructions); DPO/RLHF teaches <em>values</em> (which of two responses is better). You need both.</p>
+<p><strong>Expect this follow-up:</strong> "When would you choose DPO over RLHF?" — DPO is simpler, offline, no reward model needed; use it when you have quality preference pairs and a single-GPU budget. PPO is more powerful but expensive; use it for flagship models where you can generate new rollouts.</p></div>
 </section>

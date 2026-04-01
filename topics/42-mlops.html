@@ -1,34 +1,249 @@
 <section class="section" id="sec-mlops">
 <div class="sec-title">Deployment &amp; Monitoring (MLOps)</div>
-<div class="sec-desc">The gap between a working notebook and a production ML system is enormous. MLOps is the engineering discipline that bridges it — and the reason most ML projects never reach production.</div>
+<div class="sec-desc">The gap between a working notebook and a production ML system is enormous. MLOps is the engineering discipline that bridges it — covering containerisation, CI/CD, serving infrastructure, cost optimisation, and monitoring. Most ML projects fail here, not in the modelling.</div>
+
+<!-- PART 1 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Serving Patterns &amp; Infrastructure</div>
+
 <div class="g2">
 <div class="card cb"><div class="card-title">Serving Patterns</div>
 <table class="tbl"><tr><th>Pattern</th><th>Latency</th><th>Best For</th></tr>
-<tr><td>REST API (real-time)</td><td>&lt;100ms</td><td>User-facing decisions (credit approval)</td></tr>
-<tr><td>Batch inference</td><td>Hours</td><td>Nightly scoring, email campaigns</td></tr>
-<tr><td>Streaming (Kafka)</td><td>Seconds</td><td>Fraud detection on transaction stream</td></tr>
-<tr><td>Edge deployment</td><td>&lt;10ms</td><td>Mobile, IoT, latency-critical</td></tr>
-<tr><td>Serverless (Lambda)</td><td>Cold: &gt;1s, warm: ~50ms</td><td>Sporadic traffic, low cost</td></tr></table></div>
-<div class="card cg"><div class="card-title">Model Drift Detection</div>
-<table class="tbl"><tr><th>Type</th><th>What Changes</th><th>Detection Method</th></tr>
-<tr><td>Data drift</td><td>P(X) changes — input distribution shifts</td><td>PSI, KS test, MMD per feature</td></tr>
-<tr><td>Concept drift</td><td>P(y|X) changes — relationship changes</td><td>Monitor performance metrics</td></tr>
-<tr><td>Label drift</td><td>P(y) changes — outcome prevalence changes</td><td>Monitor positive rate over time</td></tr>
-<tr><td>Prediction drift</td><td>P(ŷ) changes — model outputs shift</td><td>PSI on score distribution</td></tr></table></div>
+<tr><td>REST API (real-time)</td><td>&lt;100ms</td><td>User-facing decisions (credit approval, fraud)</td></tr>
+<tr><td>Batch inference</td><td>Hours</td><td>Nightly scoring, email campaign targeting</td></tr>
+<tr><td>Streaming (Kafka)</td><td>Seconds</td><td>Fraud detection on live transaction stream</td></tr>
+<tr><td>Edge deployment</td><td>&lt;10ms</td><td>Mobile, IoT, latency-critical applications</td></tr>
+<tr><td>Serverless (Lambda)</td><td>Cold: &gt;1s; warm: ~50ms</td><td>Sporadic traffic, low fixed cost</td></tr>
+<tr><td>GPU serving (vLLM)</td><td>50–500ms</td><td>LLM inference at scale</td></tr>
+</table></div>
+<div class="card cg"><div class="card-title">Containerisation with Docker</div>
+<div class="card-body">Container = reproducible, portable unit. Packages model + dependencies + runtime together. The standard unit of ML deployment.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Dockerfile layers:</strong> base image → system deps → Python deps → model artifacts → entrypoint</li>
+  <li><strong>Multi-stage builds:</strong> build stage (large) → runtime stage (slim) — reduces final image size 5–10×</li>
+  <li><strong>CUDA base images:</strong> use nvidia/cuda:12.x-runtime for GPU serving; don't include cudnn unless needed</li>
+  <li><strong>Model weight mounting:</strong> mount weights as a volume or pull from S3/GCS at startup — don't bake into image (large image → slow CI)</li>
+  <li><strong>Health checks:</strong> /health endpoint critical for Kubernetes liveness probes</li>
+</ul></div>
 </div>
-<div class="card"><div class="card-title">MLOps Stack</div>
+
+<div class="card"><div class="card-title">Kubernetes for ML Serving</div>
+<div class="anim-wrap"><div class="anim-title">Kubernetes ML serving: requests → LoadBalancer → Pods → model servers with HPA scaling</div>
+<svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+<!-- Client -->
+<rect x="10" y="65" width="60" height="32" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="40" y="80" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="Syne" font-weight="700">Clients</text>
+<text x="40" y="91" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">HTTP traffic</text>
+<!-- LB -->
+<rect x="90" y="57" width="70" height="46" rx="5" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.5"/>
+<text x="125" y="77" text-anchor="middle" fill="#f5a623" font-size="9" font-family="Syne" font-weight="700">Load</text>
+<text x="125" y="89" text-anchor="middle" fill="#f5a623" font-size="9" font-family="Syne" font-weight="700">Balancer</text>
+<text x="125" y="101" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Service / Ingress</text>
+<!-- Pods -->
+<rect x="185" y="20" width="80" height="38" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="225" y="37" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="Syne" font-weight="700">Pod 1</text>
+<text x="225" y="50" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">model-server:8080</text>
+<rect x="185" y="65" width="80" height="38" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="225" y="82" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="Syne" font-weight="700">Pod 2</text>
+<text x="225" y="95" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">model-server:8080</text>
+<rect x="185" y="108" width="80" height="38" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="225" y="125" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="Syne" font-weight="700">Pod 3</text>
+<text x="225" y="138" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">model-server:8080</text>
+<!-- HPA -->
+<rect x="285" y="55" width="90" height="52" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="330" y="76" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="Syne" font-weight="700">HPA</text>
+<text x="330" y="90" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Horizontal Pod</text>
+<text x="330" y="101" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Autoscaler</text>
+<!-- Feature Store -->
+<rect x="395" y="40" width="95" height="40" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="442" y="57" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="Syne" font-weight="700">Feature Store</text>
+<text x="442" y="70" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Redis / Feast</text>
+<rect x="395" y="90" width="95" height="40" rx="5" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.5"/>
+<text x="442" y="107" text-anchor="middle" fill="#f5a623" font-size="9" font-family="Syne" font-weight="700">Model Registry</text>
+<text x="442" y="120" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">MLflow / S3</text>
+<!-- Arrows -->
+<line x1="70" y1="81" x2="88" y2="81" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#k8arr)"/>
+<line x1="160" y1="70" x2="183" y2="40" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#k8arr)"/>
+<line x1="160" y1="81" x2="183" y2="81" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#k8arr)"/>
+<line x1="160" y1="90" x2="183" y2="125" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#k8arr)"/>
+<line x1="265" y1="81" x2="283" y2="81" stroke="#b97cf8" stroke-width="1.2" stroke-dasharray="4,3"/>
+<line x1="265" y1="40" x2="393" y2="57" stroke="#8e97b8" stroke-width="1.2" stroke-dasharray="4,3"/>
+<defs><marker id="k8arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8e97b8"/></marker></defs>
+</svg></div>
+<div class="g2" style="margin-top:8px">
+<div>
+<ul class="bul">
+  <li><strong>Deployment:</strong> defines desired Pod spec (image, resources, env vars); rolling updates with zero downtime</li>
+  <li><strong>Service:</strong> stable DNS name + load balances across Pods; ClusterIP for internal, LoadBalancer for external</li>
+  <li><strong>HPA:</strong> scales Pod count based on CPU/GPU utilisation or custom metrics (requests/sec)</li>
+  <li><strong>Resource requests/limits:</strong> always set both — prevents noisy neighbours from starving model Pods</li>
+</ul></div>
+<div>
+<ul class="bul">
+  <li><strong>GPU node pools:</strong> separate node pool with GPU nodes; taint + toleration ensures only GPU Pods schedule there</li>
+  <li><strong>Readiness probe:</strong> Kubernetes only routes traffic after probe succeeds — critical for slow model loading</li>
+  <li><strong>ConfigMaps / Secrets:</strong> inject model config and API keys without rebuilding images</li>
+  <li><strong>Namespace separation:</strong> staging vs production namespaces prevent accidental cross-contamination</li>
+</ul></div>
+</div></div>
+
+<!-- PART 2 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — CI/CD for ML</div>
+
+<div class="card"><div class="card-title">ML CI/CD Pipeline</div>
+<div class="card-body">Standard software CI/CD (test → build → deploy) extended to handle data, models, and experiments — not just code.</div>
+<div class="anim-wrap"><div class="anim-title">ML CI/CD pipeline: code commit triggers data validation → training → evaluation → registry → serving</div>
+<svg viewBox="0 0 500 90" xmlns="http://www.w3.org/2000/svg">
+<!-- Stages -->
+<rect x="5" y="25" width="60" height="36" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="35" y="42" text-anchor="middle" fill="#5ba4fb" font-size="8" font-family="Syne" font-weight="700">Code</text>
+<text x="35" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">git push</text>
+
+<rect x="78" y="25" width="62" height="36" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="109" y="42" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="Syne" font-weight="700">Data</text>
+<text x="109" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Validate schema</text>
+
+<rect x="153" y="25" width="62" height="36" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="184" y="42" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="Syne" font-weight="700">Train</text>
+<text x="184" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Managed job</text>
+
+<rect x="228" y="25" width="62" height="36" rx="5" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.5"/>
+<text x="259" y="42" text-anchor="middle" fill="#f5a623" font-size="8" font-family="Syne" font-weight="700">Evaluate</text>
+<text x="259" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">AUC ≥ threshold</text>
+
+<rect x="303" y="25" width="62" height="36" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="334" y="42" text-anchor="middle" fill="#b97cf8" font-size="8" font-family="Syne" font-weight="700">Register</text>
+<text x="334" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">MLflow / registry</text>
+
+<rect x="378" y="25" width="60" height="36" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="408" y="42" text-anchor="middle" fill="#5ba4fb" font-size="8" font-family="Syne" font-weight="700">Deploy</text>
+<text x="408" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Canary → prod</text>
+
+<rect x="451" y="25" width="44" height="36" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="473" y="42" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="Syne" font-weight="700">Monitor</text>
+<text x="473" y="54" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Alerts</text>
+
+<!-- Arrows -->
+<line x1="65" y1="43" x2="76" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<line x1="140" y1="43" x2="151" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<line x1="215" y1="43" x2="226" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<line x1="290" y1="43" x2="301" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<line x1="365" y1="43" x2="376" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<line x1="438" y1="43" x2="449" y2="43" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#cdarr)"/>
+<!-- Retraining trigger -->
+<path d="M473 61 Q473 82 334 82 Q184 82 184 63" stroke="#f5a623" stroke-width="1" fill="none" stroke-dasharray="4,3"/>
+<text x="330" y="78" text-anchor="middle" fill="#f5a623" font-size="7" font-family="DM Sans">drift detected → retrain trigger</text>
+<defs><marker id="cdarr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8e97b8"/></marker></defs>
+</svg></div>
+<div class="g2" style="margin-top:8px">
+<ul class="bul">
+  <li><strong>GitHub Actions / Jenkins:</strong> trigger training jobs on push to main or on schedule</li>
+  <li><strong>Data validation gate:</strong> Great Expectations / Pydantic schema checks before training; fail fast if distribution shifts</li>
+  <li><strong>Automated evaluation gate:</strong> new model must beat champion on held-out set — else fail the pipeline</li>
+</ul>
+<ul class="bul">
+  <li><strong>Model versioning:</strong> every training run tagged with git SHA, dataset hash, hyperparams</li>
+  <li><strong>Rollback:</strong> re-promote previous model version in registry → redeploy — takes minutes</li>
+  <li><strong>Smoke tests:</strong> integration tests on model endpoint (latency, output schema) before prod promotion</li>
+</ul></div></div>
+
+<!-- PART 3 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-orange,#f5a623);margin:28px 0 12px;padding:0">Part 3 — Cost Optimisation</div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">Training Cost Optimisation</div>
+<table class="tbl"><tr><th>Technique</th><th>Savings</th><th>Trade-off</th></tr>
+<tr><td>Spot / preemptible instances</td><td>60–90% vs on-demand</td><td>Must handle interruptions (checkpoint frequently)</td></tr>
+<tr><td>Mixed precision (FP16/BF16)</td><td>2× memory → larger batch / smaller GPU</td><td>Minimal accuracy impact</td></tr>
+<tr><td>Gradient checkpointing</td><td>10× memory reduction</td><td>~30% slower (recomputes activations)</td></tr>
+<tr><td>Data parallelism</td><td>Linear scaling across GPUs</td><td>Requires gradient synchronisation overhead</td></tr>
+<tr><td>Early stopping</td><td>Saves 20–50% compute</td><td>Risk of stopping too early</td></tr>
+</table></div>
+<div class="card cc"><div class="card-title">Serving Cost Optimisation</div>
+<table class="tbl"><tr><th>Technique</th><th>Savings</th><th>Notes</th></tr>
+<tr><td>Request batching</td><td>3–5× GPU throughput</td><td>Group requests; adds latency</td></tr>
+<tr><td>INT4/INT8 quantisation</td><td>2–4× smaller; faster</td><td>&lt;1% accuracy drop on most models</td></tr>
+<tr><td>Spot nodes for batch</td><td>60–90% cheaper</td><td>Not for real-time serving</td></tr>
+<tr><td>Right-sizing</td><td>Often 30–50% waste</td><td>Profile actual GPU/CPU utilisation</td></tr>
+<tr><td>Model caching</td><td>Avoids redundant compute</td><td>Cache predictions for repeated inputs</td></tr>
+</table></div>
+</div>
+
+<!-- PART 4 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 4 — LLM Serving: vLLM &amp; Triton</div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">vLLM — PagedAttention</div>
+<div class="card-body">The bottleneck in LLM serving is the KV cache — it grows linearly with sequence length and batch size, causing memory fragmentation and low GPU utilisation.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>PagedAttention:</strong> manages KV cache like OS virtual memory — allocates fixed-size "pages" on demand, no fragmentation</li>
+  <li><strong>Continuous batching:</strong> new requests slot in as sequences finish — no waiting for entire batch to complete; 23× higher throughput vs naive batching</li>
+  <li><strong>Tensor parallelism:</strong> splits model weights across multiple GPUs (needed for 70B+ models)</li>
+  <li><strong>Speculative decoding:</strong> small draft model proposes tokens; vLLM verifies in parallel; 2–3× faster for high-latency models</li>
+  <li>OpenAI-compatible API — drop-in replacement for OpenAI endpoints</li>
+</ul></div>
+<div class="card cb"><div class="card-title">NVIDIA Triton Inference Server</div>
+<div class="card-body">NVIDIA's multi-framework serving platform — supports PyTorch, TensorFlow, ONNX, TensorRT in a single server.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Ensemble models:</strong> chain preprocessing → model → postprocessing in a single inference request</li>
+  <li><strong>Dynamic batching:</strong> accumulates requests and batches before forwarding to model</li>
+  <li><strong>TensorRT backend:</strong> JIT compiles PyTorch/ONNX to TensorRT → 3–5× faster GPU inference</li>
+  <li><strong>Model repository:</strong> hot-reloading — deploy new model version without server restart</li>
+  <li><strong>GRPC + HTTP:</strong> supports both protocols; GRPC preferred for high-throughput production</li>
+  <li>Best for: classical ML serving pipelines, multi-model ensembles, non-LLM deep learning</li>
+</ul></div>
+</div>
+
+<div class="card"><div class="card-title">Latency Profiling</div>
+<table class="tbl"><tr><th>Latency Component</th><th>Typical Budget</th><th>Optimisation Target</th></tr>
+<tr><td>Network (client → LB → pod)</td><td>5–20ms</td><td>CDN edge, keep-alive connections</td></tr>
+<tr><td>Feature retrieval (Redis)</td><td>1–5ms</td><td>Redis cluster, in-memory features</td></tr>
+<tr><td>Model inference</td><td>20–200ms</td><td>Quantisation, TensorRT, smaller model</td></tr>
+<tr><td>Post-processing</td><td>1–10ms</td><td>Move to C++ if bottleneck</td></tr>
+<tr><td>Response serialisation</td><td>1–5ms</td><td>MessagePack over JSON for heavy payloads</td></tr>
+</table>
+<div class="box story" style="margin-top:8px"><div class="bl">📖 Profiling tip</div><p>Profile P99 latency, not P50. P50 hides tail latency spikes that users actually experience. For ML pipelines, the database / feature store lookup is often the bottleneck — not the model itself.</p></div></div>
+
+<!-- PART 5 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 5 — Drift Detection &amp; Monitoring</div>
+
+<div class="g2">
+<div class="card cg"><div class="card-title">Drift Types &amp; Detection</div>
+<table class="tbl"><tr><th>Type</th><th>What Changes</th><th>Detection Method</th></tr>
+<tr><td>Data drift</td><td>P(X) — input distribution shifts</td><td>PSI, KS test, MMD per feature</td></tr>
+<tr><td>Concept drift</td><td>P(y|X) — relationship changes</td><td>Monitor performance metrics over time</td></tr>
+<tr><td>Label drift</td><td>P(y) — outcome prevalence changes</td><td>Monitor positive rate; alert on deviation</td></tr>
+<tr><td>Prediction drift</td><td>P(ŷ) — model output distribution shifts</td><td>PSI on score distribution</td></tr>
+</table></div>
+<div class="card ca"><div class="card-title">A/B &amp; Deployment Strategies</div>
+<ul class="bul">
+  <li><strong>Shadow mode:</strong> new model runs alongside old, predictions logged but not acted on — zero business risk, no business metric feedback</li>
+  <li><strong>Canary release:</strong> route 5–10% of traffic to new model; monitor; scale up if healthy</li>
+  <li><strong>Champion-challenger:</strong> champion = current production; challenger = new model; compare on live traffic</li>
+  <li><strong>Multi-armed bandit:</strong> dynamically allocate traffic to better variant; faster than fixed A/B but harder to interpret for statistical significance</li>
+</ul></div>
+</div>
+
+<div class="card"><div class="card-title">MLOps Stack — Tools by Layer</div>
 <table class="tbl"><tr><th>Component</th><th>Open Source</th><th>Managed Cloud</th></tr>
-<tr><td>Experiment tracking</td><td>MLflow, Weights &amp; Biases</td><td>SageMaker Experiments, Vertex AI</td></tr>
+<tr><td>Experiment tracking</td><td>MLflow, W&amp;B</td><td>SageMaker Experiments, Vertex AI</td></tr>
 <tr><td>Pipeline orchestration</td><td>Airflow, Prefect, ZenML</td><td>SageMaker Pipelines, Vertex Pipelines</td></tr>
 <tr><td>Model registry</td><td>MLflow Model Registry</td><td>SageMaker Model Registry</td></tr>
 <tr><td>Feature store</td><td>Feast, Hopsworks</td><td>SageMaker Feature Store, Vertex FS</td></tr>
-<tr><td>Model serving</td><td>TorchServe, BentoML, vLLM</td><td>SageMaker endpoints, Vertex Predict</td></tr>
+<tr><td>Model serving</td><td>vLLM, Triton, BentoML</td><td>SageMaker endpoints, Vertex Predict</td></tr>
 <tr><td>Monitoring</td><td>Evidently AI, Seldon Alibi</td><td>SageMaker Model Monitor</td></tr>
-<tr><td>Data versioning</td><td>DVC, Delta Lake</td><td>S3 + versioning, GCS</td></tr></table></div>
-<div class="card ca"><div class="card-title">Feature Store — Why It Matters</div>
-<div class="card-body">A feature store solves two problems: consistency between training and serving, and feature reuse across teams.</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Training-serving skew:</strong> features computed differently in batch (training) vs real-time (serving) → model sees different distributions. Feature store enforces the same logic everywhere.</li><li><strong>Point-in-time correct joins:</strong> when training, join features that were available AT THE PREDICTION TIME — not the current value. Prevents future leakage.</li><li><strong>Reuse:</strong> "customer_30day_payment_rate" computed once, used by fraud, collections, and marketing models</li></ul></div>
-<div class="card"><div class="card-title">A/B Testing in Production</div>
-<ul class="bul"><li><strong>Shadow mode:</strong> new model runs alongside old, predictions logged but not acted on. Zero risk, but no business metric feedback.</li><li><strong>Canary release:</strong> route 5–10% of traffic to new model. Monitor, scale up if healthy.</li><li><strong>Champion-challenger:</strong> production model = champion, new model = challenger. Compare performance on live traffic.</li><li><strong>Multi-armed bandit:</strong> dynamically allocate more traffic to better-performing variant. Faster than fixed A/B but harder to interpret.</li></ul></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The most common MLOps failures: (1) training-serving skew — feature computation differs between training pipeline and inference API; (2) no monitoring — model silently degrades for months; (3) no rollback mechanism — bad deployment can't be reverted quickly. My production checklist: containerize (Docker), track experiments (MLflow), version data (DVC), monitor with PSI on feature distributions + business KPIs, and always keep the previous model artifact ready for rollback."</p></div>
+<tr><td>Container orchestration</td><td>Kubernetes (k8s)</td><td>EKS, GKE, AKS</td></tr>
+</table></div>
+
+<div class="card"><div class="card-title">Feature Store — Why It Matters</div>
+<ul class="bul">
+  <li><strong>Training-serving skew:</strong> features computed differently in batch (training) vs real-time (serving) → model sees different distributions at inference time — feature store enforces the same transformation logic everywhere</li>
+  <li><strong>Point-in-time correct joins:</strong> when training, join only features available AT the prediction time — prevents future leakage</li>
+  <li><strong>Reuse across teams:</strong> "customer_30day_payment_rate" computed once, used by fraud, collections, and marketing models</li>
+  <li><strong>Offline store</strong> (S3/DeltaLake) for training; <strong>online store</strong> (Redis) for &lt;5ms serving latency</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "The most common MLOps failures: (1) training-serving skew — feature computation differs between training pipeline and inference API; (2) no monitoring — model silently degrades for months; (3) no rollback mechanism — a bad deployment can't be reverted quickly. My production checklist: containerise with Docker, track experiments with MLflow, monitor with PSI on feature distributions + business KPIs, canary deploy all changes, and always keep the previous model artifact for hot rollback."</p>
+<p><strong>Common mistake:</strong> Treating MLOps as just "deploying the model." The hard part is the full loop: drift detection → retraining trigger → CI/CD pipeline → evaluation gate → canary deploy → monitor again. Each step needs automation.</p>
+<p><strong>Expect this follow-up:</strong> "How would you serve a 70B parameter LLM at low latency?" — Tensor parallelism across multiple A100s, vLLM PagedAttention for KV cache efficiency, INT4 quantisation, speculative decoding with a 3B draft model. Expect 200–500ms P50 latency at reasonable cost.</p></div>
 </section>

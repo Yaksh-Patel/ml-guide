@@ -1,21 +1,176 @@
 <section class="section" id="sec-systemdesign">
 <div class="sec-title">ML System Design</div>
-<div class="sec-desc">Senior-level interview territory — design a fraud detection system, recommendation engine, or credit scoring platform. The framework: requirements → data → features → model → serving → monitoring.</div>
-<div class="card"><div class="card-title">ML System Design Framework</div>
-<ol class="num"><li><strong>Clarify requirements:</strong> latency (real-time vs batch), volume (TPS), accuracy target, update frequency, regulatory constraints</li><li><strong>Problem framing:</strong> supervised/unsupervised/RL? Binary/multi-class/ranking? Objective metric?</li><li><strong>Data strategy:</strong> sources, freshness, labels (how collected?), historical volume, class balance</li><li><strong>Feature engineering:</strong> real-time features (last 5 transactions), pre-computed features (30-day payment rate), embeddings</li><li><strong>Model selection:</strong> baseline, main approach, why it fits requirements</li><li><strong>Training pipeline:</strong> offline training schedule, data versioning, experiment tracking</li><li><strong>Serving infrastructure:</strong> latency budget, scaling, fallback logic</li><li><strong>Monitoring &amp; iteration:</strong> metrics, drift detection, retraining triggers</li></ol></div>
-<div class="card"><div class="card-title">Case Study: Fraud Detection System (Real-Time)</div>
+<div class="sec-desc">Senior-level interview territory — design a fraud detection system, recommendation engine, real-time search ranking platform, or LLM inference pipeline. The framework: requirements → data → features → model → serving → monitoring. This topic covers three complete case studies.</div>
+
+<!-- FRAMEWORK -->
+<div class="card"><div class="card-title">ML System Design Framework (Apply to Every Problem)</div>
+<ol class="num">
+  <li><strong>Clarify requirements:</strong> latency (real-time vs batch), volume (TPS), accuracy target, update frequency, regulatory constraints</li>
+  <li><strong>Problem framing:</strong> supervised / unsupervised / RL? Binary / multi-class / ranking? What is the ground truth / label source?</li>
+  <li><strong>Data strategy:</strong> sources, freshness, labels (how collected?), class balance, historical volume</li>
+  <li><strong>Feature engineering:</strong> real-time features (last 5 transactions), pre-computed features (30-day rate), embeddings</li>
+  <li><strong>Model selection:</strong> justify the architecture — why does it fit the constraints?</li>
+  <li><strong>Training pipeline:</strong> offline training schedule, data versioning, experiment tracking</li>
+  <li><strong>Serving infrastructure:</strong> latency budget per layer, scaling strategy, fallback logic</li>
+  <li><strong>Monitoring &amp; iteration:</strong> metrics, drift detection, retraining triggers, A/B testing</li>
+</ol></div>
+
+<!-- CASE STUDY 1 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:24px 0 12px;padding:0">Case Study 1 — Fraud Detection (Real-Time)</div>
+
 <table class="tbl"><tr><th>Layer</th><th>Design Decision</th><th>Reasoning</th></tr>
-<tr><td>Latency</td><td>&lt;50ms P99</td><td>Transaction must approve/decline before user timeout</td></tr>
-<tr><td>Features</td><td>Transaction + pre-computed customer features from feature store</td><td>Can't compute 30-day history in real-time; feature store serves in &lt;5ms</td></tr>
-<tr><td>Model</td><td>LightGBM or small neural net</td><td>Fast inference; handles feature importance for investigation</td></tr>
-<tr><td>Output</td><td>Score → rule engine → decision</td><td>Rules allow business override; score enables risk-based decisioning</td></tr>
-<tr><td>Update</td><td>Daily retraining; feature store updated hourly</td><td>Fraud patterns evolve; hourly features catch velocity attacks</td></tr>
-<tr><td>Monitoring</td><td>PSI on feature distributions + FPR + fraud catch rate daily</td><td>Concept drift (fraud patterns change) and data drift both critical</td></tr></table></div>
-<div class="g2">
-<div class="card cp"><div class="card-title">Latency vs Accuracy Trade-offs</div>
-<ul class="bul"><li>Quantize model (INT8): 2–4× faster inference, &lt;1% accuracy drop</li><li>Distill large model → small model: smaller, faster, some accuracy cost</li><li>Feature selection: fewer features → faster inference</li><li>Approximate neighbors (FAISS) instead of exact: 100× faster, tiny accuracy loss</li><li>Async enrichment: serve fast with base features, enrich asynchronously for human review queue</li></ul></div>
-<div class="card cc"><div class="card-title">Scalability Considerations</div>
-<ul class="bul"><li><strong>Stateless serving:</strong> each prediction request is independent — easy horizontal scaling</li><li><strong>Caching:</strong> cache predictions for identical inputs (careful — staleness risk)</li><li><strong>Horizontal scaling:</strong> multiple model servers behind a load balancer</li><li><strong>GPU batching:</strong> accumulate requests into batches; GPUs are efficient at batch operations</li><li><strong>Database bottleneck:</strong> feature lookups often limit throughput — use Redis for feature serving</li></ul></div>
+<tr><td>Latency SLA</td><td>&lt;50ms P99</td><td>Transaction must approve/decline before user timeout</td></tr>
+<tr><td>Label source</td><td>Disputed charges + fraud investigation outcomes (delayed by days)</td><td>Labels arrive late — must handle feedback loop carefully</td></tr>
+<tr><td>Features</td><td>Transaction features + pre-computed customer features from feature store</td><td>Can't compute 30-day history in 50ms; feature store serves in &lt;5ms</td></tr>
+<tr><td>Model</td><td>LightGBM (primary) + neural net ensemble (offline)</td><td>Fast inference; interpretable feature importance for investigation teams</td></tr>
+<tr><td>Output</td><td>Risk score → rule engine → decision</td><td>Rules allow business override; score enables risk-based decisioning at different thresholds</td></tr>
+<tr><td>Update</td><td>Daily retrain; feature store updated hourly</td><td>Fraud patterns evolve rapidly; hourly features catch velocity attacks (many small txns)</td></tr>
+<tr><td>Monitoring</td><td>PSI on feature distributions + FPR + fraud catch rate daily</td><td>Both data drift (input shift) and concept drift (fraud pattern change) are critical</td></tr>
+</table>
+
+<div class="g2" style="margin-top:8px">
+<div class="card cb"><div class="card-title">Latency Budget (50ms total)</div>
+<table class="tbl"><tr><th>Component</th><th>Budget</th></tr>
+<tr><td>Network (client → API)</td><td>5ms</td></tr>
+<tr><td>Feature lookup (Redis)</td><td>3ms</td></tr>
+<tr><td>Model inference (LightGBM)</td><td>5ms</td></tr>
+<tr><td>Rule engine</td><td>2ms</td></tr>
+<tr><td>DB write (async)</td><td>async — off critical path</td></tr>
+<tr><td><strong>Total P50</strong></td><td><strong>~15ms</strong></td></tr>
+<tr><td><strong>Total P99</strong></td><td><strong>&lt;50ms</strong></td></tr>
+</table></div>
+<div class="card ca"><div class="card-title">Class Imbalance Strategy</div>
+<ul class="bul">
+  <li>Fraud rate is typically 0.1–1% — severe class imbalance</li>
+  <li><strong>Don't oversample at training time</strong> — adjust decision threshold instead</li>
+  <li>Use <strong>scale_pos_weight</strong> in LightGBM (= negatives / positives)</li>
+  <li>Evaluate with <strong>PR-AUC</strong> not ROC-AUC — ROC is misleading under heavy imbalance</li>
+  <li>Business metric: cost matrix (false negative = fraud loss; false positive = customer friction)</li>
+</ul></div>
 </div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"When I get a system design problem, I start by anchoring on two things: (1) what latency is acceptable — real-time (&lt;100ms) forces very different choices than batch (hours), and (2) what does failure look like — a wrong fraud decision means customer friction, a wrong credit decision means money loss. Then I work through the data flywheel: more decisions → more labeled data → better model → better decisions. The biggest scaling trap is model serving becoming a monolith — separate the model server from the feature server from the rule engine."</p></div>
+
+<!-- CASE STUDY 2 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Case Study 2 — Search &amp; Ranking System</div>
+
+<div class="card"><div class="card-title">Two-Stage Retrieval + Ranking Architecture</div>
+<div class="card-body">All large-scale search and recommendation systems use a <strong>two-stage funnel</strong>: cheap retrieval (millions → hundreds of candidates), then expensive ranking (hundreds → ranked top-k).</div>
+<div class="anim-wrap"><div class="anim-title">Search pipeline: query → retrieval (ANN + BM25) → rerank (pointwise LTR) → serve</div>
+<svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
+<!-- Query -->
+<rect x="5" y="48" width="60" height="36" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="35" y="63" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="Syne" font-weight="700">Query</text>
+<text x="35" y="76" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">"best running shoes"</text>
+<!-- Retrieval -->
+<rect x="83" y="20" width="80" height="36" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="123" y="36" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="Syne" font-weight="700">Dense Retrieval</text>
+<text x="123" y="49" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">ANN / vector search (FAISS)</text>
+<rect x="83" y="78" width="80" height="36" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="123" y="94" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="Syne" font-weight="700">Sparse Retrieval</text>
+<text x="123" y="107" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">BM25 keyword match</text>
+<!-- Merge -->
+<rect x="185" y="48" width="60" height="36" rx="5" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.5"/>
+<text x="215" y="63" text-anchor="middle" fill="#f5a623" font-size="9" font-family="Syne" font-weight="700">Merge &amp;</text>
+<text x="215" y="76" text-anchor="middle" fill="#f5a623" font-size="9" font-family="Syne" font-weight="700">Dedupe</text>
+<!-- Rerank -->
+<rect x="270" y="48" width="80" height="36" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="310" y="63" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="Syne" font-weight="700">LTR Reranker</text>
+<text x="310" y="76" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">LambdaMART / XGBoost</text>
+<!-- Serve -->
+<rect x="375" y="48" width="60" height="36" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="405" y="63" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="Syne" font-weight="700">Top-K</text>
+<text x="405" y="76" text-anchor="middle" fill="#4e5a7a" font-size="7" font-family="DM Sans">Results served</text>
+<!-- Candidates counts -->
+<text x="123" y="14" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">~100M docs</text>
+<text x="215" y="44" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">~500 candidates</text>
+<text x="310" y="44" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">~500 → 50</text>
+<text x="405" y="44" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">top 10</text>
+<!-- Arrows -->
+<line x1="65" y1="62" x2="81" y2="40" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#sarr)"/>
+<line x1="65" y1="70" x2="81" y2="90" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#sarr)"/>
+<line x1="163" y1="40" x2="183" y2="60" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#sarr)"/>
+<line x1="163" y1="90" x2="183" y2="74" stroke="#8e97b8" stroke-width="1.2" marker-end="url(#sarr)"/>
+<line x1="245" y1="66" x2="268" y2="66" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#sarr)"/>
+<line x1="350" y1="66" x2="373" y2="66" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#sarr)"/>
+<defs><marker id="sarr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8e97b8"/></marker></defs>
+</svg></div></div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">Retrieval Layer Details</div>
+<ul class="bul">
+  <li><strong>Dense retrieval (ANN):</strong> embed query + docs with same bi-encoder (e.g., E5, BGE); find nearest neighbours with FAISS/HNSW; handles semantic similarity</li>
+  <li><strong>Sparse retrieval (BM25):</strong> TF-IDF-based keyword matching; fast via inverted index; misses synonyms</li>
+  <li><strong>Hybrid search:</strong> combine dense + sparse scores (RRF or learned weighting); outperforms either alone on most benchmarks</li>
+  <li><strong>HNSW index:</strong> hierarchical navigable small world graph — sub-linear ANN search, build once, query in ~1ms</li>
+</ul></div>
+<div class="card cc"><div class="card-title">Ranking (LTR) Details</div>
+<ul class="bul">
+  <li><strong>Learning-to-rank (LTR):</strong> given (query, doc) pairs, predict a relevance score</li>
+  <li><strong>Pointwise:</strong> binary relevant / not (simplest; ignores relative order)</li>
+  <li><strong>Pairwise (RankNet, LambdaMART):</strong> model prefers doc A over doc B — directly optimises ranking</li>
+  <li><strong>Features:</strong> BM25 score, semantic similarity, CTR, freshness, user affinity, PageRank, price</li>
+  <li><strong>Label source:</strong> human relevance judgments + click-through data (clicks = implicit feedback, noisy but scalable)</li>
+  <li><strong>Offline metric:</strong> NDCG@10; online metric: click-through rate, session engagement</li>
+</ul></div>
+</div>
+
+<!-- CASE STUDY 3 -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-orange,#f5a623);margin:28px 0 12px;padding:0">Case Study 3 — Recommendation System (End-to-End)</div>
+
+<table class="tbl"><tr><th>Layer</th><th>Design Decision</th><th>Reasoning</th></tr>
+<tr><td>Problem framing</td><td>Implicit feedback (views, clicks, watch time) → predicted engagement</td><td>Explicit ratings rare; implicit signals abundant but noisy</td></tr>
+<tr><td>Candidate generation</td><td>Two-tower model: user tower + item tower → approximate nearest neighbours</td><td>Enables offline pre-computation of item embeddings; fast retrieval</td></tr>
+<tr><td>Ranking</td><td>Wide &amp; Deep or DCN-v2 (factorisation + neural)</td><td>Captures low-order feature interactions (wide) + high-order (deep)</td></tr>
+<tr><td>Objective</td><td>Multi-task: click + watch time + share (weighted sum)</td><td>Optimising click alone causes clickbait; watch time adds quality signal</td></tr>
+<tr><td>Cold start</td><td>Content-based fallback for new items; popularity-based for new users</td><td>Collaborative filtering fails without interaction history</td></tr>
+<tr><td>Freshness</td><td>Item embeddings updated daily; user embeddings updated every hour</td><td>User interests shift faster than item characteristics</td></tr>
+<tr><td>Diversity</td><td>MMR (Maximal Marginal Relevance) reranking at serving time</td><td>Avoid showing 10 identical items; improves long-term retention</td></tr>
+</table>
+
+<div class="g2" style="margin-top:8px">
+<div class="card cg"><div class="card-title">Two-Tower Architecture</div>
+<div class="formula math-formula">$$\begin{aligned}
+e_u &= f_\theta(u_\text{features}) \quad \text{[user tower — trained once per user per hour]} \\
+e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offline]} \\
+\hat{y} &= e_u \cdot e_i \quad \text{[dot product similarity → ANN retrieval]}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:6px">
+  <li>Train with <strong>in-batch negatives:</strong> other items in the same batch serve as negatives — no explicit negative sampling needed</li>
+  <li>Hard negatives (high-scoring but not interacted) significantly improve retrieval quality</li>
+</ul></div>
+<div class="card cb"><div class="card-title">Data Flywheel</div>
+<div class="card-body">The core competitive advantage in recommendation systems is the feedback loop:</div>
+<ul class="bul" style="margin-top:8px">
+  <li>Better recommendations → more engagement → more interaction data</li>
+  <li>More interaction data → better model → better recommendations</li>
+  <li>This compounds over time — the data flywheel is what makes Netflix/Spotify hard to replicate</li>
+  <li><strong>Position bias:</strong> items shown higher get more clicks regardless of quality — must correct for this in training (inverse propensity weighting)</li>
+</ul></div>
+</div>
+
+<!-- CROSS-CUTTING CONCERNS -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Cross-Cutting: Latency vs Accuracy Trade-offs &amp; Scalability</div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">Latency vs Accuracy</div>
+<ul class="bul">
+  <li><strong>Quantise model (INT8):</strong> 2–4× faster inference, &lt;1% accuracy drop</li>
+  <li><strong>Distill large model:</strong> smaller, faster, some accuracy cost</li>
+  <li><strong>Approximate neighbours (FAISS):</strong> 100× faster than exact; tiny accuracy loss</li>
+  <li><strong>Async enrichment:</strong> serve fast with base features; enrich asynchronously for human review queue</li>
+  <li><strong>Feature precomputation:</strong> move expensive features offline to feature store</li>
+</ul></div>
+<div class="card ca"><div class="card-title">Scalability Patterns</div>
+<ul class="bul">
+  <li><strong>Stateless serving:</strong> each prediction independent → horizontal scaling trivial</li>
+  <li><strong>Caching:</strong> cache predictions for identical inputs — careful of staleness</li>
+  <li><strong>GPU batching:</strong> accumulate requests; GPUs are highly efficient at batch operations</li>
+  <li><strong>Redis for feature serving:</strong> database lookups often limit throughput more than model</li>
+  <li><strong>Read replicas:</strong> scale read-heavy feature serving independently of write path</li>
+</ul></div>
+</div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "When I get a system design problem, I anchor on two questions: (1) what latency is acceptable — real-time (&lt;100ms) forces very different choices than batch (hours), and (2) what does failure look like — a wrong fraud decision means customer friction or money loss. For any ranking problem I default to a two-stage funnel: cheap approximate retrieval first, then expensive but accurate reranking. The biggest scaling trap is letting the feature store / DB lookup become the bottleneck — move high-latency features offline and serve from Redis."</p>
+<p><strong>Common mistake:</strong> Jumping straight to the model architecture without clarifying requirements. The correct model for fraud detection at &lt;50ms with no labels for 3 days is completely different from fraud scoring in a nightly batch job.</p>
+<p><strong>Expect this follow-up:</strong> "How would you handle position bias in recommendation labels?" — Use inverse propensity weighting: down-weight clicks on highly-ranked items (they'd get clicks regardless) and up-weight clicks on lower positions. Or use randomisation experiments: occasionally show items in random order to collect unbiased training signal.</p></div>
 </section>
