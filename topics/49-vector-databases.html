@@ -1,0 +1,239 @@
+<section class="section" id="sec-vectordb">
+<div class="sec-title">Vector Databases</div>
+<div class="sec-desc">The infrastructure layer behind every RAG system, semantic search, and embedding-based recommendation. Vector databases efficiently store, index, and retrieve high-dimensional embedding vectors using approximate nearest-neighbour search — finding the most semantically similar items in milliseconds across billions of vectors.</div>
+
+<!-- Why vector DBs -->
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Vector Databases Exist</div>
+<div class="card-body">Traditional databases query on exact values. Vector databases query on <em>semantic similarity</em> — "find the 10 documents most similar in meaning to this query." Brute-force exact similarity search is O(n·d) for n vectors of dimension d — completely infeasible at scale.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Dense retrieval:</strong> text/image/audio → embedding → similarity search → ranked results</li>
+  <li><strong>Use cases:</strong> RAG knowledge retrieval, semantic search, deduplication, recommendation, anomaly detection, face recognition</li>
+  <li><strong>Scale challenge:</strong> OpenAI text-embedding-3-large produces 3072-dim vectors; a 10M document corpus = 30B floats = 120GB at float32</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">Similarity Metrics</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Formula</th><th>When to use</th></tr>
+<tr><td><strong>Cosine similarity</strong></td><td>$\frac{u \cdot v}{\|u\|\|v\|}$</td><td>Text embeddings — magnitude irrelevant, direction matters</td></tr>
+<tr><td><strong>Dot product</strong></td><td>$u \cdot v$</td><td>When embeddings are L2-normalised (same as cosine); also for MRL embeddings</td></tr>
+<tr><td><strong>Euclidean (L2)</strong></td><td>$\|u - v\|_2$</td><td>Image embeddings, spatial data, when magnitude matters</td></tr>
+<tr><td><strong>Manhattan (L1)</strong></td><td>$\|u - v\|_1$</td><td>Sparse high-dimensional data; robust to outliers</td></tr>
+</table>
+<div class="box info" style="margin-top:8px"><div class="bl">Tip</div><p>Always L2-normalise embeddings before indexing if using cosine similarity — cosine becomes equivalent to dot product, which is faster to compute and FAISS/HNSW optimise for it.</p></div>
+</div>
+</div>
+
+<!-- ANN algorithms -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Approximate Nearest Neighbour (ANN) Algorithms</div>
+
+<div class="card ca"><div class="card-title">HNSW — Hierarchical Navigable Small World</div>
+<div class="card-body">The dominant ANN algorithm in production. Builds a multi-layer graph where the top layers are sparse (long-range navigation) and bottom layers are dense (local search). Query traverses top to bottom, pruning the search space at each layer.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Key parameters</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Parameter</th><th>Effect</th><th>Typical value</th></tr>
+<tr><td><code>M</code></td><td>Max edges per node per layer — higher = better recall, more memory</td><td>16–64</td></tr>
+<tr><td><code>ef_construction</code></td><td>Search width during index build — higher = better graph quality, slower build</td><td>100–400</td></tr>
+<tr><td><code>ef_search</code></td><td>Search width at query time — tune to hit recall target</td><td>50–200</td></tr>
+</table>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Performance characteristics</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Query speed:</strong> O(log n) — practically 1–10ms for millions of vectors</li>
+  <li><strong>Recall@10:</strong> 95–99% achievable with tuned ef_search</li>
+  <li><strong>Memory:</strong> ~(4·d + M·8) bytes/vector — heavier than flat index</li>
+  <li><strong>No training required</strong> — incremental inserts supported</li>
+  <li><strong>Weakness:</strong> can't do filtered search natively (workaround: post-filter or HNSW with metadata)</li>
+</ul>
+</div>
+</div></div>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">IVF — Inverted File Index</div>
+<div class="card-body">Clusters vectors into Voronoi cells via k-means. At query time, probe only the nearest k clusters instead of all vectors.</div>
+<div class="formula">IVF index: cluster vectors into nlist centroids
+Query: find nearest nprobe centroids, search only those cells
+Recall vs speed tradeoff: nprobe=1 (fast, low recall) → nprobe=nlist (exact, slow)</div>
+<ul class="bul" style="margin-top:8px">
+  <li>Requires training (k-means on representative sample — typically 30–300× nlist vectors)</li>
+  <li>Memory-efficient — scales to billions of vectors on GPU (FAISS-GPU)</li>
+  <li>Combined with <strong>PQ (Product Quantisation)</strong>: IVF+PQ compresses vectors by 8–32× with ~5% recall drop</li>
+</ul></div>
+
+<div class="card cc"><div class="card-title">Other ANN Algorithms</div>
+<table class="tbl">
+<tr><th>Algorithm</th><th>Mechanism</th><th>Best for</th></tr>
+<tr><td><strong>Flat (brute-force)</strong></td><td>Exact — compute all distances</td><td>&lt;1M vectors; ground-truth recall computation</td></tr>
+<tr><td><strong>LSH</strong></td><td>Hash similar vectors to same buckets</td><td>Very high-dim sparse data; older baseline</td></tr>
+<tr><td><strong>Annoy</strong></td><td>Random projection tree forest</td><td>Read-heavy, no updates needed; Spotify's original rec system</td></tr>
+<tr><td><strong>ScaNN</strong></td><td>Google's anisotropic quantisation</td><td>State-of-the-art recall/speed on Google-scale data</td></tr>
+<tr><td><strong>DiskANN</strong></td><td>SSD-resident graph; streams from disk</td><td>Billion-scale on limited RAM (Microsoft)</td></tr>
+</table></div>
+</div>
+
+<!-- FAISS deep dive -->
+<div class="card"><div class="card-title">FAISS — Facebook AI Similarity Search</div>
+<div class="card-body">The most widely used ANN library. CPU and GPU support, multiple index types, and a composable index factory string. Used internally by Pinecone, Weaviate, and most vector DBs.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">import faiss, numpy as np
+
+d = 1536  # OpenAI ada-002 dimension
+n = 100_000
+
+# Build HNSW index (M=32, ef=200)
+index = faiss.IndexHNSWFlat(d, 32)
+index.hnsw.efConstruction = 200
+index.hnsw.efSearch = 100
+
+# Normalise + add vectors
+vecs = np.random.randn(n, d).astype('float32')
+faiss.normalize_L2(vecs)
+index.add(vecs)
+
+# Query: top-5 nearest neighbours
+query = np.random.randn(1, d).astype('float32')
+faiss.normalize_L2(query)
+distances, indices = index.search(query, k=5)
+
+# IVF+PQ for large-scale (billion vectors)
+# "IVF4096,PQ64" = 4096 clusters, 64 PQ subquantisers
+index2 = faiss.index_factory(d, "IVF4096,PQ64")
+index2.train(vecs)   # requires training
+index2.add(vecs)
+index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Index factory cheat sheet</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>String</th><th>Meaning</th><th>Use when</th></tr>
+<tr><td><code>Flat</code></td><td>Exact brute-force</td><td>&lt;500K vectors, need 100% recall</td></tr>
+<tr><td><code>HNSWx</code></td><td>HNSW, M=x edges</td><td>General purpose; &lt;50M vectors on RAM</td></tr>
+<tr><td><code>IVFx,Flat</code></td><td>IVF, x clusters</td><td>GPU search; x ≈ 4√n</td></tr>
+<tr><td><code>IVFx,PQy</code></td><td>IVF + product quantisation</td><td>Billion-scale; 8–32× compression</td></tr>
+<tr><td><code>IVFx,SQ8</code></td><td>IVF + scalar quantisation 8-bit</td><td>2× compression, minimal recall loss</td></tr>
+</table>
+</div>
+</div></div>
+
+<!-- Managed vector DBs -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Managed Vector Database Landscape</div>
+
+<div class="card"><div class="card-title">Vector Database Comparison</div>
+<table class="tbl">
+<tr><th>Database</th><th>Index</th><th>Filtering</th><th>Scale</th><th>Best for</th></tr>
+<tr><td><strong>Pinecone</strong></td><td>Proprietary (HNSW-based)</td><td>Metadata filter (pre-filter)</td><td>Billions (managed)</td><td>Fully managed; production RAG; zero ops burden</td></tr>
+<tr><td><strong>Weaviate</strong></td><td>HNSW + BM25</td><td>GraphQL filters + hybrid</td><td>100M+ self-hosted</td><td>Hybrid search (dense + sparse); structured + semantic</td></tr>
+<tr><td><strong>Qdrant</strong></td><td>HNSW + quantisation</td><td>Payload filters (fast)</td><td>Billions self-hosted</td><td>Fastest filtered search; Rust-native; great OSS</td></tr>
+<tr><td><strong>Chroma</strong></td><td>HNSW (via hnswlib)</td><td>Metadata filter</td><td>&lt;10M embedded</td><td>Local prototyping; LangChain default; simple API</td></tr>
+<tr><td><strong>pgvector</strong></td><td>IVFFlat or HNSW</td><td>Full SQL</td><td>&lt;10M rows</td><td>Already using Postgres; avoid infra sprawl</td></tr>
+<tr><td><strong>Milvus</strong></td><td>IVF, HNSW, DiskANN</td><td>Boolean filter</td><td>Billions self-hosted</td><td>Enterprise-scale; Kubernetes-native; many index types</td></tr>
+<tr><td><strong>Redis (VSS)</strong></td><td>HNSW or Flat</td><td>Hash/tag filter</td><td>&lt;50M in-memory</td><td>Ultra-low latency (&lt;1ms); already using Redis</td></tr>
+</table></div>
+
+<!-- Embedding pipelines -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Embedding Pipeline Design</div>
+
+<div class="card cp"><div class="card-title">End-to-End Embedding Pipeline</div>
+<div class="g3" style="margin-top:10px">
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">1. Embed</div>
+<ul class="bul">
+  <li>Choose embedding model based on task: text, code, multimodal, domain-specific</li>
+  <li>Batch embed documents offline (OpenAI batch API, or local model with GPU)</li>
+  <li>Dimension: 768–3072 for text; higher = better quality, more storage</li>
+  <li><strong>Always L2-normalise</strong> before inserting if using cosine similarity</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">2. Chunk &amp; Store</div>
+<ul class="bul">
+  <li>Chunk documents before embedding — embedding model has a context window (usually 512–8192 tokens)</li>
+  <li>Store original text + metadata alongside each vector (chunk ID, source URL, timestamp)</li>
+  <li>Choose index type: HNSW for recall, IVF+PQ for billion-scale, pgvector for SQL integration</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">3. Query &amp; Retrieve</div>
+<ul class="bul">
+  <li>Embed the query with the <em>same model</em> — embedding model mismatches destroy recall</li>
+  <li>ANN search returns top-k candidate IDs + distances</li>
+  <li>Apply metadata filters (date range, source, category) — pre-filter or post-filter</li>
+  <li>Fetch full text for top-k; pass to LLM as context</li>
+</ul></div>
+</div></div>
+
+<div class="card"><div class="card-title">Embedding Model Selection</div>
+<table class="tbl">
+<tr><th>Model</th><th>Dim</th><th>Context</th><th>Strength</th><th>Cost</th></tr>
+<tr><td><strong>text-embedding-3-small</strong></td><td>1536</td><td>8191 tok</td><td>Best quality/cost ratio for English text; OpenAI</td><td>$0.02/1M tokens</td></tr>
+<tr><td><strong>text-embedding-3-large</strong></td><td>3072</td><td>8191 tok</td><td>Highest quality; supports MRL dimension reduction</td><td>$0.13/1M tokens</td></tr>
+<tr><td><strong>BGE-M3</strong></td><td>1024</td><td>8192 tok</td><td>Open-source SOTA; multilingual; dense+sparse+colbert</td><td>Free (self-host)</td></tr>
+<tr><td><strong>E5-mistral-7b</strong></td><td>4096</td><td>32K tok</td><td>Best open-source single model; instruction-following</td><td>Free (GPU needed)</td></tr>
+<tr><td><strong>Cohere embed-v3</strong></td><td>1024</td><td>512 tok</td><td>Best for retrieval-specific tasks; compression-friendly</td><td>$0.10/1M tokens</td></tr>
+<tr><td><strong>voyage-3</strong></td><td>1024</td><td>32K tok</td><td>Anthropic-backed; strong on long-context retrieval</td><td>$0.06/1M tokens</td></tr>
+</table></div>
+
+<!-- Filtered search -->
+<div class="card cc"><div class="card-title">Filtered Vector Search — A Critical Production Concern</div>
+<div class="card-body">Most real applications require filtered search: "find the 10 most similar documents <em>that are also from the last 30 days and in category X</em>." Naive approaches break recall or performance.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Pre-filtering (filter-then-search)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Apply metadata filter first → search only matching subset</li>
+  <li>Problem: if filter is selective, HNSW graph becomes disconnected — recall collapses</li>
+  <li>Pinecone's approach: namespace partitioning + dynamic ef_search boost</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Post-filtering (search-then-filter)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Retrieve top-K (K >> k), then apply metadata filter to the candidates</li>
+  <li>Problem: may return fewer than k results if filter is strict</li>
+  <li>Solution: over-fetch (K=10×k), accept occasional shortfall</li>
+</ul>
+</div>
+</div>
+<div class="box info" style="margin-top:8px"><div class="bl">Best practice</div><p>Qdrant's payload index + HNSW with filtered search is currently the best OSS option — applies filters during graph traversal, maintaining recall without over-fetching. Weaviate's GraphQL + hybrid also handles this well.</p></div>
+</div>
+
+<!-- Quantisation -->
+<div class="card cg"><div class="card-title">Vector Compression — Quantisation Techniques</div>
+<table class="tbl">
+<tr><th>Technique</th><th>Compression</th><th>Recall Impact</th><th>How</th></tr>
+<tr><td><strong>Float32 (baseline)</strong></td><td>1×</td><td>—</td><td>4 bytes/dimension</td></tr>
+<tr><td><strong>Float16 / BFloat16</strong></td><td>2×</td><td>&lt;0.1%</td><td>2 bytes/dim; widely supported</td></tr>
+<tr><td><strong>Int8 Scalar Quantisation</strong></td><td>4×</td><td>~0.5%</td><td>Scale each dimension to 0–255</td></tr>
+<tr><td><strong>Binary quantisation</strong></td><td>32×</td><td>~3–5%</td><td>Each dim → 1 bit; Hamming distance; Cohere supports this natively</td></tr>
+<tr><td><strong>Product Quantisation (PQ)</strong></td><td>8–32×</td><td>~3–8%</td><td>Split vector into m subvectors, quantise each; FAISS IVF+PQ</td></tr>
+<tr><td><strong>Matryoshka (MRL)</strong></td><td>2–8× dim reduction</td><td>Graceful degradation</td><td>Train embedding so prefix of d dimensions is a valid shorter embedding (OpenAI text-embedding-3)</td></tr>
+</table></div>
+
+<!-- Common mistakes -->
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using different models for indexing vs querying</strong> — destroys the embedding space; recall drops to near-zero. Always use the exact same model and preprocessing</li>
+  <li><strong>Not normalising embeddings</strong> — cosine similarity computed on unnormalised vectors gives wrong results; always L2-normalise before inserting</li>
+  <li><strong>Assuming ANN = exact</strong> — ANN trades a small recall loss for large speed gains. Always measure recall@k vs a Flat (exact) index baseline</li>
+  <li><strong>Choosing database before benchmarking</strong> — recall@10, QPS, and memory vary significantly by data distribution. Always benchmark on your actual vectors</li>
+  <li><strong>Ignoring embedding model dimension vs quality tradeoff</strong> — larger dimensions aren't always better; Matryoshka embeddings can match larger dims at lower cost</li>
+  <li><strong>Index size vs nlist mismatch in IVF</strong> — rule of thumb: nlist ≈ 4√n (e.g. 4096 for 1M vectors); too few clusters = poor partitioning, too many = training failure</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Meta:</strong> FAISS was created at Meta; powers billions-scale image similarity search in Instagram, video retrieval in Reels</li>
+  <li><strong>Spotify:</strong> Annoy (built internally) powers music recommendation; recently migrated to HNSW for better recall</li>
+  <li><strong>Airbnb:</strong> Listing embeddings in HNSW for similar-listing recommendations; 100M+ listings indexed</li>
+  <li><strong>Google:</strong> ScaNN powers YouTube recommendation retrieval at trillion-scale; DiskANN used in Azure Cognitive Search</li>
+  <li><strong>OpenAI / Anthropic / LangChain ecosystem:</strong> Chroma for prototyping; Pinecone/Qdrant/Weaviate for production RAG</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>How vector search works:</strong> "We embed documents and queries into a shared high-dimensional space using the same model. At query time we embed the query and run approximate nearest-neighbour search — typically HNSW — against the indexed document vectors. HNSW builds a multi-layer navigable graph and traverses it top-down in O(log n), achieving 95–99% recall at &lt;5ms for millions of vectors."</p>
+<p style="margin-top:8px"><strong>ANN vs exact search:</strong> "Brute-force exact search is O(n·d) — infeasible at scale. HNSW trades 1–5% recall for 100–1000× speedup. In practice: measure recall@10 vs a Flat index on your specific data. If recall is sufficient (usually &gt;95%), ANN is the clear choice."</p>
+<p style="margin-top:8px"><strong>Index selection guide:</strong> "HNSW for &lt;50M vectors where RAM is available and recall matters. IVF+PQ for billion-scale where memory is constrained — 32× compression with ~5% recall loss. pgvector for teams already on Postgres who need &lt;10M vectors without new infra. Pinecone/Qdrant for managed production with metadata filtering."</p>
+<p style="margin-top:8px"><strong>Common follow-up — filtered search:</strong> "Filtered ANN is non-trivial — pre-filtering with HNSW on selective filters breaks graph connectivity and collapses recall. Best approach: Qdrant's payload-indexed HNSW that applies filters during graph traversal, or over-fetch with post-filtering. Always benchmark recall on your actual filter distributions."</p>
+</div>
+
+</section>

@@ -1,0 +1,256 @@
+<section class="section" id="sec-rag">
+<div class="sec-title">RAG &amp; Retrieval</div>
+<div class="sec-desc">Retrieval-Augmented Generation (RAG) is the dominant pattern for grounding LLM outputs in real, current, sourced knowledge — without fine-tuning. A RAG pipeline retrieves relevant documents from a knowledge base and injects them into the LLM's context at inference time. Getting every stage right — chunking, embedding, retrieval, reranking, generation — is the difference between a hallucinating chatbot and a reliable production system.</div>
+
+<!-- Why RAG -->
+<div class="g2">
+<div class="card cb"><div class="card-title">Why RAG Exists</div>
+<ul class="bul">
+  <li><strong>LLMs hallucinate</strong> — parametric memory (weights) is unreliable for specific facts, recent events, proprietary knowledge</li>
+  <li><strong>Knowledge cutoff</strong> — fine-tuning on new data is slow, expensive, and degrades general capabilities</li>
+  <li><strong>No sourcing</strong> — base LLMs can't cite where a fact came from; RAG retrieves the source document</li>
+  <li><strong>Privacy</strong> — sensitive company data can't go into model training; RAG keeps it in a controlled retrieval layer</li>
+  <li><strong>Cost</strong> — retrieving and injecting 3–5 relevant passages is vastly cheaper than a 128K-token context</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">RAG vs Fine-Tuning Decision</div>
+<table class="tbl">
+<tr><th>Need</th><th>Use</th></tr>
+<tr><td>Current / frequently updated facts</td><td>RAG</td></tr>
+<tr><td>Proprietary knowledge (docs, wikis, PDFs)</td><td>RAG</td></tr>
+<tr><td>Cited, sourced answers</td><td>RAG</td></tr>
+<tr><td>Specific response style / persona</td><td>Fine-tune (LoRA)</td></tr>
+<tr><td>Domain-specific reasoning patterns</td><td>Fine-tune (LoRA)</td></tr>
+<tr><td>Both knowledge + style</td><td>RAG + LoRA combined</td></tr>
+</table>
+<div class="box warn" style="margin-top:8px"><div class="bl">Common mistake</div><p>Fine-tuning to inject facts. Fine-tuning teaches the model <em>how</em> to behave, not <em>what</em> to know. Factual knowledge encoded in weights is unreliable and goes stale — always use RAG for knowledge.</p></div>
+</div>
+</div>
+
+<!-- Pipeline overview -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — The RAG Pipeline</div>
+
+<div class="card"><div class="card-title">End-to-End RAG Architecture</div>
+<div class="anim-wrap">
+<div class="anim-title">RAG pipeline — ingestion (offline) and retrieval (online)</div>
+<svg viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <!-- Offline ingestion row -->
+  <text x="16" y="38" font-family="Inter,sans-serif" font-size="9" fill="#4e5a7a" font-weight="700" letter-spacing="1">OFFLINE INGESTION</text>
+  <rect x="16" y="45" width="96" height="36" rx="7" fill="#1a2035" stroke="#5b7df8" stroke-width="1"/>
+  <text x="64" y="66" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">Raw Docs</text>
+  <line x1="112" y1="63" x2="130" y2="63" stroke="#5b7df8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="130" y="45" width="96" height="36" rx="7" fill="#1a2035" stroke="#5b7df8" stroke-width="1"/>
+  <text x="178" y="61" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">Chunk</text>
+  <text x="178" y="74" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">split + clean</text>
+  <line x1="226" y1="63" x2="244" y2="63" stroke="#5b7df8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="244" y="45" width="96" height="36" rx="7" fill="#1a2035" stroke="#5b7df8" stroke-width="1"/>
+  <text x="292" y="61" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">Embed</text>
+  <text x="292" y="74" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">encoder model</text>
+  <line x1="340" y1="63" x2="358" y2="63" stroke="#5b7df8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="358" y="45" width="100" height="36" rx="7" fill="#1a2035" stroke="#22d3a0" stroke-width="1.5"/>
+  <text x="408" y="61" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#22d3a0">Vector DB</text>
+  <text x="408" y="74" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">HNSW index</text>
+  <!-- Online query row -->
+  <text x="16" y="118" font-family="Inter,sans-serif" font-size="9" fill="#4e5a7a" font-weight="700" letter-spacing="1">ONLINE RETRIEVAL</text>
+  <rect x="16" y="125" width="96" height="36" rx="7" fill="#1a2035" stroke="#f5a623" stroke-width="1"/>
+  <text x="64" y="146" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">User Query</text>
+  <line x1="112" y1="143" x2="130" y2="143" stroke="#f5a623" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="130" y="125" width="96" height="36" rx="7" fill="#1a2035" stroke="#f5a623" stroke-width="1"/>
+  <text x="178" y="141" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">Embed</text>
+  <text x="178" y="154" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">same model</text>
+  <!-- Arrow up from vector DB to retrieval -->
+  <line x1="408" y1="81" x2="408" y2="108" stroke="#22d3a0" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="340" y1="143" x2="358" y2="143" stroke="#f5a623" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="358" y="125" width="100" height="36" rx="7" fill="#1a2035" stroke="#22d3a0" stroke-width="1.5"/>
+  <text x="408" y="141" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#22d3a0">Retrieve</text>
+  <text x="408" y="154" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">top-k ANN</text>
+  <line x1="458" y1="143" x2="476" y2="143" stroke="#f5a623" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="476" y="125" width="96" height="36" rx="7" fill="#1a2035" stroke="#b97cf8" stroke-width="1.5"/>
+  <text x="524" y="141" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#b97cf8">Rerank</text>
+  <text x="524" y="154" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">cross-encoder</text>
+  <line x1="572" y1="143" x2="590" y2="143" stroke="#b97cf8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="590" y="125" width="74" height="36" rx="7" fill="#1a2035" stroke="#b97cf8" stroke-width="1"/>
+  <text x="627" y="141" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#e6e9f4">LLM</text>
+  <text x="627" y="154" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" fill="#4e5a7a">+ context</text>
+</svg>
+</div></div>
+
+<!-- Chunking strategies -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Chunking Strategies</div>
+
+<div class="card ca"><div class="card-title">Chunking — The Most Underrated RAG Decision</div>
+<div class="card-body">Chunk size controls the granularity of retrieval. Too large: retrieved chunks contain irrelevant context, polluting the LLM. Too small: single chunks lack enough context to be useful.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Strategy</th><th>How</th><th>Best for</th><th>Chunk size</th></tr>
+<tr><td><strong>Fixed-size</strong></td><td>Split by token/char count with overlap</td><td>Baseline; homogeneous text</td><td>256–512 tokens, 20% overlap</td></tr>
+<tr><td><strong>Sentence / paragraph</strong></td><td>Split on <code>.</code> / <code>\n\n</code></td><td>Prose documents; natural boundaries</td><td>1–5 sentences</td></tr>
+<tr><td><strong>Semantic chunking</strong></td><td>Split where embedding cosine similarity drops between adjacent sentences</td><td>Mixed-topic documents; blog posts</td><td>Variable; avg ~400 tokens</td></tr>
+<tr><td><strong>Recursive character splitter</strong></td><td>Try <code>\n\n</code> → <code>\n</code> → <code>.</code> → <code> </code> in order; respect structure</td><td>General purpose; LangChain default</td><td>512–1024 tokens</td></tr>
+<tr><td><strong>Document-aware</strong></td><td>Respect markdown headers, PDF sections, code blocks as natural boundaries</td><td>Structured docs, codebases, wikis</td><td>Section-sized</td></tr>
+<tr><td><strong>Small-to-big / Parent-child</strong></td><td>Embed small chunks; retrieve parent (larger) chunk for context</td><td>When context needed beyond single chunk</td><td>Child: 128 tok; parent: 512 tok</td></tr>
+</table>
+<div class="box tip" style="margin-top:10px"><div class="bl">Practical guide</div><p>Start with recursive splitter at 512 tokens / 20% overlap. Measure recall@5 on 50 question-answer pairs from your actual corpus. Switch to semantic chunking if recall is low (document topics shift abruptly). Use parent-child chunking if answers keep spanning chunk boundaries.</p></div>
+</div>
+
+<!-- Hybrid search -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — Retrieval Strategies</div>
+
+<div class="card cp"><div class="card-title">Hybrid Search — Dense + Sparse Combined</div>
+<div class="card-body">Dense retrieval (embedding similarity) handles semantic matching but misses exact keywords. Sparse retrieval (BM25) handles exact keywords but misses paraphrases. Hybrid search combines both — consistently outperforms either alone.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">BM25 — the sparse baseline</strong>
+<div class="formula math-formula">$$\text{BM25}(q,d) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i,d) \cdot (k_1+1)}{f(q_i,d) + k_1(1-b+b\cdot\frac{|d|}{\text{avgdl}})}$$</div>
+<ul class="bul" style="margin-top:6px">
+  <li>Term frequency weighted by inverse document frequency</li>
+  <li>Handles exact keyword match, product codes, names, jargon</li>
+  <li>Fast: inverted index lookup, no GPU needed</li>
+  <li>Fails on synonyms, paraphrases, semantic queries</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Reciprocal Rank Fusion (RRF)</strong>
+<div class="formula math-formula">$$\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + r(d)}, \quad k=60$$</div>
+<ul class="bul" style="margin-top:6px">
+  <li>Merge ranked lists from dense + sparse without needing score normalisation</li>
+  <li>k=60 is a robust default; larger k reduces impact of top-ranked items</li>
+  <li>Alternative: weighted linear combination of normalised scores (requires calibration)</li>
+  <li>Weaviate hybrid search uses RRF; Qdrant supports configurable fusion</li>
+</ul>
+</div>
+</div>
+<div class="box info" style="margin-top:10px"><div class="bl">BGE-M3: dense + sparse in one model</div><p>BGE-M3 generates dense embeddings, sparse (SPLADE-style) weights, and ColBERT late-interaction vectors from a single encoder. Eliminates the need for separate BM25 + dense pipelines — state-of-the-art on BEIR benchmark for hybrid retrieval.</p></div>
+</div>
+
+<div class="card cc"><div class="card-title">Advanced Retrieval Patterns</div>
+<table class="tbl">
+<tr><th>Pattern</th><th>How it works</th><th>When to use</th></tr>
+<tr><td><strong>HyDE</strong> (Hypothetical Document Embedding)</td><td>LLM generates a hypothetical answer; embed that; retrieve similar real docs</td><td>When query is very short or underspecified</td></tr>
+<tr><td><strong>Multi-query retrieval</strong></td><td>LLM generates 3–5 variants of the query; retrieve for each; deduplicate</td><td>Complex questions with multiple sub-topics</td></tr>
+<tr><td><strong>Step-back prompting</strong></td><td>LLM generates a higher-level "step-back" question; retrieve for that too</td><td>Detailed questions that benefit from broader context</td></tr>
+<tr><td><strong>RAG-Fusion</strong></td><td>Multi-query + RRF fusion over all sub-query result sets</td><td>General purpose; combines well with reranking</td></tr>
+<tr><td><strong>Contextual compression</strong></td><td>LLM extracts only the relevant sentence(s) from each retrieved chunk</td><td>Long chunks with low signal-to-noise ratio</td></tr>
+<tr><td><strong>Self-RAG</strong></td><td>LLM decides whether to retrieve, evaluates retrieved docs, critiques its answer</td><td>When output quality is critical and latency allows extra calls</td></tr>
+</table></div>
+
+<!-- Reranking -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — Reranking</div>
+
+<div class="card cr"><div class="card-title">Reranking — Why Retrieval Recall ≠ Precision</div>
+<div class="card-body">ANN retrieval (bi-encoder) is fast but imprecise — it embeds query and document independently, losing cross-attention signal. A cross-encoder reranker reads query + document together via full attention, producing much more accurate relevance scores. The two-stage pipeline gives you the speed of ANN + the precision of cross-attention.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Cross-encoder reranker</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Input: [CLS] query [SEP] document [SEP] → relevance score</li>
+  <li>Full cross-attention between query and document tokens</li>
+  <li>Too slow for the full corpus (O(n) forward passes); run on top-50–100 from ANN</li>
+  <li><strong>Models:</strong> BGE reranker, Cohere rerank-3, ms-marco-MiniLM cross-encoders</li>
+  <li>Typically improves NDCG@10 by 5–15% over bi-encoder alone</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Managed reranking APIs</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Provider</th><th>Model</th><th>Cost</th></tr>
+<tr><td>Cohere</td><td>rerank-3.5</td><td>$0.02 / 1K docs</td></tr>
+<tr><td>Jina AI</td><td>jina-reranker-v2</td><td>$0.018 / 1K docs</td></tr>
+<tr><td>Voyage AI</td><td>rerank-1</td><td>$0.05 / 1K docs</td></tr>
+<tr><td>BGE reranker</td><td>bge-reranker-v2-m3</td><td>Free (self-host)</td></tr>
+</table>
+</div>
+</div></div>
+
+<!-- Evaluation -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — RAG Evaluation (RAGAS Framework)</div>
+
+<div class="card"><div class="card-title">RAGAS Metrics — Evaluating Every Stage</div>
+<table class="tbl">
+<tr><th>Metric</th><th>What it measures</th><th>How computed</th><th>Target</th></tr>
+<tr><td><strong>Faithfulness</strong></td><td>Is the answer supported by the retrieved context? (hallucination check)</td><td>LLM judge: decompose answer into claims, verify each against context</td><td>&gt;0.90</td></tr>
+<tr><td><strong>Answer relevance</strong></td><td>Does the answer address the question?</td><td>Embed generated answer; compute similarity to original question</td><td>&gt;0.85</td></tr>
+<tr><td><strong>Context precision</strong></td><td>What fraction of retrieved chunks are actually relevant?</td><td>LLM judge per retrieved chunk; mean over top-k</td><td>&gt;0.80</td></tr>
+<tr><td><strong>Context recall</strong></td><td>Did retrieval find all the relevant information needed to answer?</td><td>Ground truth answer decomposed into claims; check each in context</td><td>&gt;0.80</td></tr>
+<tr><td><strong>Answer correctness</strong></td><td>Is the final answer factually correct? (requires ground truth)</td><td>Semantic + factual similarity to reference answer</td><td>&gt;0.75</td></tr>
+</table>
+<div class="box story" style="margin-top:10px"><div class="bl">💡 Practical Eval Setup</div><p>Build a golden dataset of 50–100 question / expected-answer / source-document triples from your actual corpus. Run RAGAS on every pipeline change. Track faithfulness first — it's the hallucination metric and the most important for production trust. Context precision and recall diagnose whether the problem is in retrieval or generation.</p></div>
+</div>
+
+<div class="card cg"><div class="card-title">Retrieval Metrics (without LLM judge)</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Formula</th><th>What it measures</th></tr>
+<tr><td><strong>Recall@k</strong></td><td>Relevant docs in top-k / total relevant docs</td><td>Did retrieval find the right documents?</td></tr>
+<tr><td><strong>Precision@k</strong></td><td>Relevant docs in top-k / k</td><td>How many retrieved docs are actually useful?</td></tr>
+<tr><td><strong>NDCG@k</strong></td><td>Normalised Discounted Cumulative Gain</td><td>Are the most relevant docs ranked highest?</td></tr>
+<tr><td><strong>MRR</strong></td><td>Mean Reciprocal Rank of first relevant doc</td><td>How quickly does retrieval surface a relevant doc?</td></tr>
+</table></div>
+
+<!-- Production patterns -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent,#5b7df8);margin:28px 0 12px;padding:0">Part 6 — Production RAG Patterns</div>
+
+<div class="card cp"><div class="card-title">Agentic RAG &amp; Multi-hop Reasoning</div>
+<div class="card-body">Simple RAG retrieves once. Real-world questions often require multiple retrieval steps — each answer informing the next query. Agentic RAG lets the LLM decide when and what to retrieve.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Pattern</th><th>Mechanism</th><th>Use case</th></tr>
+<tr><td><strong>Iterative RAG</strong></td><td>Retrieve → answer partial → retrieve again with refined query (loop until sufficient)</td><td>Multi-hop questions: "Who founded the company that acquired X?"</td></tr>
+<tr><td><strong>Tree of Thoughts + RAG</strong></td><td>Explore multiple reasoning paths, retrieve at each node</td><td>Complex research questions with ambiguous sub-paths</td></tr>
+<tr><td><strong>ReAct + retrieval tool</strong></td><td>LLM issues Thought → Action(search: "query") → Observation → repeat</td><td>Agent with web search or vector DB as a tool</td></tr>
+<tr><td><strong>Corrective RAG</strong></td><td>After generation, evaluate faithfulness; if low, re-retrieve with corrected query</td><td>High-stakes answer quality; when hallucination is costly</td></tr>
+</table></div>
+
+<div class="card"><div class="card-title">Production Checklist &amp; Common Failure Modes</div>
+<div class="g2">
+<div>
+<strong style="font-size:12px;color:var(--text)">✅ Production checklist</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Same embedding model for ingestion and query — enforced at the API layer</li>
+  <li>Chunk overlap of 10–20% so context doesn't break at chunk boundaries</li>
+  <li>Metadata stored alongside each vector (source, timestamp, category)</li>
+  <li>Reranker in the pipeline — bi-encoder retrieval alone is insufficient for precision</li>
+  <li>RAGAS evaluation on a golden dataset before every deployment</li>
+  <li>Faithfulness monitoring in production (sample 5% of responses, run LLM judge)</li>
+  <li>Query caching for identical/near-identical questions (semantic dedup)</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">❌ Common failure modes</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Low retrieval recall:</strong> chunks too small, embedding model wrong domain — fix: larger chunks + domain-specific embedder</li>
+  <li><strong>Low faithfulness:</strong> LLM ignoring context, hallucinating — fix: explicit "answer only from context" system prompt + faithfulness eval</li>
+  <li><strong>Context pollution:</strong> irrelevant chunks retrieved — fix: reranker + smaller k</li>
+  <li><strong>Lost in the middle:</strong> LLM ignores documents in the middle of a long context — fix: put most relevant chunks first and last</li>
+  <li><strong>Stale knowledge:</strong> documents not re-indexed after updates — fix: incremental indexing pipeline on document change events</li>
+</ul>
+</div>
+</div></div>
+
+<!-- Common mistakes -->
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>RAG as a silver bullet for hallucination</strong> — RAG reduces hallucination but doesn't eliminate it. The LLM can still ignore retrieved context. Faithfulness evaluation is essential</li>
+  <li><strong>Skipping reranking</strong> — bi-encoder retrieval has poor precision on hard queries. Cross-encoder reranking is cheap (runs on top-50 docs) and reliably improves quality 5–15%</li>
+  <li><strong>Fixed chunk size for all document types</strong> — code, PDFs, tables, prose all have different optimal chunking strategies</li>
+  <li><strong>Not evaluating retrieval separately from generation</strong> — if RAGAS scores are low, measure recall@5 on retrieval first. Most RAG failures are retrieval failures, not LLM failures</li>
+  <li><strong>Embedding model mismatch</strong> — using a different model to embed queries vs documents. The embedding space must be identical</li>
+  <li><strong>k too large in the prompt</strong> — injecting 20 retrieved chunks fills the context window with noise. 3–5 reranked chunks is typically optimal</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Microsoft (Copilot / Azure AI Search):</strong> hybrid BM25 + dense retrieval + cross-encoder reranking; powers GitHub Copilot Chat over codebases</li>
+  <li><strong>Notion AI:</strong> RAG over user workspace; chunks are Notion blocks with parent-page metadata for context</li>
+  <li><strong>Perplexity AI:</strong> web-search RAG — real-time retrieval from Bing index → rerank → LLM synthesis with inline citations</li>
+  <li><strong>Glean (enterprise search):</strong> RAG over company data (Slack, Drive, Confluence, Jira); user permission filtering on every retrieval</li>
+  <li><strong>Financial firms:</strong> RAG over earnings transcripts, regulatory filings, internal research notes; faithfulness critical for compliance</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What is RAG?</strong> "RAG grounds LLM outputs in retrieved knowledge. At query time: embed the question, run ANN search over indexed document embeddings, retrieve top-k chunks, inject them into the LLM context, generate a grounded answer. The key insight: the LLM's parametric memory is unreliable for facts — retrieval provides real, current, citable information."</p>
+<p style="margin-top:8px"><strong>Why hybrid search?</strong> "Dense retrieval handles semantic similarity but misses exact keywords. BM25 handles keywords but misses paraphrases. Hybrid search fuses both ranked lists via Reciprocal Rank Fusion — consistently outperforms either alone. BGE-M3 generates dense + sparse signals from a single encoder, making the combination simple."</p>
+<p style="margin-top:8px"><strong>How do you evaluate a RAG pipeline?</strong> "I use RAGAS: faithfulness (are claims supported by context?), context recall (did retrieval find the necessary info?), and answer relevance (does the answer address the question?). I build a golden dataset of 50–100 QA pairs from the actual corpus and run these metrics on every pipeline change. Faithfulness is the first metric to check — it's the hallucination measure."</p>
+<p style="margin-top:8px"><strong>RAG vs fine-tuning?</strong> "RAG for knowledge — facts, current information, sourced answers. Fine-tune for behaviour — style, format, persona, task-specific patterns. The combination is the best of both worlds: LoRA shapes how the model communicates, RAG provides what it knows."</p>
+</div>
+
+</section>
