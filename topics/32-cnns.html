@@ -1,0 +1,113 @@
+<section class="section" id="sec-cnn">
+<div class="sec-title">Convolutional Neural Networks (CNNs)</div>
+<div class="sec-desc">Parameter-efficient deep nets that exploit spatial locality and translation invariance — the backbone of all computer vision tasks and much of audio and text processing.</div>
+<div class="card"><div class="card-title">Convolution Operation</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Output}_{i,j} = \sum_m \sum_n \text{Input}_{i+m,\,j+n} \times \text{Kernel}_{m,n} + \text{bias} \\
+\text{Output size} = \lfloor(W-K+2P)/S\rfloor + 1 \\
+W=\text{input},\; K=\text{kernel},\; P=\text{padding},\; S=\text{stride}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">A 3×3 kernel slides over the input, computing dot products at each position. The same kernel weights detect the same feature everywhere — <strong>weight sharing</strong> is the key efficiency gain (3×3 kernel has only 9 params, not width×height params).</div></div>
+<!-- CNN Convolution Animation -->
+<div class="anim-wrap"><div class="anim-title">CNN convolution: kernel sliding over input → feature map</div>
+<svg viewBox="0 0 480 200" xmlns="http://www.w3.org/2000/svg">
+<!-- Input grid 5x5 -->
+<text x="60" y="14" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Input (5×5)</text>
+<g transform="translate(10, 20)">
+  <!-- Grid cells -->
+  <rect x="0" y="0" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="24" y="0" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="48" y="0" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="72" y="0" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="96" y="0" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="0" y="24" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="24" y="24" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="48" y="24" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="72" y="24" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="96" y="24" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="0" y="48" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="24" y="48" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="48" y="48" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="72" y="48" width="24" height="24" fill="#22d3a0" opacity=".25" stroke="#2e3a58"/>
+  <rect x="96" y="48" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="0" y="72" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="24" y="72" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="48" y="72" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="72" y="72" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="96" y="72" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="0" y="96" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="24" y="96" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="48" y="96" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="72" y="96" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <rect x="96" y="96" width="24" height="24" fill="#1a1f2e" stroke="#2e3a58"/>
+  <!-- Moving kernel highlight -->
+  <rect x="48" y="0" width="48" height="48" fill="none" stroke="#f5a623" stroke-width="2.5" stroke-dasharray="4,2">
+    <animate attributeName="x" values="0;24;48;72;0;24;48;72;0" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="y" values="0;0;0;0;24;24;24;24;48" dur="3s" repeatCount="indefinite"/>
+  </rect>
+</g>
+<!-- Arrow -->
+<text x="170" y="95" fill="#4e5a7a" font-size="20" font-family="DM Sans">→</text>
+<!-- Kernel 2x2 -->
+<text x="225" y="14" text-anchor="middle" fill="#f5a623" font-size="10" font-family="DM Sans">Kernel (2×2)</text>
+<g transform="translate(201, 20)">
+  <rect x="0" y="0" width="24" height="24" fill="#f5a623" opacity=".3" stroke="#f5a623" stroke-width="1.5"/>
+  <rect x="24" y="0" width="24" height="24" fill="#f5a623" opacity=".3" stroke="#f5a623" stroke-width="1.5"/>
+  <rect x="0" y="24" width="24" height="24" fill="#f5a623" opacity=".3" stroke="#f5a623" stroke-width="1.5"/>
+  <rect x="24" y="24" width="24" height="24" fill="#f5a623" opacity=".3" stroke="#f5a623" stroke-width="1.5"/>
+  <text x="12" y="16" text-anchor="middle" fill="#f5a623" font-size="9" font-family="JetBrains Mono">1</text>
+  <text x="36" y="16" text-anchor="middle" fill="#f5a623" font-size="9" font-family="JetBrains Mono">0</text>
+  <text x="12" y="40" text-anchor="middle" fill="#f5a623" font-size="9" font-family="JetBrains Mono">-1</text>
+  <text x="36" y="40" text-anchor="middle" fill="#f5a623" font-size="9" font-family="JetBrains Mono">1</text>
+  <text x="24" y="70" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">edge detector</text>
+</g>
+<!-- Arrow -->
+<text x="295" y="95" fill="#4e5a7a" font-size="20" font-family="DM Sans">→</text>
+<!-- Output feature map 4x4 -->
+<text x="390" y="14" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="DM Sans">Feature Map (4×4)</text>
+<g transform="translate(342, 20)">
+  <rect x="0" y="0" width="24" height="24" fill="#b97cf8" opacity=".4" stroke="#b97cf8"/>
+  <rect x="24" y="0" width="24" height="24" fill="#b97cf8" opacity=".2" stroke="#b97cf8"/>
+  <rect x="48" y="0" width="24" height="24" fill="#b97cf8" opacity=".6" stroke="#b97cf8"/>
+  <rect x="72" y="0" width="24" height="24" fill="#b97cf8" opacity=".1" stroke="#b97cf8"/>
+  <rect x="0" y="24" width="24" height="24" fill="#b97cf8" opacity=".3" stroke="#b97cf8"/>
+  <rect x="24" y="24" width="24" height="24" fill="#b97cf8" opacity=".8" stroke="#b97cf8"/>
+  <rect x="48" y="24" width="24" height="24" fill="#b97cf8" opacity=".2" stroke="#b97cf8"/>
+  <rect x="72" y="24" width="24" height="24" fill="#b97cf8" opacity=".5" stroke="#b97cf8"/>
+  <rect x="0" y="48" width="24" height="24" fill="#b97cf8" opacity=".5" stroke="#b97cf8"/>
+  <rect x="24" y="48" width="24" height="24" fill="#b97cf8" opacity=".3" stroke="#b97cf8"/>
+  <rect x="48" y="48" width="24" height="24" fill="#b97cf8" opacity=".7" stroke="#b97cf8"/>
+  <rect x="72" y="48" width="24" height="24" fill="#b97cf8" opacity=".15" stroke="#b97cf8"/>
+  <rect x="0" y="72" width="24" height="24" fill="#b97cf8" opacity=".1" stroke="#b97cf8"/>
+  <rect x="24" y="72" width="24" height="24" fill="#b97cf8" opacity=".4" stroke="#b97cf8"/>
+  <rect x="48" y="72" width="24" height="24" fill="#b97cf8" opacity=".3" stroke="#b97cf8"/>
+  <rect x="72" y="72" width="24" height="24" fill="#b97cf8" opacity=".6" stroke="#b97cf8"/>
+</g>
+<text x="240" y="185" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">🟡 sliding kernel detects edges everywhere in input → feature map</text>
+</svg></div>
+<div class="card"><div class="card-title">CNN Architecture Components</div>
+<table class="tbl"><tr><th>Layer Type</th><th>What It Does</th><th>Key Parameter</th></tr>
+<tr><td>Conv layer</td><td>Apply learnable filters; extract local features</td><td>filters, kernel_size, stride, padding</td></tr>
+<tr><td>Activation (ReLU)</td><td>Non-linearity after each conv</td><td>—</td></tr>
+<tr><td>BatchNorm</td><td>Normalize activations; speed &amp; stability</td><td>momentum, eps</td></tr>
+<tr><td>Max Pooling</td><td>Spatial downsampling; translational invariance</td><td>pool_size, stride</td></tr>
+<tr><td>Global Avg Pool</td><td>Spatial → vector (replaces Flatten in modern nets)</td><td>—</td></tr>
+<tr><td>Flatten</td><td>Convert feature maps to 1D vector</td><td>—</td></tr>
+<tr><td>FC / Dense</td><td>Classification head</td><td>units, dropout</td></tr></table></div>
+<div class="card"><div class="card-title">Famous Architectures</div>
+<table class="tbl"><tr><th>Architecture</th><th>Key Innovation</th><th>Year</th></tr>
+<tr><td>AlexNet</td><td>Deep CNN on GPU + ReLU + Dropout</td><td>2012</td></tr>
+<tr><td>VGG16/19</td><td>Deep stacks of 3×3 convs</td><td>2014</td></tr>
+<tr><td>GoogLeNet (Inception)</td><td>Inception modules: parallel conv at different scales</td><td>2014</td></tr>
+<tr><td>ResNet</td><td>Residual connections y=F(x)+x; enables 100+ layers</td><td>2015</td></tr>
+<tr><td>DenseNet</td><td>Connect each layer to all later layers</td><td>2016</td></tr>
+<tr><td>EfficientNet</td><td>Compound scaling (width × depth × resolution)</td><td>2019</td></tr>
+<tr><td>Vision Transformer (ViT)</td><td>Pure Transformer on image patches — no conv</td><td>2020</td></tr></table></div>
+<div class="card cg"><div class="card-title">Residual Connection (ResNet) — The Critical Insight</div>
+<div class="formula math-formula">$$\begin{aligned}
+y = F(x, \{W_i\}) + x \quad \text{(shortcut connection)} \\
+F(x) \text{ learns the residual (correction), not the full mapping}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">If the optimal function is close to the identity (a good starting point), residual learning is easier than learning the full mapping from scratch. The skip connection also provides a gradient highway: ∂L/∂x = ∂L/∂y · (∂F/∂x + 1). The "+1" means early layers always receive some gradient, even if F's gradient vanishes.</div></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"CNNs exploit two inductive biases: locality (nearby pixels are correlated — a 3×3 kernel captures this) and translation equivariance (a cat in the top-left vs bottom-right uses the same weights). ResNets solved the depth problem with skip connections — the gradient highway via the identity shortcut. For production vision models I start with EfficientNet-B3 with ImageNet pretrained weights and fine-tune — rarely need to train from scratch."</p></div>
+</section>

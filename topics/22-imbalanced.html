@@ -1,0 +1,20 @@
+<section class="section" id="sec-imbalanced">
+<div class="sec-title">Handling Imbalanced Datasets</div>
+<div class="sec-desc">In fraud detection (0.1% positive), cancer detection (5%), and credit default (3%), naive models predict "no" for everything and get 99% accuracy. The metric and data preparation must account for the imbalance.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Resampling Strategies</div>
+<ul class="bul"><li><strong>Random oversampling:</strong> duplicate minority class samples. Simple but overfits on exact duplicates.</li><li><strong>SMOTE:</strong> Synthetic Minority Oversampling TEchnique — interpolate between minority class neighbors to create new synthetic points. Better than random oversampling.</li><li><strong>ADASYN:</strong> Adaptive Synthetic — generates more samples where misclassification is likely.</li><li><strong>Random undersampling:</strong> remove majority class samples. Loses information — only use when data is huge.</li><li><strong>Tomek links:</strong> remove boundary majority samples (cleaning, not balancing).</li></ul></div>
+<div class="card cg"><div class="card-title">Algorithm-Level Adjustments</div>
+<ul class="bul"><li><strong>Class weights:</strong> weight=class_weight='balanced' in sklearn — scales the loss contribution. No data loss. My #1 first try.</li><li><strong>Threshold tuning:</strong> instead of default 0.5 cutoff, find threshold that maximizes F1 or business metric on validation set.</li><li><strong>Cost-sensitive learning:</strong> assign asymmetric misclassification costs — missed positive costs more than false alarm.</li><li><strong>Focal Loss:</strong> down-weights easy negative examples dynamically. Used in RetinaNet (object detection) and imbalanced NLP tasks.</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Correct Evaluation on Imbalanced Data</div>
+<table class="tbl"><tr><th>Metric</th><th>Good For Imbalanced?</th><th>Why</th></tr>
+<tr><td>Accuracy</td><td>❌ Never</td><td>Dominated by majority class</td></tr>
+<tr><td>AUC-ROC</td><td>⚠️ Partially</td><td>Optimistic when TN pool is huge</td></tr>
+<tr><td>PR-AUC</td><td>✅ Yes</td><td>Doesn't use TN; minority-focused</td></tr>
+<tr><td>F1 / F-beta</td><td>✅ Yes</td><td>Ignores TN; balance P and R</td></tr>
+<tr><td>Matthews Correlation Coeff.</td><td>✅ Yes</td><td>Balanced even for extreme imbalance</td></tr>
+<tr><td>KS statistic</td><td>✅ Yes</td><td>Separation between class score distributions</td></tr></table></div>
+<div class="box story"><div class="bl">📖 Fraud Analogy</div><p>If 0.1% of transactions are fraud and you predict "not fraud" for everything: 99.9% accuracy. 0% recall. 100% of fraudsters escape. Accuracy is a lie. Your PR-AUC baseline is 0.001. Your model must beat that to add any value.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My strategy for imbalanced data: (1) use PR-AUC as primary metric, (2) try class_weight='balanced' first — no data manipulation needed, (3) if still insufficient, apply SMOTE on training set only (never on validation/test), (4) tune the decision threshold on validation set to maximize the business-relevant metric (e.g., recall@precision=0.5), (5) use Focal Loss if training a neural network. Always stratify your CV splits to maintain class ratio in each fold."</p></div>
+</section>

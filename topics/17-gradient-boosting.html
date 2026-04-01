@@ -1,0 +1,36 @@
+<section class="section" id="sec-boosting">
+<div class="sec-title">Gradient Boosting</div>
+<div class="sec-desc">Sequential ensemble where each tree corrects the residual errors of all previous trees. Reduces bias (unlike Random Forest which reduces variance). The dominant algorithm for structured data competitions.</div>
+<div class="card"><div class="card-title">Core Algorithm</div>
+<div class="formula math-formula">$$\begin{aligned}
+F_0(x) = \text{base prediction (e.g., mean of } y) \\
+r_{im} = -\frac{\partial L(y_i, F_{m-1}(x_i))}{\partial F_{m-1}(x_i)} \quad \text{[pseudo-residuals]} \\
+\text{Fit tree } h_m \text{ to pseudo-residuals } \{r_{im}\} \\
+F_m(x) = F_{m-1}(x) + \eta \cdot h_m(x) \\
+F(x) = F_0 + \eta \cdot \sum_m h_m(x)
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">For squared loss: pseudo-residuals = actual − predicted (simple residuals). For log-loss: pseudo-residuals = y − σ(F(x)). Each tree is a <em>weak learner</em> (shallow, high bias) trained on the gradient direction of the loss.</div></div>
+<div class="g3">
+<div class="card cb"><div class="card-title">XGBoost</div>
+<ul class="bul"><li>Second-order Taylor expansion for faster convergence</li><li>Built-in L1/L2 regularization on leaf weights</li><li>Handles missing values natively (learns default direction)</li><li>Parallel tree construction per level</li></ul>
+<span class="tag tg">Gold standard</span></div>
+<div class="card cg"><div class="card-title">LightGBM</div>
+<ul class="bul"><li>Leaf-wise growth (vs level-wise in XGBoost) → deeper, more accurate</li><li>GOSS: only large-gradient samples for split finding</li><li>EFB: bundles mutually exclusive features</li><li>10-20x faster than XGBoost on large data</li></ul>
+<span class="tag tb">Speed king</span></div>
+<div class="card ca"><div class="card-title">CatBoost</div>
+<ul class="bul"><li>Native categorical encoding (ordered target encoding)</li><li>Ordered boosting prevents target leakage</li><li>Symmetric trees → fast inference</li><li>Minimal hyperparameter tuning needed</li></ul>
+<span class="tag ta">Best for cats</span></div>
+</div>
+<div class="card"><div class="card-title">Key Hyperparameters</div>
+<table class="tbl"><tr><th>Parameter</th><th>Effect</th><th>Typical Range</th></tr>
+<tr><td>n_estimators</td><td>Number of trees — use early stopping</td><td>100–10000</td></tr>
+<tr><td>learning_rate (η)</td><td>Smaller → needs more trees, generalizes better</td><td>0.01–0.3</td></tr>
+<tr><td>max_depth</td><td>Depth per tree (complexity)</td><td>3–8</td></tr>
+<tr><td>subsample</td><td>Row subsampling per tree</td><td>0.6–0.9</td></tr>
+<tr><td>colsample_bytree</td><td>Feature subsampling per tree</td><td>0.6–0.9</td></tr>
+<tr><td>min_child_weight</td><td>Minimum hessian sum in leaf</td><td>1–10</td></tr>
+<tr><td>gamma</td><td>Min gain to create a split</td><td>0–5</td></tr>
+<tr><td>lambda / alpha</td><td>L2 / L1 on leaf weights</td><td>1, 0</td></tr></table></div>
+<div class="box story"><div class="bl">📖 The Consulting Analogy</div><p>XGBoost hires 500 consultants sequentially. Consultant 1 gives a report. Consultant 2 reads report 1 and specifically studies its mistakes, then corrects them. Consultant 3 corrects what 1 and 2 missed together. Each expert focuses only on the residual errors of all predecessors. By the end, the team has collectively covered every blind spot. Too many rounds? The last consultants start memorizing trivia (overfitting) — early stopping saves you.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Gradient boosting reduces bias via sequential error correction — each tree fits the negative gradient of the loss. Unlike bagging (reduces variance), boosting reduces bias. The learning rate η is a shrinkage factor that prevents overfitting. I always use early stopping with a validation set (eval_metric + early_stopping_rounds in XGBoost). For most tabular problems, LightGBM is my first choice — faster, matches XGBoost performance, and handles large datasets better."</p></div>
+</section>

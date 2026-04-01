@@ -1,0 +1,94 @@
+<section class="section" id="sec-rnn">
+<div class="sec-title">RNNs &amp; LSTMs</div>
+<div class="sec-desc">Neural networks with memory — process sequences step by step, maintaining a hidden state that summarizes history. Pre-Transformer architecture for sequential data.</div>
+<div class="card"><div class="card-title">Vanilla RNN</div>
+<div class="formula math-formula">$$\begin{aligned}
+h_t = \tanh(W_{hh}h_{t-1} + W_{xh}x_t + b) \\
+y_t = W_{hy}h_t + b_y
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">The same weights (Wₕₕ, Wₓₕ) are applied at every time step — "weight sharing across time" analogous to CNN's weight sharing across space. Problem: for long sequences, multiplying Wₕₕᵀ many times → vanishing or exploding gradients.</div></div>
+<!-- RNN/LSTM Animation -->
+<div class="anim-wrap"><div class="anim-title">RNN Unrolled — and LSTM gates controlling information flow</div>
+<svg viewBox="0 0 500 190" xmlns="http://www.w3.org/2000/svg">
+<!-- RNN Unrolled (top half) -->
+<text x="250" y="14" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">RNN unrolled through time</text>
+<!-- cells -->
+<rect x="30" y="25" width="60" height="40" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="60" y="49" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">RNN</text>
+<rect x="160" y="25" width="60" height="40" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="190" y="49" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">RNN</text>
+<rect x="290" y="25" width="60" height="40" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="320" y="49" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">RNN</text>
+<rect x="420" y="25" width="60" height="40" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="450" y="49" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">RNN</text>
+<!-- hidden state arrows -->
+<line x1="90" y1="45" x2="158" y2="45" stroke="#22d3a0" stroke-width="2"/>
+<text x="124" y="40" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">h₁</text>
+<line x1="220" y1="45" x2="288" y2="45" stroke="#22d3a0" stroke-width="2"/>
+<text x="254" y="40" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">h₂</text>
+<line x1="350" y1="45" x2="418" y2="45" stroke="#22d3a0" stroke-width="2"/>
+<text x="384" y="40" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">h₃</text>
+<!-- inputs -->
+<text x="60" y="83" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">x₁</text>
+<line x1="60" y1="80" x2="60" y2="67" stroke="#f5a623" stroke-width="1.5"/>
+<text x="190" y="83" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">x₂</text>
+<line x1="190" y1="80" x2="190" y2="67" stroke="#f5a623" stroke-width="1.5"/>
+<text x="320" y="83" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">x₃</text>
+<line x1="320" y1="80" x2="320" y2="67" stroke="#f5a623" stroke-width="1.5"/>
+<text x="450" y="83" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">x₄</text>
+<line x1="450" y1="80" x2="450" y2="67" stroke="#f5a623" stroke-width="1.5"/>
+<!-- Vanishing gradient warning -->
+<text x="250" y="95" text-anchor="middle" fill="#f06767" font-size="9" font-family="DM Sans">↑ Gradient vanishes over many steps — early tokens have tiny influence on loss</text>
+
+<!-- LSTM Gates (bottom half) -->
+<text x="250" y="108" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">LSTM cell — gates control what's remembered, forgotten, output</text>
+<rect x="120" y="118" width="260" height="60" rx="8" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<!-- cell state line (the highway) -->
+<line x1="30" y1="138" x2="120" y2="138" stroke="#f5a623" stroke-width="2.5"/>
+<line x1="380" y1="138" x2="470" y2="138" stroke="#f5a623" stroke-width="2.5"/>
+<text x="50" y="134" fill="#f5a623" font-size="9" font-family="DM Sans">Cₜ₋₁</text>
+<text x="388" y="134" fill="#f5a623" font-size="9" font-family="DM Sans">Cₜ</text>
+<!-- forget gate -->
+<circle cx="155" cy="138" r="12" fill="#f06767" opacity=".8"/>
+<text x="155" y="143" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">f</text>
+<text x="155" y="172" text-anchor="middle" fill="#f06767" font-size="9" font-family="DM Sans">forget</text>
+<!-- input gate + tanh -->
+<circle cx="220" cy="138" r="12" fill="#5ba4fb" opacity=".8"/>
+<text x="220" y="143" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">i</text>
+<text x="220" y="172" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="DM Sans">input</text>
+<!-- tanh candidate -->
+<circle cx="280" cy="138" r="12" fill="#22d3a0" opacity=".8"/>
+<text x="280" y="143" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">g</text>
+<text x="280" y="172" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">candidate</text>
+<!-- output gate -->
+<circle cx="345" cy="138" r="12" fill="#b97cf8" opacity=".8"/>
+<text x="345" y="143" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">o</text>
+<text x="345" y="172" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="DM Sans">output</text>
+</svg></div>
+<div class="card"><div class="card-title">LSTM — Long Short-Term Memory</div>
+<div class="formula math-formula">$$\begin{aligned}
+f_t = \sigma(W_f[h_{t-1}, x_t] + b_f) \quad \text{(forget gate)} \\
+i_t = \sigma(W_i[h_{t-1}, x_t] + b_i) \quad \text{(input gate)} \\
+\tilde{g}_t = \tanh(W_g[h_{t-1}, x_t] + b_g) \quad \text{(candidate memory)} \\
+C_t = f_t \odot C_{t-1} + i_t \odot \tilde{g}_t \quad \text{(cell state update)} \\
+o_t = \sigma(W_o[h_{t-1}, x_t] + b_o) \quad \text{(output gate)} \\
+h_t = o_t \odot \tanh(C_t) \quad \text{(hidden state)}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">The <strong>cell state</strong> Cₜ is a conveyor belt — it carries information across many time steps with only multiplicative (not additive) interactions, preventing gradient vanishing. Gates (sigmoid squashed → [0,1]) control: forget (what to erase), input (what to add), output (what to expose).</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">GRU — Gated Recurrent Unit</div>
+<div class="formula math-formula">$$\begin{aligned}
+z_t = \sigma(W_z[h_{t-1}, x_t]) \quad \text{(update gate)} \\
+r_t = \sigma(W_r[h_{t-1}, x_t]) \quad \text{(reset gate)} \\
+\tilde{h}_t = \tanh(W[r_t \odot h_{t-1},\, x_t]) \\
+h_t = (1-z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:6px">2 gates instead of 3. No separate cell state. Fewer parameters than LSTM — often matches performance, trains faster.</div></div>
+<div class="card cg"><div class="card-title">Bidirectional RNN</div>
+<div class="card-body">Run one RNN forward (x₁→xₙ) and one backward (xₙ→x₁). Concatenate hidden states. Each position sees both past AND future context.</div>
+<div class="formula math-formula">$$\bar{h}_t = \text{concat}(\text{RNN}_{\text{forward}}(x_t),\; \text{RNN}_{\text{backward}}(x_t))$$</div>
+<div class="card-body" style="margin-top:6px">Used in BERT's architecture conceptually. Requires full sequence — can't stream. More powerful than unidirectional for NLU tasks.</div></div>
+</div>
+<div class="box story"><div class="bl">📖 Goldfish vs Elephant Analogy</div><p>Vanilla RNN is a goldfish — forgets what happened 10 steps ago because the information has to pass through 10 matrix multiplications. LSTM is an elephant with a notebook (cell state) — it decides what to write, what to erase, and what to read. The cell state highway carries memories intact across hundreds of steps.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"RNNs/LSTMs were the dominant sequence architecture before Transformers. The LSTM's cell state solves the vanishing gradient problem for sequences (though not for extremely long contexts). For sequence tasks today, I default to Transformer-based architectures (BERT, GPT) which handle long-range dependencies better via attention. LSTMs are still useful for: streaming/online scenarios where the full sequence isn't available, time series forecasting, and resource-constrained deployment."</p></div>
+</section>

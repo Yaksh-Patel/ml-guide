@@ -1,0 +1,49 @@
+<section class="section" id="sec-biasvar">
+<div class="sec-title">Bias-Variance Tradeoff</div>
+<div class="sec-desc">The fundamental decomposition of model error — and the framework for diagnosing why your model fails.</div>
+<div class="formula math-formula">$$Expected Error = Bias^2 + Variance + Irreducible Noise$$</div>
+<div class="g2">
+<div class="card cr"><div class="card-title">High Bias → Underfitting</div>
+<div class="card-body">Model too simple. Strong assumptions. Misses real patterns.</div>
+<ul class="bul" style="margin-top:8px"><li>High training error AND high validation error</li><li>Train ≈ Validation (both bad)</li><li>Example: linear model on non-linear data</li><li><strong>Fix:</strong> more features, more complex model, less regularization, more training</li></ul></div>
+<div class="card ca"><div class="card-title">High Variance → Overfitting</div>
+<div class="card-body">Model too complex. Memorizes noise in training data.</div>
+<ul class="bul" style="margin-top:8px"><li>Low training error, HIGH validation error</li><li>Large gap between train and validation</li><li>Example: deep tree with no max_depth</li><li><strong>Fix:</strong> regularization, more data, simpler model, dropout, early stopping</li></ul></div>
+</div>
+<!-- Bias-variance animation -->
+<div class="anim-wrap"><div class="anim-title">Bias-Variance tradeoff as model complexity increases</div>
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ax" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<line x1="50" y1="170" x2="470" y2="170" stroke="#4e5a7a" stroke-width="1.5" marker-end="url(#ax)"/>
+<line x1="50" y1="170" x2="50" y2="20" stroke="#4e5a7a" stroke-width="1.5" marker-end="url(#ax)"/>
+<text x="460" y="185" fill="#4e5a7a" font-size="11" font-family="DM Sans">Complexity →</text>
+<text x="12" y="95" fill="#4e5a7a" font-size="11" font-family="DM Sans" transform="rotate(-90 25 95)">Error →</text>
+<!-- Bias curve (decreasing) -->
+<path d="M60,30 C150,60 280,120 460,155" fill="none" stroke="#f06767" stroke-width="2.5"/>
+<text x="300" y="138" fill="#f06767" font-size="11" font-family="DM Sans">Bias²</text>
+<!-- Variance curve (increasing) -->
+<path d="M60,155 C180,140 300,110 460,35" fill="none" stroke="#5ba4fb" stroke-width="2.5"/>
+<text x="350" y="65" fill="#5ba4fb" font-size="11" font-family="DM Sans">Variance</text>
+<!-- Total error U-shape -->
+<path d="M60,120 C130,80 200,72 260,75 C320,78 380,95 460,140" fill="none" stroke="#22d3a0" stroke-width="2.5" stroke-dasharray="8,4"/>
+<text x="200" y="68" fill="#22d3a0" font-size="11" font-family="DM Sans">Total Error (U-shape)</text>
+<!-- sweet spot -->
+<line x1="255" y1="45" x2="255" y2="170" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="230" y="40" fill="#f5a623" font-size="11" font-family="DM Sans">Sweet Spot</text>
+<!-- labels -->
+<text x="70" y="185" fill="#f06767" font-size="10" font-family="DM Sans">Underfit</text>
+<text x="400" y="185" fill="#5ba4fb" font-size="10" font-family="DM Sans">Overfit</text>
+</svg></div>
+<div class="g2">
+<div class="card"><div class="card-title">Diagnosing with Learning Curves</div>
+<ul class="bul"><li><strong>High bias:</strong> both train &amp; val error high, converge together quickly</li><li><strong>High variance:</strong> train error low, val error much higher, large gap</li><li><strong>Just right:</strong> both errors low, small gap</li></ul></div>
+<div class="card"><div class="card-title">Practical Fixes</div>
+<table class="tbl"><tr><th>Problem</th><th>Fix</th></tr>
+<tr><td>High bias</td><td>More features, deeper model, less λ</td></tr>
+<tr><td>High variance</td><td>More data, regularization, dropout, pruning</td></tr>
+<tr><td>Both high</td><td>Different model class entirely</td></tr>
+<tr><td>Irreducible noise</td><td>Better data collection</td></tr></table></div>
+</div>
+<div class="box story"><div class="bl">📖 Student Analogy</div><p><strong>High bias:</strong> Student who guesses "the answer is B" for everything — consistently wrong in the same way. <strong>High variance:</strong> Student who memorizes every practice exam word-for-word. Aces practice, fails when phrasing differs. <strong>Goal:</strong> Understand the concept — good on both.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Bias-variance tradeoff tells me how to diagnose model failure. I plot learning curves: if train and val error both plateau high → high bias, add complexity. If val error stays much higher than train → high variance, add regularization or more data. The sweet spot is found via cross-validation, not gut feel."</p></div>
+</section>

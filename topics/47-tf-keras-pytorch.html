@@ -1,0 +1,185 @@
+<section class="section" id="sec-frameworks">
+<div class="sec-title">TensorFlow, Keras &amp; PyTorch</div>
+<div class="sec-desc">The three dominant deep learning frameworks — understanding their design philosophy, differences, and when to use each is increasingly important as the ecosystem matures.</div>
+
+<div class="card"><div class="card-title">Framework Comparison</div>
+<table class="tbl"><tr><th>Dimension</th><th>PyTorch</th><th>TensorFlow 2.x</th><th>Keras (standalone)</th></tr>
+<tr><td>Philosophy</td><td>Research-first, Pythonic</td><td>Production-first, graph-based</td><td>High-level API, beginner-friendly</td></tr>
+<tr><td>Computation graph</td><td>Dynamic (define-by-run)</td><td>Dynamic (eager) + static (tf.function)</td><td>Wraps TF backend</td></tr>
+<tr><td>Debugging</td><td>⭐⭐⭐ Native Python debugger</td><td>⭐⭐ Harder in graph mode</td><td>⭐⭐⭐ Easy</td></tr>
+<tr><td>Deployment</td><td>TorchScript, ONNX</td><td>SavedModel, TF Lite, TF Serving</td><td>Via TF backend</td></tr>
+<tr><td>Mobile/Edge</td><td>PyTorch Mobile, ExecuTorch</td><td>TF Lite, TF.js (best ecosystem)</td><td>Via TF Lite</td></tr>
+<tr><td>Research adoption</td><td>Dominant (~85% papers)</td><td>Declining</td><td>Used for prototyping</td></tr>
+<tr><td>Industry adoption</td><td>Growing (Meta, OpenAI)</td><td>Google products, legacy systems</td><td>Prototyping, education</td></tr>
+<tr><td>Community/ecosystem</td><td>HuggingFace, torchvision</td><td>TF Hub, TFX</td><td>keras.io models</td></tr></table></div>
+
+<div class="card"><div class="card-title">PyTorch — Core Patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql">import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
+
+# ─── 1. DEFINE MODEL (OOP style) ──────────────────────────────
+class BinaryClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim=64):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, 1)  # raw logits
+        )
+    def forward(self, x):
+        return self.layers(x).squeeze(-1)
+
+# ─── 2. SETUP ─────────────────────────────────────────────────
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = BinaryClassifier(input_dim=20).to(device)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+criterion = nn.BCEWithLogitsLoss()  # numerically stable (logits, not probs)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+
+# ─── 3. TRAINING LOOP ─────────────────────────────────────────
+for epoch in range(50):
+    model.train()
+    for X_batch, y_batch in train_loader:
+        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+        optimizer.zero_grad()
+        logits = model(X_batch)
+        loss = criterion(logits, y_batch.float())
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+    scheduler.step()
+
+    # ─── 4. VALIDATION ────────────────────────────────────────
+    model.eval()
+    with torch.no_grad():
+        val_logits = model(X_val.to(device))
+        val_probs = torch.sigmoid(val_logits).cpu().numpy()
+
+# ─── 5. SAVE / LOAD ───────────────────────────────────────────
+torch.save(model.state_dict(), 'model.pth')
+model.load_state_dict(torch.load('model.pth', map_location='cpu'))
+
+# ─── 6. CUSTOM DATASET ────────────────────────────────────────
+class CreditDataset(torch.utils.data.Dataset):
+    def __init__(self, X, y):
+        self.X = torch.FloatTensor(X)
+        self.y = torch.FloatTensor(y)
+    def __len__(self): return len(self.X)
+    def __getitem__(self, idx): return self.X[idx], self.y[idx]</code></pre></div></div>
+
+<div class="card"><div class="card-title">TensorFlow 2.x — Core Patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql">import tensorflow as tf
+from tensorflow import keras
+
+# ─── 1. SEQUENTIAL API (simple) ───────────────────────────────
+model = keras.Sequential([
+    keras.layers.Input(shape=(20,)),
+    keras.layers.Dense(64, activation='relu'),
+    keras.layers.BatchNormalization(),
+    keras.layers.Dropout(0.3),
+    keras.layers.Dense(32, activation='relu'),
+    keras.layers.Dense(1, activation='sigmoid')
+])
+
+# ─── 2. FUNCTIONAL API (for complex graphs) ───────────────────
+inputs = keras.Input(shape=(20,))
+x = keras.layers.Dense(64, activation='relu')(inputs)
+x = keras.layers.BatchNormalization()(x)
+x = keras.layers.Dropout(0.3)(x)
+outputs = keras.layers.Dense(1, activation='sigmoid')(x)
+model = keras.Model(inputs, outputs)
+
+# ─── 3. COMPILE + TRAIN ───────────────────────────────────────
+model.compile(
+    optimizer=keras.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4),
+    loss='binary_crossentropy',
+    metrics=['AUC', 'Precision', 'Recall']
+)
+
+callbacks = [
+    keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
+    keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=3),
+    keras.callbacks.ModelCheckpoint('best_model.keras', save_best_only=True)
+]
+
+history = model.fit(
+    X_train, y_train,
+    validation_split=0.2,
+    epochs=100,
+    batch_size=64,
+    callbacks=callbacks
+)
+
+# ─── 4. SUBCLASSED MODEL (custom training loop) ───────────────
+class CustomModel(keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.dense1 = keras.layers.Dense(64, activation='relu')
+        self.out = keras.layers.Dense(1, activation='sigmoid')
+    def call(self, x, training=False):
+        return self.out(self.dense1(x))
+    def train_step(self, data):
+        X, y = data
+        with tf.GradientTape() as tape:
+            y_pred = self(X, training=True)
+            loss = self.compute_loss(y=y, y_pred=y_pred)
+        grads = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
+        return {m.name: m.result() for m in self.metrics}
+
+# ─── 5. SAVE / EXPORT ─────────────────────────────────────────
+model.save('model.keras')                   # Keras format
+model.export('saved_model/')                # TF SavedModel for serving
+# TFLite for mobile:
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()</code></pre></div></div>
+
+<div class="card"><div class="card-title">Keras (Standalone, v3.x) — Multi-Backend</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import keras   # Keras 3 — works with PyTorch, TF, or JAX backend
+               # Set backend: KERAS_BACKEND=torch python train.py
+
+# Same API, different backends — write once, run anywhere
+model = keras.Sequential([
+    keras.layers.Dense(64, activation='gelu'),
+    keras.layers.Dense(1)
+])
+
+# Mixed precision (faster on modern GPUs)
+keras.mixed_precision.set_global_policy('mixed_float16')
+
+# Built-in training utilities
+model.compile(optimizer='adamw', loss='mse')
+model.fit(X, y, epochs=10, validation_split=0.2)
+
+# Hub models — fine-tune pre-trained
+import keras_hub
+classifier = keras_hub.models.BertClassifier.from_preset(
+    "bert_base_en_uncased",
+    num_classes=2
+)
+classifier.fit(train_ds, epochs=3)</code></pre></div></div>
+
+<div class="card"><div class="card-title">When To Use Which Framework</div>
+<table class="tbl"><tr><th>Scenario</th><th>Recommended</th><th>Why</th></tr>
+<tr><td>Research / novel architecture</td><td>PyTorch</td><td>Dynamic graphs = easy to debug + modify mid-computation</td></tr>
+<tr><td>Production serving at scale</td><td>TF/TF Serving or TorchServe</td><td>TF Serving is mature; TorchScript for PyTorch</td></tr>
+<tr><td>Mobile / Edge deployment</td><td>TensorFlow Lite</td><td>Best ecosystem: Android, iOS, Raspberry Pi</td></tr>
+<tr><td>HuggingFace / NLP models</td><td>PyTorch</td><td>Transformers library is PyTorch-first</td></tr>
+<tr><td>Quick prototyping / learning</td><td>Keras</td><td>Fewest lines of code; best error messages</td></tr>
+<tr><td>TPU training (Google Cloud)</td><td>TensorFlow / JAX</td><td>Best TPU support</td></tr>
+<tr><td>Existing codebase (TF 1.x legacy)</td><td>TF 2.x + compatibility mode</td><td>Migration path</td></tr></table></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Key Differences Deep Dive</div>
+<ul class="bul"><li><strong>Computational graph:</strong> PyTorch builds graph dynamically as you execute (eager by default). TF 2 is also eager but <code>@tf.function</code> compiles to static graph for speed — can be hard to debug.</li><li><strong>Debugging:</strong> PyTorch = put a <code>print()</code> or breakpoint anywhere. TF graph mode = must use <code>tf.print()</code> inside the graph.</li><li><strong>GPU memory:</strong> TF claims all GPU memory upfront; set <code>tf.config.experimental.set_memory_growth(gpu, True)</code> to avoid this.</li><li><strong>DDP training:</strong> PyTorch DistributedDataParallel is cleaner API than TF's MirroredStrategy for multi-GPU.</li></ul></div>
+<div class="card cg"><div class="card-title">Common Gotchas</div>
+<ul class="bul"><li><strong>PyTorch:</strong> forget <code>zero_grad()</code> → accumulated gradients. Forget <code>model.eval()</code> → dropout active during inference.</li><li><strong>TF/Keras:</strong> <code>training=True/False</code> controls BN and Dropout — pass it in <code>model(x, training=True)</code>. Default <code>model.predict()</code> sets <code>training=False</code>.</li><li><strong>Data shapes:</strong> PyTorch expects [B, C, H, W] (NCHW); TF expects [B, H, W, C] (NHWC) — a common transposition bug.</li><li><strong>Loss functions:</strong> PyTorch BCEWithLogitsLoss (logits) ≠ BCELoss (probs). Use the logits version — numerically stable.</li></ul></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"PyTorch is my default for anything research-adjacent or using HuggingFace models — the ecosystem is now dominant. The key advantage is the dynamic computation graph: you can conditionally execute parts of the graph, insert Python debugging statements, and inspect tensors at any point. TensorFlow's advantage is deployment: TF Serving, TF Lite, and TF.js form the best end-to-end production ecosystem. Keras 3 is interesting because it abstracts over both — same code runs on PyTorch or TF backend."</p></div>
+</section>

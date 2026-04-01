@@ -1,0 +1,34 @@
+<section class="section" id="sec-mlops">
+<div class="sec-title">Deployment &amp; Monitoring (MLOps)</div>
+<div class="sec-desc">The gap between a working notebook and a production ML system is enormous. MLOps is the engineering discipline that bridges it — and the reason most ML projects never reach production.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Serving Patterns</div>
+<table class="tbl"><tr><th>Pattern</th><th>Latency</th><th>Best For</th></tr>
+<tr><td>REST API (real-time)</td><td>&lt;100ms</td><td>User-facing decisions (credit approval)</td></tr>
+<tr><td>Batch inference</td><td>Hours</td><td>Nightly scoring, email campaigns</td></tr>
+<tr><td>Streaming (Kafka)</td><td>Seconds</td><td>Fraud detection on transaction stream</td></tr>
+<tr><td>Edge deployment</td><td>&lt;10ms</td><td>Mobile, IoT, latency-critical</td></tr>
+<tr><td>Serverless (Lambda)</td><td>Cold: &gt;1s, warm: ~50ms</td><td>Sporadic traffic, low cost</td></tr></table></div>
+<div class="card cg"><div class="card-title">Model Drift Detection</div>
+<table class="tbl"><tr><th>Type</th><th>What Changes</th><th>Detection Method</th></tr>
+<tr><td>Data drift</td><td>P(X) changes — input distribution shifts</td><td>PSI, KS test, MMD per feature</td></tr>
+<tr><td>Concept drift</td><td>P(y|X) changes — relationship changes</td><td>Monitor performance metrics</td></tr>
+<tr><td>Label drift</td><td>P(y) changes — outcome prevalence changes</td><td>Monitor positive rate over time</td></tr>
+<tr><td>Prediction drift</td><td>P(ŷ) changes — model outputs shift</td><td>PSI on score distribution</td></tr></table></div>
+</div>
+<div class="card"><div class="card-title">MLOps Stack</div>
+<table class="tbl"><tr><th>Component</th><th>Open Source</th><th>Managed Cloud</th></tr>
+<tr><td>Experiment tracking</td><td>MLflow, Weights &amp; Biases</td><td>SageMaker Experiments, Vertex AI</td></tr>
+<tr><td>Pipeline orchestration</td><td>Airflow, Prefect, ZenML</td><td>SageMaker Pipelines, Vertex Pipelines</td></tr>
+<tr><td>Model registry</td><td>MLflow Model Registry</td><td>SageMaker Model Registry</td></tr>
+<tr><td>Feature store</td><td>Feast, Hopsworks</td><td>SageMaker Feature Store, Vertex FS</td></tr>
+<tr><td>Model serving</td><td>TorchServe, BentoML, vLLM</td><td>SageMaker endpoints, Vertex Predict</td></tr>
+<tr><td>Monitoring</td><td>Evidently AI, Seldon Alibi</td><td>SageMaker Model Monitor</td></tr>
+<tr><td>Data versioning</td><td>DVC, Delta Lake</td><td>S3 + versioning, GCS</td></tr></table></div>
+<div class="card ca"><div class="card-title">Feature Store — Why It Matters</div>
+<div class="card-body">A feature store solves two problems: consistency between training and serving, and feature reuse across teams.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Training-serving skew:</strong> features computed differently in batch (training) vs real-time (serving) → model sees different distributions. Feature store enforces the same logic everywhere.</li><li><strong>Point-in-time correct joins:</strong> when training, join features that were available AT THE PREDICTION TIME — not the current value. Prevents future leakage.</li><li><strong>Reuse:</strong> "customer_30day_payment_rate" computed once, used by fraud, collections, and marketing models</li></ul></div>
+<div class="card"><div class="card-title">A/B Testing in Production</div>
+<ul class="bul"><li><strong>Shadow mode:</strong> new model runs alongside old, predictions logged but not acted on. Zero risk, but no business metric feedback.</li><li><strong>Canary release:</strong> route 5–10% of traffic to new model. Monitor, scale up if healthy.</li><li><strong>Champion-challenger:</strong> production model = champion, new model = challenger. Compare performance on live traffic.</li><li><strong>Multi-armed bandit:</strong> dynamically allocate more traffic to better-performing variant. Faster than fixed A/B but harder to interpret.</li></ul></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The most common MLOps failures: (1) training-serving skew — feature computation differs between training pipeline and inference API; (2) no monitoring — model silently degrades for months; (3) no rollback mechanism — bad deployment can't be reverted quickly. My production checklist: containerize (Docker), track experiments (MLflow), version data (DVC), monitor with PSI on feature distributions + business KPIs, and always keep the previous model artifact ready for rollback."</p></div>
+</section>

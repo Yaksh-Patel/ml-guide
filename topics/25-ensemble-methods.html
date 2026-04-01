@@ -1,0 +1,29 @@
+<section class="section" id="sec-ensemble">
+<div class="sec-title">Ensemble Methods</div>
+<div class="sec-desc">Combine multiple models to outperform any individual — the technique behind every top Kaggle solution and many production systems.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Bagging (Bootstrap Aggregating)</div>
+<div class="card-body">Train same algorithm on different bootstrap samples. Average predictions. <strong>Reduces variance.</strong></div>
+<ul class="bul" style="margin-top:8px"><li>Models trained independently and in parallel</li><li>Works best when base model has high variance (overfitting)</li><li>Examples: Random Forest, Extra Trees</li><li>OOB evaluation: each training sample missed by ~37% of trees → free validation</li></ul></div>
+<div class="card cg"><div class="card-title">Boosting</div>
+<div class="card-body">Train sequentially — each model focuses on previous model's errors. <strong>Reduces bias.</strong></div>
+<ul class="bul" style="margin-top:8px"><li>Models trained sequentially, each correcting its predecessor</li><li>Works best when base model has high bias (underfitting)</li><li>Examples: XGBoost, LightGBM, AdaBoost, CatBoost</li><li>Risk: sensitive to noisy labels (each boosted model doubles down on hard examples)</li></ul></div>
+</div>
+<div class="card ca"><div class="card-title">Stacking (Stacked Generalization)</div>
+<div class="card-body">Train multiple diverse base models. Use their predictions as features for a meta-model (blender) trained on held-out predictions.</div>
+<div class="formula math-formula">$$\begin{aligned}
+&\text{Stage 1: train base models } \{M_1, M_2, \ldots, M_k\} \text{ on training data} \\
+&\text{Stage 2 (out-of-fold): get predictions from each } M_i \text{ on validation folds} \\
+&\text{Stage 3: train meta-model on } [M_1(x_i), M_2(x_i), \ldots, M_k(x_i)] \rightarrow y \\
+&\text{Inference: stack base model predictions} \rightarrow \text{feed to meta-model}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Meta-model learns which base model to trust on which inputs</li><li>Diversity is key: combine logistic regression + XGBoost + neural network</li><li>Risk of leakage: always use out-of-fold predictions, not in-sample predictions</li></ul></div>
+<div class="card"><div class="card-title">Voting &amp; Blending</div>
+<div class="g2" style="margin-top:8px">
+<div><strong style="font-size:13px;color:var(--text)">Voting Classifier</strong>
+<ul class="bul" style="margin-top:6px"><li><strong>Hard voting:</strong> majority vote on class labels</li><li><strong>Soft voting:</strong> average predicted probabilities — almost always better</li><li>Weights can be assigned to better-performing models</li></ul></div>
+<div><strong style="font-size:13px;color:var(--text)">Blending vs Stacking</strong>
+<ul class="bul" style="margin-top:6px"><li>Blending: simpler — hold out a fixed 20% for meta-model training</li><li>Stacking: use k-fold CV out-of-fold predictions — more data for meta-model, less leakage risk</li><li>Blending faster to implement; stacking more robust</li></ul></div>
+</div></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For Kaggle: stack XGBoost + LightGBM + neural network + Random Forest, then use a linear meta-model (elastic net). Diversity is more important than individual model quality. For production: stacking is expensive to maintain — I usually soft-vote 2–3 models instead. The biggest stacking mistake is training the meta-model on in-sample predictions — this guarantees leakage. Always use out-of-fold CV predictions."</p></div>
+</section>

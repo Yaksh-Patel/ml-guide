@@ -1,0 +1,30 @@
+<section class="section" id="sec-dimred">
+<div class="sec-title">Dimensionality Reduction</div>
+<div class="sec-desc">Compress high-dimensional data into fewer dimensions — removing noise, revealing structure, enabling visualization, and speeding up downstream models.</div>
+<div class="card"><div class="card-title">PCA — Principal Component Analysis</div>
+<div class="card-body">Find orthogonal directions of maximum variance in the data via eigendecomposition of the covariance matrix.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\Sigma &= \tfrac{1}{n}X^TX \quad \text{(covariance matrix, after mean-centering)} \\
+\Sigma \mathbf{v} &= \lambda \mathbf{v} \quad \text{(eigendecomposition)} \\
+\mathbf{PC}_1 &= \text{eigenvector with largest eigenvalue} \\
+\mathbf{PC}_2 &= \text{eigenvector with 2nd largest (orthogonal to } \mathbf{PC}_1) \\
+\text{Explained variance ratio} &= \lambda_i \;/\; \textstyle\sum_j \lambda_j
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>How many components? Choose k such that cumulative explained variance ≥ 95%</li><li>Assumes linear relationships between features</li><li>Interpretability suffers: PCs are linear combinations of all features</li><li>Standardize features first — PCA is scale-sensitive</li></ul></div>
+<div class="g2">
+<div class="card ca"><div class="card-title">t-SNE</div>
+<div class="card-body">t-Distributed Stochastic Neighbor Embedding. Non-linear, preserves local structure, excellent for 2D/3D visualization.</div>
+<ul class="bul" style="margin-top:8px"><li>Converts distances to probabilities; minimizes KL divergence between high-D and low-D probability distributions</li><li>Perplexity parameter (5–50): controls neighborhood size</li><li><strong>Not for features:</strong> t-SNE is only for visualization — distances in 2D plot don't have meaningful scale</li><li>Non-deterministic; computationally expensive O(n²)</li></ul></div>
+<div class="card cp"><div class="card-title">UMAP</div>
+<div class="card-body">Uniform Manifold Approximation and Projection. Faster than t-SNE, preserves global structure better.</div>
+<ul class="bul" style="margin-top:8px"><li>Based on Riemannian geometry and fuzzy topology — mathematically rigorous</li><li>Preserves both local AND global structure (t-SNE loses global)</li><li>Much faster: O(n log n) vs O(n²)</li><li>Can be used for feature engineering (unlike t-SNE)</li><li>Parameters: n_neighbors (local), min_dist (spread)</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Which to Use When</div>
+<table class="tbl"><tr><th>Method</th><th>Best For</th><th>Limitation</th></tr>
+<tr><td>PCA</td><td>Linear compression, preprocessing before ML, decorrelating features</td><td>Only captures linear structure</td></tr>
+<tr><td>Truncated SVD</td><td>Sparse data (TF-IDF), text, recommenders</td><td>Linear; like PCA without mean-centering</td></tr>
+<tr><td>t-SNE</td><td>2D/3D visualization only</td><td>Slow; no out-of-sample extension; non-deterministic</td></tr>
+<tr><td>UMAP</td><td>Visualization + feature engineering; large datasets</td><td>Less interpretable than PCA</td></tr>
+<tr><td>Autoencoder</td><td>Non-linear compression; anomaly detection</td><td>Needs data, compute, tuning</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I use PCA as a preprocessing step when features are highly correlated (reduces multicollinearity for linear models) or when I need to reduce compute. For visualization, UMAP is now my default over t-SNE — it's faster, preserves global structure, and can handle larger datasets. A critical gotcha: always fit PCA on training data only, then transform both train and test — otherwise you leak test information into the representation."</p></div>
+</section>

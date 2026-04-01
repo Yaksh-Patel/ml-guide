@@ -1,0 +1,35 @@
+<section class="section" id="sec-linlog">
+<div class="sec-title">Linear &amp; Logistic Regression</div>
+<div class="sec-desc">The workhorse baseline — fast, interpretable, and the right starting point for virtually every ML project. If you can't beat logistic regression, you shouldn't ship the complex model.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Linear Regression</div><div class="card-body">Predict continuous output. Minimize sum of squared residuals (OLS).</div>
+<div class="formula math-formula">$$\begin{aligned}
+\hat{y} &= \beta_0 + \beta_1 x_1 + \cdots + \beta_n x_n = X\boldsymbol{\beta} \\
+\hat{\boldsymbol{\beta}} &= (X^TX)^{-1}X^Ty \quad \text{(analytical solution)} \\
+\mathcal{L} &= \textstyle\sum(y_i - \hat{y}_i)^2 \quad \text{(MSE)}
+\end{aligned}$$</div></div>
+<div class="card cg"><div class="card-title">Logistic Regression</div><div class="card-body">Predict binary probability. Sigmoid squashes linear output to [0,1].</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbb{P}(y=1 \mid x) &= \sigma(w^Tx+b) = \dfrac{1}{1+e^{-z}} \\
+\mathcal{L} &= -\bigl[y\log\hat{y} + (1-y)\log(1-\hat{y})\bigr] \quad \text{(BCE)} \\
+&\quad\text{No closed form} \rightarrow \text{gradient descent}
+\end{aligned}$$</div></div>
+</div>
+<div class="card cr"><div class="card-title">Assumptions — must know cold</div>
+<div class="g2" style="margin-top:8px">
+<ul class="bul"><li><strong>Linearity:</strong> linear relationship between features and output (or log-odds for logistic)</li><li><strong>Independence:</strong> observations independent — time series violates this</li><li><strong>No multicollinearity:</strong> correlated features make coefficients unstable — check with VIF &gt; 10</li></ul>
+<ul class="bul"><li><strong>Homoscedasticity (linear):</strong> constant variance of residuals across predictions</li><li><strong>Normality of residuals (linear):</strong> needed for valid coefficient CIs</li><li><strong>No influential outliers:</strong> one bad point can drag the whole line</li></ul>
+</div></div>
+<div class="g2">
+<div class="card"><div class="card-title">Regularized Variants</div>
+<table class="tbl"><tr><th>Name</th><th>Penalty</th><th>Effect</th></tr>
+<tr><td>Ridge (L2)</td><td>λΣwᵢ²</td><td>Shrinks all coefficients</td></tr>
+<tr><td>Lasso (L1)</td><td>λΣ|wᵢ|</td><td>Zeros out irrelevant features</td></tr>
+<tr><td>Elastic Net</td><td>λ₁Σ|wᵢ|+λ₂Σwᵢ²</td><td>Both — sparse + stable</td></tr>
+<tr><td>Logistic + L2</td><td>C=1/λ in sklearn</td><td>Standard regularized classifier</td></tr></table></div>
+<div class="card"><div class="card-title">Interpretation of Coefficients</div>
+<ul class="bul"><li>Linear: βᵢ = change in ŷ per unit increase in xᵢ (holding others fixed)</li><li>Logistic: βᵢ = change in log-odds per unit increase in xᵢ</li><li>Odds ratio: exp(βᵢ) — multiply odds by this per unit increase</li><li>Standardize features first to compare coefficient magnitudes</li></ul></div>
+</div>
+<div class="box story"><div class="bl">📖 Straight Road Analogy</div><p>Linear regression drives on a perfectly straight road. Real data has curves, hills, roundabouts. These models draw a straight line through a spiral staircase. Works brilliantly when the relationship is truly linear — but that's rarer than you think.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Logistic regression is my mandatory baseline for every classification problem. Coefficients are interpretable, training is fast, and it's well-calibrated out-of-the-box. I validate assumptions: check VIF for multicollinearity, plot residuals for linearity, and use Platt scaling or isotonic regression if I need better calibration. If XGBoost doesn't beat logistic regression by at least 1% AUC on my validation set, I ship logistic regression — it's simpler and easier to maintain."</p></div>
+</section>

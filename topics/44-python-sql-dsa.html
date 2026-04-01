@@ -1,0 +1,85 @@
+<section class="section" id="sec-coding">
+<div class="sec-title">Python, SQL &amp; DSA</div>
+<div class="sec-desc">The practical toolkit for every DS interview — core pandas/numpy patterns, SQL aggregations, and the algorithmic thinking that shows you can code, not just model.</div>
+<div class="card"><div class="card-title">Python — Must-Know Patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql"># Pandas essentials
+df.groupby('col').agg({'target': ['mean','std','count']})
+df.merge(df2, on='id', how='left')
+df.pivot_table(values='amt', index='month', columns='category')
+df[df['score'].between(0.3, 0.7)].copy()
+df['pct_change'] = df.groupby('id')['balance'].pct_change()
+
+# NumPy / vectorized operations
+np.where(condition, val_true, val_false)
+np.percentile(arr, [25, 50, 75])
+arr[arr &gt; threshold].mean()   # boolean indexing
+
+# sklearn pipeline (prevents leakage)
+from sklearn.pipeline import Pipeline
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', LogisticRegression(C=1.0))
+])
+pipe.fit(X_train, y_train)
+pipe.predict_proba(X_test)[:, 1]
+
+# Cross-validate properly
+cv_scores = cross_val_score(pipe, X, y, cv=StratifiedKFold(5),
+                             scoring='roc_auc')</code></pre></div></div>
+<div class="card"><div class="card-title">SQL — Data Science Patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql">-- Running average payment rate (window function)
+SELECT customer_id, month,
+  AVG(payment_ratio) OVER (PARTITION BY customer_id
+    ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS rolling_3m_rate
+FROM payments;
+
+-- Cohort retention analysis
+SELECT cohort_month, months_since_join,
+  COUNT(DISTINCT user_id) AS retained_users,
+  COUNT(DISTINCT user_id) * 1.0 / FIRST_VALUE(COUNT(DISTINCT user_id))
+    OVER (PARTITION BY cohort_month ORDER BY months_since_join) AS retention_rate
+FROM user_cohorts
+GROUP BY cohort_month, months_since_join;
+
+-- Customers who defaulted within 6 months of application
+SELECT a.customer_id, a.app_date, d.default_date
+FROM applications a
+LEFT JOIN defaults d ON a.customer_id = d.customer_id
+  AND d.default_date BETWEEN a.app_date AND a.app_date + INTERVAL '6 months'
+WHERE d.customer_id IS NOT NULL;</code></pre></div></div>
+<div class="card"><div class="card-title">DSA — Most Common in DS Interviews</div>
+<table class="tbl"><tr><th>Pattern</th><th>Example</th><th>Key Technique</th></tr>
+<tr><td>Sliding window</td><td>Max sum subarray of size k; rolling feature</td><td>Two pointers, deque</td></tr>
+<tr><td>Two pointers</td><td>Find pair with target sum in sorted array</td><td>Start at both ends, converge</td></tr>
+<tr><td>Hashmap counting</td><td>Find most frequent item; group anagrams</td><td>dict/Counter; O(n) lookup</td></tr>
+<tr><td>Binary search</td><td>Search in rotated array; find threshold</td><td>O(log n); lo,hi,mid pattern</td></tr>
+<tr><td>DFS/BFS</td><td>Graph connectivity, shortest path</td><td>Stack (DFS) / Queue (BFS)</td></tr>
+<tr><td>Heap/Priority Queue</td><td>Top-k elements, merge k sorted lists</td><td>heapq in Python; O(n log k)</td></tr>
+<tr><td>Dynamic Programming</td><td>Optimal feature subset, knapsack</td><td>Memoization or tabulation</td></tr></table></div>
+<div class="card"><div class="card-title">PyTorch Essential Patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import torch, torch.nn as nn
+
+# Define model
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(128, 64), nn.ReLU(), nn.Dropout(0.3),
+            nn.Linear(64, 1), nn.Sigmoid()
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# Training loop
+model = MLP(); optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+for epoch in range(epochs):
+    model.train()
+    for X_batch, y_batch in dataloader:
+        optimizer.zero_grad()
+        pred = model(X_batch)
+        loss = nn.BCELoss()(pred, y_batch)
+        loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # gradient clip
+        optimizer.step()</code></pre></div></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For DS coding interviews: pandas over loops (always vectorize — 100× faster), use sklearn Pipelines (prevents leakage, clean code), and know your window functions in SQL (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER). For DSA, practice LeetCode Medium in Python: sliding window, two pointers, and hashmap problems cover 80% of what DS interviews ask. Most important: communicate your approach before coding — interviewers care more about your reasoning than perfect syntax."</p></div>
+</section>

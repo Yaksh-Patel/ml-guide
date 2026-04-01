@@ -1,0 +1,70 @@
+<section class="section" id="sec-transformers">
+<div class="sec-title">Transformers</div>
+<div class="sec-desc">The architecture that ate the world — "Attention is All You Need" (2017) replaced RNNs across NLP, then spread to vision (ViT), protein folding (AlphaFold), audio, video, and more.</div>
+<div class="card"><div class="card-title">Encoder-Decoder Architecture</div>
+<!-- Transformer Animation -->
+<div class="anim-wrap" style="margin-top:10px"><div class="anim-title">Transformer Encoder-Decoder — encoder processes input, decoder generates output</div>
+<svg viewBox="0 0 500 230" xmlns="http://www.w3.org/2000/svg">
+<!-- Encoder stack -->
+<rect x="20" y="20" width="180" height="200" rx="8" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="110" y="38" text-anchor="middle" fill="#5ba4fb" font-size="12" font-family="Syne" font-weight="700">ENCODER</text>
+<!-- Encoder layers -->
+<rect x="30" y="45" width="160" height="30" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="110" y="64" text-anchor="middle" fill="#8e97b8" font-size="10" font-family="DM Sans">Multi-Head Self-Attention</text>
+<rect x="30" y="80" width="160" height="20" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="110" y="94" text-anchor="middle" fill="#8e97b8" font-size="9" font-family="DM Sans">Add &amp; LayerNorm</text>
+<rect x="30" y="105" width="160" height="30" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="110" y="124" text-anchor="middle" fill="#8e97b8" font-size="10" font-family="DM Sans">Feed-Forward (FFN)</text>
+<rect x="30" y="140" width="160" height="20" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="110" y="154" text-anchor="middle" fill="#8e97b8" font-size="9" font-family="DM Sans">Add &amp; LayerNorm</text>
+<!-- Residual connection indicator -->
+<text x="18" y="110" fill="#5ba4fb" font-size="20" font-family="DM Sans">⌒</text>
+<text x="18" y="150" fill="#5ba4fb" font-size="20" font-family="DM Sans">⌒</text>
+<!-- N× label -->
+<text x="110" y="180" text-anchor="middle" fill="#5ba4fb" font-size="11" font-family="JetBrains Mono">× 6 layers</text>
+<!-- Input embeddings -->
+<text x="110" y="218" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Input + Positional Encoding</text>
+<!-- Arrow from encoder to decoder -->
+<line x1="202" y1="110" x2="298" y2="110" stroke="#22d3a0" stroke-width="2">
+  <animate attributeName="stroke-dasharray" values="0,100;100,0" dur="1.5s" repeatCount="indefinite"/>
+</line>
+<text x="250" y="105" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">K, V →</text>
+<!-- Decoder stack -->
+<rect x="300" y="20" width="185" height="200" rx="8" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="392" y="38" text-anchor="middle" fill="#b97cf8" font-size="12" font-family="Syne" font-weight="700">DECODER</text>
+<rect x="310" y="45" width="165" height="30" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="392" y="60" text-anchor="middle" fill="#8e97b8" font-size="9.5" font-family="DM Sans">Masked Self-Attention</text>
+<text x="392" y="70" text-anchor="middle" fill="#4e5a7a" font-size="8.5" font-family="DM Sans">(causal — can't see future)</text>
+<rect x="310" y="80" width="165" height="20" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="392" y="94" text-anchor="middle" fill="#8e97b8" font-size="9" font-family="DM Sans">Add &amp; LayerNorm</text>
+<rect x="310" y="105" width="165" height="30" rx="4" fill="#5ba4fb" opacity=".2" stroke="#5ba4fb"/>
+<text x="392" y="120" text-anchor="middle" fill="#5ba4fb" font-size="9.5" font-family="DM Sans">Cross-Attention (Q from decoder</text>
+<text x="392" y="130" text-anchor="middle" fill="#5ba4fb" font-size="9.5" font-family="DM Sans">K,V from encoder)</text>
+<rect x="310" y="140" width="165" height="20" rx="4" fill="#212840" stroke="#2e3a58"/>
+<text x="392" y="154" text-anchor="middle" fill="#8e97b8" font-size="9" font-family="DM Sans">Add &amp; LayerNorm</text>
+<text x="392" y="180" text-anchor="middle" fill="#b97cf8" font-size="11" font-family="JetBrains Mono">× 6 layers</text>
+<text x="392" y="218" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Output Embeddings (shifted)</text>
+</svg></div></div>
+<div class="card"><div class="card-title">Positional Encoding</div>
+<div class="card-body">Self-attention is permutation-invariant — shuffling tokens gives the same output. Positional encodings inject position information into the embeddings.</div>
+<div class="formula math-formula">$$\begin{aligned}
+PE(\text{pos}, 2i)   &= \sin\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+\text{Input to each layer} &= \text{token embedding} + \text{positional embedding}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Original Transformer used sinusoidal encodings. Modern LLMs use Rotary Position Embedding (RoPE) or ALiBi — these generalize better to sequences longer than training length.</div></div>
+<div class="card"><div class="card-title">Transformer Variants</div>
+<table class="tbl"><tr><th>Type</th><th>Architecture</th><th>Used For</th><th>Examples</th></tr>
+<tr><td>Encoder-only</td><td>Bidirectional self-attention</td><td>Classification, NER, embedding</td><td>BERT, RoBERTa, DistilBERT</td></tr>
+<tr><td>Decoder-only</td><td>Causal (masked) self-attention</td><td>Text generation, LLMs</td><td>GPT, Claude, Llama, Mistral</td></tr>
+<tr><td>Encoder-decoder</td><td>Cross-attention between encoder and decoder</td><td>Translation, summarization, T2T</td><td>T5, BART, MarianMT</td></tr>
+<tr><td>Vision Transformer</td><td>Patch embeddings + self-attention</td><td>Image classification, detection</td><td>ViT, DeiT, Swin</td></tr></table></div>
+<div class="card"><div class="card-title">Why Transformers Beat RNNs</div>
+<table class="tbl"><tr><th>Property</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+<tr><td>Long-range dependencies</td><td>Struggle (vanishing gradient)</td><td>Direct attention — O(1) path length</td></tr>
+<tr><td>Parallelism during training</td><td>Sequential — can't parallelize</td><td>Fully parallel — all positions at once</td></tr>
+<tr><td>Context window</td><td>Effective ~200 tokens</td><td>Scales to 100K+ with tricks</td></tr>
+<tr><td>Memory</td><td>O(sequence length)</td><td>O(n²) attention matrix</td></tr>
+<tr><td>Streaming / online inference</td><td>Natural (stateful)</td><td>Requires full context or KV cache</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The Transformer's key insight: replace sequential processing with parallel attention over all positions. Two architectural choices enabled this: (1) residual connections around every sub-layer prevent vanishing gradients in deep stacks; (2) layer normalization (not BatchNorm) because sequence batches have variable length. The real paradigm shift: pre-train on massive unsupervised data → fine-tune on task-specific data. This is the backbone of all modern AI."</p></div>
+</section>

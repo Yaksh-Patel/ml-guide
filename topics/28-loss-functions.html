@@ -1,0 +1,189 @@
+<section class="section" id="sec-loss">
+<div class="sec-title">Loss Functions</div>
+<div class="sec-desc">The objective you optimize — every loss function encodes a probability model and a cost structure. Choose wrong and you optimize for the wrong thing. For classifiers, cross-entropy is almost always the right choice over MSE or raw classification error.</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Regression Losses</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{MSE} &= \tfrac{1}{n}\sum(y-\hat{y})^2 \quad\rightarrow\text{assumes Gaussian noise} \\
+\text{MAE} &= \tfrac{1}{n}\sum|y-\hat{y}| \quad\rightarrow\text{assumes Laplace noise} \\
+\text{Huber} &= \begin{cases} \tfrac{1}{2}(y-\hat{y})^2 & \text{if } |e| \leq \delta \\ \delta|y-\hat{y}|-\tfrac{\delta^2}{2} & \text{otherwise}\end{cases}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li><strong>MSE:</strong> penalizes large errors heavily; differentiable; outlier-sensitive</li><li><strong>MAE:</strong> robust to outliers; non-differentiable at 0 (subgradient)</li><li><strong>Huber:</strong> MSE near 0, MAE for large errors — best of both</li><li><strong>Log-cosh:</strong> smooth approximation to Huber; twice differentiable everywhere</li></ul></div>
+<div class="card cg"><div class="card-title">Classification Losses</div>
+<div class="formula math-formula">$$\begin{aligned}
+BCE = -\left[y \log \hat{y} + (1-y) \log(1-\hat{y})\right] \\
+CCE = -\sum y_i \log \hat{y}_i \quad \text{[categorical cross-entropy]} \\
+ACE = -(1/n) \sum \log(\hat{y}_{\text{correct}}) \quad \text{[average cross-entropy]} \\
+Hinge = \max(0, 1-y\cdot\hat{y})_{SVMloss} \\
+Focal = -(1-\hat{y})^\gamma \log \hat{y} \quad \text{[imbalanced data]}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li><strong>BCE:</strong> standard binary; equivalent to Bernoulli MLE</li><li><strong>CCE / ACE:</strong> multi-class with softmax; equivalent to Categorical MLE</li><li><strong>Focal Loss:</strong> (1−ŷ)^γ down-weights easy examples; γ=2 is standard</li><li><strong>Label smoothing:</strong> target = 0.9 instead of 1.0 — prevents overconfident predictions</li></ul></div>
+</div>
+
+<!-- ── ACE vs MSE vs Classification Error ── -->
+<div class="card"><div class="card-title">Why Average Cross-Entropy (ACE) Beats Classification Error and MSE</div>
+<div class="card-body" style="margin-bottom:10px">Consider two classifiers predicting political affiliation (Democrat / Republican / Other) — both get 2 out of 3 examples correct, so both have identical <strong>classification error = 1/3</strong>. But they are clearly not equally good:</div>
+
+<div class="g2">
+<div class="card cr" style="margin-bottom:0"><div class="card-title">Classifier A — barely correct</div>
+<div class="formula">Computed | Target | Correct? 
+ 0.3 0.3 0.4 | 0 0 1 ✓ | yes (barely) 
+ 0.3 0.4 0.3 | 0 1 0 ✓ | yes (barely) 
+ 0.1 0.2 0.7 | 1 0 0 ✗ | no (way off)</div></div>
+<div class="card cg" style="margin-bottom:0"><div class="card-title">Classifier B — confidently correct</div>
+<div class="formula">Computed | Target | Correct? 
+ 0.1 0.2 0.7 | 0 0 1 ✓ | yes (confident) 
+ 0.1 0.7 0.2 | 0 1 0 ✓ | yes (confident) 
+ 0.3 0.4 0.3 | 1 0 0 ✗ | no (barely off)</div></div>
+</div>
+
+<div class="card-body" style="margin-top:12px;margin-bottom:10px">Classification error is blind to <em>how confident</em> the prediction was. ACE is not — it uses ln() to reward confident correct predictions and heavily penalize wrong ones.</div>
+
+<div class="formula math-formula">$$ACE = -\dfrac{1}{n}\sum_i \ln\bigl(\hat{y}_{\text{correct},i}\bigr)$$</div>
+<div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
+For each example, only the log-prob of the <strong>TRUE class</strong> is counted<br>
+(other terms multiply by 0 from one-hot target and vanish)<br><br>
+<strong>Classifier A:</strong> &minus;(ln(0.4)+ln(0.4)+ln(0.1))/3<br>
+&nbsp;&nbsp;&nbsp;= &minus;(&minus;0.916 + &minus;0.916 + &minus;2.303)/3 = <strong>1.38</strong> &larr; higher = worse<br><br>
+<strong>Classifier B:</strong> &minus;(ln(0.7)+ln(0.7)+ln(0.3))/3<br>
+&nbsp;&nbsp;&nbsp;= &minus;(&minus;0.357 + &minus;0.357 + &minus;1.204)/3 = <strong>0.64</strong> &larr; lower = better &#10003;
+</div>
+
+
+
+
+
+
+
+
+<div class="card-body" style="margin-top:10px">ACE correctly identifies Classifier B as superior. Classification error cannot.</div>
+</div>
+
+<!-- ── MSE comparison ── -->
+<div class="card ca"><div class="card-title">MSE for Classifiers — Better Than Accuracy, Still Worse Than ACE</div>
+<div class="formula math-formula">$$\text{MSE} = \dfrac{1}{n}\sum_i \sum_j (y_{ij} - \hat{y}_{ij})^2 \quad \text{(summed over all output neurons)}$$</div>
+<div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
+<strong>Clf A, ex1:</strong> (0.3&minus;0)&sup2;+(0.3&minus;0)&sup2;+(0.4&minus;1)&sup2; = 0.09+0.09+0.36 = 0.54<br>
+<strong>Clf A, ex3:</strong> (0.1&minus;1)&sup2;+(0.2&minus;0)&sup2;+(0.7&minus;0)&sup2; = 0.81+0.04+0.49 = 1.34<br>
+<strong>MSE Clf A</strong> = (0.54+0.54+1.34)/3 = <strong>0.81</strong><br><br>
+<strong>Clf B, ex1:</strong> (0.1&minus;0)&sup2;+(0.2&minus;0)&sup2;+(0.7&minus;1)&sup2; = 0.01+0.04+0.09 = 0.14<br>
+<strong>Clf B, ex3:</strong> (0.3&minus;1)&sup2;+(0.4&minus;0)&sup2;+(0.3&minus;0)&sup2; = 0.49+0.16+0.09 = 0.74<br>
+<strong>MSE Clf B</strong> = (0.14+0.14+0.74)/3 = <strong>0.34</strong>
+</div>
+
+
+
+
+
+
+
+<div class="card-body" style="margin-top:8px">MSE also correctly ranks B above A, but it <strong>wastes signal on the wrong neurons</strong> — it penalizes the 0.3 and 0.4 outputs of the incorrect class, even though those are irrelevant to the decision. ACE only grades you on the probability you assigned to the true class, which is exactly the information that matters.</div></div>
+
+<!-- ── Training stall explanation ── -->
+<div class="card cp"><div class="card-title">The Deeper Reason: MSE Causes Training to Stall Near Convergence</div>
+<div class="formula math-formula">$$\Delta W \propto (\hat{y}-y)\cdot\underbrace{\hat{y}(1-\hat{y})}_{\sigma'(z)\text{ term}} \quad \text{(sigmoid + MSE)}$$</div>
+<div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
+When &#375;&#770; &rarr; 1.0 (confident &amp; correct): &nbsp;0.95&middot;(1&minus;0.95) = <strong>0.0475</strong><br>
+When &#375;&#770; &rarr; 0.5 (uncertain): &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.5&middot;(1&minus;0.5)&nbsp; = <strong>0.25</strong><br>
+As network improves, &sigma;&prime;(z) &rarr; 0 &rarr; gradient &rarr; 0 &rarr; weights barely move.<br>
+Training <strong>stalls</strong> even though not fully converged.
+</div>
+
+<div class="formula math-formula" style="margin-top:8px">$$\Delta W \propto (\hat{y}-y) \quad \text{(cross-entropy + softmax/sigmoid \u2014 } \sigma'\text{ cancels!)}$$</div>
+<div class="formula" style="font-size:13px;line-height:1.7;margin-top:4px">
+Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is intentional.
+</div>
+
+
+
+
+
+
+
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>This cancellation is why BCE is the canonical loss for binary classification with sigmoid output</li><li>The same cancellation occurs for CCE with softmax — ∂L/∂z = ŷ − y</li><li>This is not a coincidence — these loss-activation pairs are designed together to have clean gradients</li></ul></div>
+
+<!-- ── When to use which ── -->
+<div class="card"><div class="card-title">Probabilistic &amp; Specialized Losses</div>
+<table class="tbl"><tr><th>Loss</th><th>Use Case</th><th>Key Property</th></tr>
+<tr><td>KL Divergence</td><td>VAEs, knowledge distillation</td><td>Asymmetric — KL(P‖Q) ≠ KL(Q‖P)</td></tr>
+<tr><td>Contrastive / Triplet</td><td>Metric learning, face recognition</td><td>Pulls same-class embeddings together</td></tr>
+<tr><td>ELBO</td><td>Variational autoencoders</td><td>Reconstruction − KL penalty</td></tr>
+<tr><td>CTC Loss</td><td>Speech recognition, OCR</td><td>Sequence-to-sequence with unaligned outputs</td></tr>
+<tr><td>RLHF reward</td><td>LLM alignment</td><td>Learned from human preference comparisons</td></tr>
+<tr><td>InfoNCE</td><td>Contrastive SSL (SimCLR)</td><td>Noise contrastive estimation</td></tr></table></div>
+
+<div class="card"><div class="card-title">When to Use Which</div>
+<table class="tbl"><tr><th>Scenario</th><th>Training Loss</th><th>Eval Metric</th></tr>
+<tr><td>Binary classification</td><td>BCE (log loss)</td><td>Accuracy / AUC / F1</td></tr>
+<tr><td>Multi-class classification</td><td>Categorical cross-entropy</td><td>Accuracy / macro-F1</td></tr>
+<tr><td>Regression (clean data)</td><td>MSE</td><td>RMSE / R²</td></tr>
+<tr><td>Regression (outliers)</td><td>Huber / MAE</td><td>MAE</td></tr>
+<tr><td>Imbalanced classes</td><td>Focal Loss</td><td>PR-AUC / F1</td></tr>
+<tr><td>Overconfident predictions</td><td>BCE + label smoothing</td><td>ECE (calibration)</td></tr>
+<tr><td>After training (any classifier)</td><td>—</td><td>Classification accuracy is fine for reporting to stakeholders</td></tr></table>
+<div class="card-body" style="margin-top:8px; font-size:12.5px; color:var(--text3)">Note: classification accuracy is a good reporting metric after training — the argument for ACE over accuracy applies specifically during training, where the gradient signal matters.</div>
+</div>
+
+<div class="box story"><div class="bl">📖 Taxi Meter Analogy</div><p>MSE is a taxi that charges exponentially per mile you're off route: 1 mile wrong = $1, 10 miles = $100. MAE charges linearly. For a city with occasional crazy detours (outliers), MAE is fairer. Huber is a taxi with a daily cap. Cross-entropy is a different kind of taxi — it only charges you for how confident you were about the street you recommended. If you confidently said "go left" and the destination was right, the fare is astronomical. If you quietly suggested "maybe left?" it's a smaller penalty. It rewards learning to be confident about the right things.</p></div>
+
+<div class="box warn"><div class="bl">⚠️ Common Mistake</div><p>Using <strong>MSE as a classification loss</strong> (e.g., targets as 0/1 and computing squared error across all output nodes) is a subtly bad idea that used to be common. It works — MSE does rank classifiers in the right order — but it dilutes the gradient with signal from the wrong output neurons, and it causes the vanishing-gradient stall near convergence. Always use cross-entropy for classifier training.</p></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>Three loss metrics exist for classifiers: classification error, MSE, and average cross-entropy (ACE). <strong>Classification error is too crude</strong> — two networks with the same accuracy can be wildly different in quality because it ignores how confident each prediction was. <strong>MSE is better but still flawed</strong> — it wastes gradient on incorrect output neurons, and critically, its gradient contains a σ'(z) = ŷ(1−ŷ) term that shrinks toward zero as predictions get confident, causing training to stall. <strong>ACE is best</strong> — it only grades you on the probability assigned to the true class, and when paired with softmax/sigmoid, the derivative of the activation function cancels out of the gradient completely, leaving ∂L/∂z = ŷ − y. No stalling, no wasted signal. The probability interpretation is also clean: minimizing ACE is maximum likelihood estimation under a Categorical distribution. After training, you can switch back to reporting classification accuracy — that's ultimately what you care about for stakeholders.</p></div>
+
+<div class="card cc">
+  <div class="card-title">▶ Run It: ACE vs MSE vs Classification Error (3-class example)</div>
+  <div class="code-runner" id="runner-loss">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-loss')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-loss')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
+
+# Two classifiers — same classification error (1/3), but B is clearly better
+# Outputs are softmax probabilities over 3 classes
+# Targets: one-hot encoded
+
+targets = np.array([[0,0,1], [0,1,0], [1,0,0]])  # true labels
+
+clf_A = np.array([[0.3,0.3,0.4], [0.3,0.4,0.3], [0.1,0.2,0.7]])  # barely right, way off on #3
+clf_B = np.array([[0.1,0.2,0.7], [0.1,0.7,0.2], [0.3,0.4,0.3]])  # confidently right, barely off on #3
+
+def classification_error(preds, targets):
+    predicted_class = np.argmax(preds, axis=1)
+    true_class = np.argmax(targets, axis=1)
+    return np.mean(predicted_class != true_class)
+
+def average_cross_entropy(preds, targets):
+    # Only the true-class probability matters (other terms are 0 * log = 0)
+    true_class_probs = np.sum(preds * targets, axis=1)
+    return -np.mean(np.log(true_class_probs + 1e-12))
+
+def mean_squared_error(preds, targets):
+    return np.mean(np.sum((preds - targets)**2, axis=1))
+
+print("=== Classifier A (barely correct, way off on #3) ===")
+print(f"  Classification Error : {classification_error(clf_A, targets):.4f}")
+print(f"  Average Cross-Entropy: {average_cross_entropy(clf_A, targets):.4f}")
+print(f"  Mean Squared Error   : {mean_squared_error(clf_A, targets):.4f}")
+
+print()
+print("=== Classifier B (confidently correct, barely off on #3) ===")
+print(f"  Classification Error : {classification_error(clf_B, targets):.4f}")
+print(f"  Average Cross-Entropy: {average_cross_entropy(clf_B, targets):.4f}")
+print(f"  Mean Squared Error   : {mean_squared_error(clf_B, targets):.4f}")
+
+print()
+print("Classification Error is BLIND to quality difference (both = 0.3333)")
+print("ACE correctly ranks B lower (better): 0.64 < 1.38 ✓")
+print("MSE also ranks B lower (better): 0.34 < 0.81 ✓ (but wastes signal)")
+    </textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div>
+</div>
+
+</section>

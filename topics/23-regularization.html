@@ -1,0 +1,32 @@
+<section class="section" id="sec-reg">
+<div class="sec-title">Regularization</div>
+<div class="sec-desc">The surgeon that trims model complexity — adds a penalty to the loss function to prevent overfitting and improve generalization.</div>
+<div class="formula math-formula">$$\text{Total Loss} = \underbrace{\text{Data Loss}}_{\text{fit}} + \lambda \times \underbrace{\text{Regularization Penalty}}_{\text{complexity}}$$</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">L1 Regularization — Lasso</div>
+<div class="formula math-formula">$$\text{Penalty} = \lambda \sum_i |w_i|$$</div>
+<ul class="bul" style="margin-top:8px"><li>Pushes coefficients to <strong>exactly zero</strong> — automatic feature selection</li><li>Produces sparse models — most features get wᵢ = 0</li><li>Non-differentiable at 0 — requires subgradient methods</li><li>MAP interpretation: Laplace prior on weights</li></ul>
+<span class="tag tb">Feature selection</span><span class="tag tb">Sparse models</span></div>
+<div class="card cg"><div class="card-title">L2 Regularization — Ridge</div>
+<div class="formula math-formula">$$\text{Penalty} = \lambda \sum_i w_i^2$$</div>
+<ul class="bul" style="margin-top:8px"><li>Shrinks all coefficients proportionally toward zero — never exactly 0</li><li>Smooth penalty — differentiable everywhere</li><li>Better when all features are somewhat relevant</li><li>Handles multicollinearity well (distributes weight)</li><li>MAP interpretation: Gaussian prior on weights</li></ul>
+<span class="tag tg">Shrinkage</span><span class="tag tg">Stable</span></div>
+</div>
+<div class="card"><div class="card-title">Dropout — Regularization for Neural Networks</div>
+<div class="card-body">Randomly zero out each neuron with probability p during training (typically p=0.5 for hidden, p=0.2 for input). Forces the network to learn redundant representations — no single neuron can dominate.</div>
+<div class="formula math-formula">$$\begin{aligned}
+z_i &= \text{activation} \times \frac{\text{Bernoulli}(1-p)}{1-p} \quad \text{(inverted dropout)} \\
+&\quad \text{At inference: use all neurons (no scaling needed)}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Ensemble effect: trains ~2^n sub-networks implicitly</li><li>Apply after activation; before input to next layer</li><li>p=0.5 for fully connected; p=0.1–0.2 for convolutional; not needed with BatchNorm</li></ul></div>
+<div class="card"><div class="card-title">Other Regularization Techniques</div>
+<table class="tbl"><tr><th>Technique</th><th>How</th><th>Used In</th></tr>
+<tr><td>Early stopping</td><td>Stop when val loss stops improving</td><td>NNs, gradient boosting</td></tr>
+<tr><td>Batch Normalization</td><td>Normalize activations per mini-batch</td><td>Deep NNs; implicitly regularizes</td></tr>
+<tr><td>Weight decay (AdamW)</td><td>L2 penalty on weights in optimizer</td><td>Transformers</td></tr>
+<tr><td>Data augmentation</td><td>Artificially expand training data</td><td>CNNs, NLP (EDA, back-translation)</td></tr>
+<tr><td>Label smoothing</td><td>Soft targets (0.9 instead of 1.0)</td><td>Classification NNs</td></tr>
+<tr><td>max_depth / min_samples_leaf</td><td>Structural constraints on tree</td><td>Decision trees, XGBoost</td></tr></table></div>
+<div class="box story"><div class="bl">📖 The Strict Editor</div><p>Regularization is an editor charging you for every word: L1 cuts entire sentences (zeros features). L2 makes every sentence shorter. Dropout randomly silences 50% of your team during rehearsal — they learn to compensate for absent colleagues, making each individual more capable.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I think of regularization as a prior belief that simpler models generalize better. L1 when I suspect many features are irrelevant (feature selection baked in). L2 when most features matter but I want to prevent extreme weights. For deep learning: dropout + weight decay (AdamW) + early stopping + data augmentation. The strength λ is always tuned via cross-validation — too much and you underfit, too little and you overfit."</p></div>
+</section>

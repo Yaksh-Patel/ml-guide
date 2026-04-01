@@ -1,0 +1,32 @@
+<section class="section" id="sec-weightinit">
+<div class="sec-title">Weight Initialization</div>
+<div class="sec-desc">Poor initialization causes vanishing or exploding activations before training even starts — a network that never had a chance. The right init sets up the gradient highway from epoch 0.</div>
+<div class="card"><div class="card-title">Why Initialization Matters</div>
+<ul class="bul"><li><strong>All zeros:</strong> symmetry problem — all neurons compute identical gradients, stay identical forever. The network never breaks symmetry.</li><li><strong>All ones (or any constant):</strong> same problem — all neurons stay identical.</li><li><strong>Too large:</strong> activations saturate (sigmoid/tanh), gradients vanish</li><li><strong>Too small:</strong> activations shrink to zero layer by layer, gradients vanish</li><li><strong>Goal:</strong> keep variance of activations approximately constant through layers</li></ul></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Xavier / Glorot Initialization</div>
+<div class="formula math-formula">$$\begin{aligned}
+W \sim \text{Uniform}\!\left(-\sqrt{\tfrac{6}{n_{\text{in}}+n_{\text{out}}}},\; \sqrt{\tfrac{6}{n_{\text{in}}+n_{\text{out}}}}\right) \\
+\text{or} \\
+W \sim \mathcal{N}\!\left(0,\; \tfrac{2}{n_{\text{in}}+n_{\text{out}}}\right)
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Designed for sigmoid/tanh activations. Preserves variance in both forward and backward passes. Derived by assuming linear activations.</div>
+<span class="tag tb">Sigmoid / Tanh</span></div>
+<div class="card cg"><div class="card-title">He / Kaiming Initialization</div>
+<div class="formula math-formula">$$\begin{aligned}
+W \sim N(0, 2/n_{in}) \\
+or \\
+W \sim Uniform(-\sqrt{6/n_{in}}, \sqrt{6/n_{in}})
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Designed for ReLU. Factor of 2 accounts for the half-activation (ReLU zeroes negative inputs, effectively halving the variance). Use He normal for ReLU and its variants.</div>
+<span class="tag tg">ReLU / Leaky ReLU / ELU</span></div>
+</div>
+<div class="card"><div class="card-title">Other Initialization Strategies</div>
+<table class="tbl"><tr><th>Method</th><th>Description</th><th>Use Case</th></tr>
+<tr><td>Random Normal / Uniform</td><td>Small random values (not calibrated)</td><td>Quick experiments; usually suboptimal</td></tr>
+<tr><td>Orthogonal init</td><td>W = random orthogonal matrix</td><td>RNNs — preserves gradient magnitude</td></tr>
+<tr><td>LSTM-specific</td><td>Forget gate bias = 1 (start remembering)</td><td>LSTMs — prevents forgetting at start</td></tr>
+<tr><td>Pretrained weights</td><td>Transfer from ImageNet / language model</td><td>Transfer learning — best when available</td></tr>
+<tr><td>Sparse init</td><td>Most weights = 0, few random nonzero</td><td>Very deep networks</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"He initialization for ReLU networks is my default — it ensures variance is preserved layer by layer, preventing activations from shrinking or exploding before training starts. The key insight: ReLU zeroes ~50% of inputs on average, so we need to scale up the initialization by 2 to compensate. With BatchNorm, initialization matters less because batch normalization re-centers and rescales activations at each layer — but it's still best practice to start with the right init."</p></div>
+</section>

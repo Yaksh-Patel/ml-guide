@@ -1,0 +1,123 @@
+<section class="section" id="sec-transfer">
+<div class="sec-title">Transfer Learning &amp; Knowledge Distillation</div>
+<div class="sec-desc">Two complementary strategies for leveraging existing knowledge — transfer learning adapts pre-trained representations to new tasks, while distillation compresses large model knowledge into smaller, faster, deployable ones.</div>
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue);margin:20px 0 12px;padding:0">Part 1 — Transfer Learning</div>
+<div class="sec-desc" style="margin-bottom:14px">Don't start from scratch — leverage representations learned from massive datasets and adapt them to your task. The single highest-leverage technique in applied deep learning.</div>
+<div class="card"><div class="card-title">The Paradigm Shift</div>
+<div class="card-body">Pre-train a large model on a massive task (ImageNet, language modeling, masked token prediction). The model learns rich, general features. Fine-tune this model on your small labeled dataset — the features transfer.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Stage 1: Pre-train on large dataset (self-supervised or supervised)} \\
+\text{Stage 2: Replace/add task head (classification, NER, etc.)} \\
+\text{Stage 3: Fine-tune} \text{ --- either:} \\
+\quad\text{(a) Feature extraction: freeze backbone, train only head} \\
+\quad\text{(b) Full fine-tuning: unfreeze all layers, small LR} \\
+\quad\text{(c) Partial fine-tuning: unfreeze last N layers}
+\end{aligned}$$</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">When to Freeze vs Fine-Tune</div>
+<table class="tbl"><tr><th>Data</th><th>Domain</th><th>Strategy</th></tr>
+<tr><td>Small</td><td>Similar</td><td>Freeze backbone, train head only</td></tr>
+<tr><td>Small</td><td>Different</td><td>Fine-tune top layers + head</td></tr>
+<tr><td>Large</td><td>Similar</td><td>Full fine-tune with low LR</td></tr>
+<tr><td>Large</td><td>Different</td><td>Full fine-tune from scratch considered</td></tr></table></div>
+<div class="card cg"><div class="card-title">Parameter-Efficient Fine-Tuning (PEFT)</div>
+<ul class="bul"><li><strong>LoRA:</strong> add low-rank matrices ΔW = AB to frozen weights. Only A and B are trained (far fewer params). State-of-the-art for LLM fine-tuning.</li><li><strong>Adapters:</strong> insert small bottleneck modules between frozen layers</li><li><strong>Prompt tuning:</strong> learn soft prompt tokens while freezing the model</li><li><strong>BitFit:</strong> only fine-tune bias terms — surprisingly effective</li></ul></div>
+</div>
+<div class="card ca"><div class="card-title">Catastrophic Forgetting</div>
+<div class="card-body">When fine-tuning on a new task, the model "forgets" its pre-trained knowledge. Prevention strategies:</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Learning rate warmup:</strong> start with very small LR, increase gradually</li><li><strong>Layer-wise LR decay:</strong> lower LR for earlier (more general) layers</li><li><strong>Elastic weight consolidation (EWC):</strong> penalize changing weights important for old tasks</li><li><strong>LoRA/Adapters:</strong> freeze base model — forgetting impossible</li></ul></div>
+<div class="card"><div class="card-title">Domain Adaptation Examples</div>
+<table class="tbl"><tr><th>Base Model</th><th>Fine-Tuned For</th><th>Technique</th></tr>
+<tr><td>BERT (general English)</td><td>Clinical NLP (BioBERT)</td><td>Domain-adaptive pre-training on PubMed + fine-tune</td></tr>
+<tr><td>ResNet (ImageNet)</td><td>Pathology slide classification</td><td>Full fine-tune with low LR, augmentation</td></tr>
+<tr><td>GPT-3/4</td><td>Customer support chatbot</td><td>LoRA fine-tune on company Q&amp;A data</td></tr>
+<tr><td>Llama-2</td><td>Code generation</td><td>Fine-tune on GitHub code (Code Llama)</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Transfer learning is the highest-leverage technique in applied DL. For NLP tasks I start with a pre-trained BERT/RoBERTa, add a classification head, and fine-tune. With LoRA I can fine-tune a 7B parameter LLM on a single GPU by training only 0.1% of parameters. The intuition: lower layers learn general features (edges, grammar), upper layers learn task-specific features — so for a new task in the same domain, only upper layers need to change."</p></div>
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green);margin:32px 0 12px;padding:0">Part 2 — Knowledge Distillation</div>
+<div class="sec-desc" style="margin-bottom:14px">Train a small "student" model to mimic a large "teacher" model — transferring knowledge without transferring parameters. The technique behind DistilBERT, TinyBERT, and most efficient production models.</div>
+
+<div class="card"><div class="card-title">The Core Idea</div>
+<div class="card-body">Instead of training student on hard labels (0 or 1), train it to match the teacher's soft probability distribution. The soft labels contain richer information — the teacher's confidence across all classes, including wrong ones.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Teacher: large model } T \text{ with params } \theta_T \text{ (frozen during distillation)} \\
+\text{Student: small model } S \text{ with params } \theta_S \text{ (trained)} \\
+p_T(y|x,\tau) = \text{softmax}(z_T/\tau) \quad [\tau = \text{temperature}] \\
+\mathcal{L} = \alpha\cdot\mathcal{L}_{CE}(y_{\text{hard}},p_S) + (1-\alpha)\cdot\tau^2\cdot\mathcal{L}_{KL}(p_T\|p_S) \\
+\tau=1\text{: original distribution} \quad \tau>1\text{: smoother, more informative} \\
+\alpha\text{: balances hard label loss and distillation loss (typically }\alpha=0.3\text{)}
+\end{aligned}$$</div></div>
+
+<div class="anim-wrap"><div class="anim-title">Distillation: student learns from both ground truth AND teacher's soft output distribution</div>
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+<!-- Teacher model -->
+<rect x="20" y="40" width="120" height="80" rx="8" fill="#1a1f2e" stroke="#b97cf8" stroke-width="2"/>
+<text x="80" y="75" text-anchor="middle" fill="#b97cf8" font-size="12" font-family="Syne" font-weight="700">Teacher</text>
+<text x="80" y="90" text-anchor="middle" fill="#8e97b8" font-size="10" font-family="DM Sans">BERT-large</text>
+<text x="80" y="103" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">340M params</text>
+<!-- Frozen lock -->
+<text x="130" y="42" fill="#f5a623" font-size="14">🔒</text>
+
+<!-- Teacher soft output bars -->
+<rect x="160" y="50" width="100" height="60" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="210" y="46" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Soft logits (τ=4)</text>
+<rect x="168" y="88" width="18" height="15" rx="2" fill="#b97cf8" opacity=".8"/>
+<rect x="190" y="78" width="18" height="25" rx="2" fill="#b97cf8" opacity=".5"/>
+<rect x="212" y="60" width="18" height="43" rx="2" fill="#b97cf8" opacity=".9"/>
+<rect x="234" y="82" width="18" height="21" rx="2" fill="#b97cf8" opacity=".4"/>
+<text x="177" y="112" fill="#4e5a7a" font-size="7" font-family="DM Sans">cat</text>
+<text x="199" y="112" fill="#4e5a7a" font-size="7" font-family="DM Sans">dog</text>
+<text x="221" y="112" fill="#4e5a7a" font-size="7" font-family="DM Sans">fox</text>
+<text x="243" y="112" fill="#4e5a7a" font-size="7" font-family="DM Sans">wolf</text>
+
+<!-- Arrow to student -->
+<line x1="265" y1="80" x2="295" y2="80" stroke="#b97cf8" stroke-width="2">
+  <animate attributeName="stroke-dasharray" values="0,30;30,0;30,0" dur="2s" repeatCount="indefinite"/>
+</line>
+<text x="280" y="74" fill="#b97cf8" font-size="8" font-family="DM Sans" text-anchor="middle">KL div</text>
+
+<!-- Student model -->
+<rect x="300" y="40" width="120" height="80" rx="8" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="360" y="75" text-anchor="middle" fill="#22d3a0" font-size="12" font-family="Syne" font-weight="700">Student</text>
+<text x="360" y="90" text-anchor="middle" fill="#8e97b8" font-size="10" font-family="DM Sans">DistilBERT</text>
+<text x="360" y="103" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">66M params</text>
+
+<!-- Ground truth arrow -->
+<text x="250" y="150" text-anchor="middle" fill="#f5a623" font-size="10" font-family="DM Sans">Ground Truth y</text>
+<line x1="340" y1="145" x2="360" y2="122" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="365" y="138" fill="#f5a623" font-size="9" font-family="DM Sans">CE loss</text>
+
+<!-- Total loss -->
+<rect x="200" y="160" width="200" height="28" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="300" y="178" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">L_total = α·CE(hard) + (1−α)·τ²·KL(soft)</text>
+
+<!-- Performance bar -->
+<text x="460" y="60" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">Speed</text>
+<rect x="450" y="65" width="12" height="50" rx="3" fill="#2e3a58"/>
+<rect x="450" y="90" width="12" height="25" rx="3" fill="#b97cf8" opacity=".6"/>
+<rect x="464" y="65" width="12" height="50" rx="3" fill="#2e3a58"/>
+<rect x="464" y="70" width="12" height="45" rx="3" fill="#22d3a0" opacity=".8"/>
+<text x="451" y="122" fill="#b97cf8" font-size="7" font-family="DM Sans">T</text>
+<text x="465" y="122" fill="#22d3a0" font-size="7" font-family="DM Sans">S</text>
+</svg></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Soft Labels Are Better</div>
+<div class="card-body">Hard label: cat = [1, 0, 0, 0]. Teacher soft label: [0.01, 0.72, 0.20, 0.07] — the teacher knows "fox" is similar to "cat". The student learns this similarity structure for free, without needing labeled examples of every pair.</div>
+<div class="box story"><div class="bl">📖 Brilliant Tutor</div><p>The teacher says "this is likely a fox, somewhat like a cat, unlikely a car." The student learns not just the answer but the teacher's uncertainty and reasoning — far richer signal than binary right/wrong labels.</p></div></div>
+<div class="card cg"><div class="card-title">Distillation Variants</div>
+<table class="tbl"><tr><th>Type</th><th>What's Transferred</th><th>Example</th></tr>
+<tr><td>Response distillation</td><td>Soft output probabilities</td><td>Hinton 2015 (original paper)</td></tr>
+<tr><td>Feature distillation</td><td>Intermediate hidden states</td><td>FitNets, TinyBERT</td></tr>
+<tr><td>Relation distillation</td><td>Attention matrices</td><td>PKD-BERT, MiniLM</td></tr>
+<tr><td>Data-free distillation</td><td>Soft labels + synthetic data from teacher</td><td>DFAD, Zero-Shot KD</td></tr>
+<tr><td>Online distillation</td><td>Mutual learning — no fixed teacher</td><td>Deep Mutual Learning</td></tr>
+<tr><td>Self-distillation</td><td>Later layers teach earlier layers</td><td>Born-Again Networks</td></tr></table></div>
+</div>
+<div class="card"><div class="card-title">Distillation in Practice</div>
+<table class="tbl"><tr><th>Teacher → Student</th><th>Compression</th><th>Performance Retained</th></tr>
+<tr><td>BERT-large → DistilBERT</td><td>66% smaller, 60% faster</td><td>97% of BERT-base on GLUE</td></tr>
+<tr><td>BERT-base → TinyBERT</td><td>7.5× smaller, 9.4× faster</td><td>96.8% of teacher on GLUE</td></tr>
+<tr><td>GPT-4 → small LLM</td><td>Hundreds of billions → 7B</td><td>Task-specific: often 90%+</td></tr>
+<tr><td>Ensemble → single model</td><td>N models → 1 model</td><td>Close to ensemble performance</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The temperature τ is the key insight. At τ=1, softmax is sharp — nearly a one-hot. At τ=4, it's soft and reveals class similarities the model has learned. The student trained on τ=4 soft labels learns a richer representation than one trained on hard labels. In production I use distillation when I need &lt;100ms latency but my best model is too large — DistilBERT gives 97% of BERT quality at 2× the speed, which is often the right tradeoff."</p></div>
+</section>

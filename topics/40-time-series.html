@@ -1,0 +1,41 @@
+<section class="section" id="sec-timeseries">
+<div class="sec-title">Time Series Modeling</div>
+<div class="sec-desc">Forecasting and anomaly detection where temporal ordering matters — random splits destroy the structure, and stationarity is the prerequisite most beginners skip.</div>
+<div class="card"><div class="card-title">Stationarity — The Prerequisite</div>
+<div class="card-body">A time series is stationary if its mean, variance, and autocorrelation structure are constant over time. Most raw series are non-stationary (trends, seasonality).</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Test: Augmented Dickey-Fuller (ADF) test} \\
+H_0\text{: series has unit root (non-stationary)} \\
+p < 0.05\text{: reject }H_0 \rightarrow \text{series is stationary} \\
+\text{Transformations: differencing, }\log\text{, seasonal decomposition (STL)}
+\end{aligned}$$</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">ARIMA (Statistical)</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{ARIMA}(p,d,q)\text{:} \\
+p = \text{autoregressive terms (AR): lag } p \text{ correlations} \\
+d = \text{differencing order (to achieve stationarity)} \\
+q = \text{moving average terms (MA): lag } q \text{ error correlations} \\
+\text{SARIMA}(p,d,q)(P,D,Q)_m\text{: seasonal variant}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Identify p, d, q from ACF/PACF plots</li><li>or auto.arima() / pmdarima for automatic selection</li><li>Best for: univariate, short-term, linear relationships</li><li>Weakness: struggles with non-linear patterns, multiple seasonalities</li></ul></div>
+<div class="card cg"><div class="card-title">Prophet (Facebook/Meta)</div>
+<div class="formula math-formula">$$\begin{aligned}
+y(t) = \text{trend}(t) + \text{seasonality}(t) + \text{holidays}(t) + \text{noise} \\
+\text{trend} = \text{piecewise linear or logistic growth} \\
+\text{seasonality} = \text{Fourier series decomposition}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Handles daily, weekly, yearly seasonality automatically</li><li>Robust to missing data and outliers</li><li>Easy to add custom holidays and changepoints</li><li>Interpretable decomposition — great for business users</li><li>Best for: business metrics, web traffic, sales forecasting</li></ul></div>
+</div>
+<div class="card"><div class="card-title">ML / Deep Learning Approaches</div>
+<table class="tbl"><tr><th>Method</th><th>Key Idea</th><th>Best For</th></tr>
+<tr><td>XGBoost on lag features</td><td>Engineer lags, rolling stats, date features → tabular ML</td><td>Tabular TS with many series; strong baseline</td></tr>
+<tr><td>LSTM / GRU</td><td>Sequence model with memory; handles non-linear patterns</td><td>Complex multivariate; single or few series</td></tr>
+<tr><td>Temporal Fusion Transformer</td><td>Attention + gate mechanisms for TS; interprets variable importance</td><td>Multi-horizon, multi-variate forecasting</td></tr>
+<tr><td>N-BEATS / N-HiTS</td><td>Deep residual networks specifically designed for TS</td><td>Univariate, M4/M5 competition-level</td></tr>
+<tr><td>TimesFM / MOIRAI</td><td>Foundation models for zero-shot time series forecasting</td><td>No training data available; cold start</td></tr></table></div>
+<div class="card"><div class="card-title">Time Series Evaluation — Critical Rules</div>
+<ul class="bul"><li><strong>Never random split:</strong> always use temporal splits — train before validation date, validate before test date</li><li><strong>Walk-forward validation:</strong> retrain on expanding window, validate on next period</li><li><strong>Metrics:</strong> MAE (interpretable), MAPE (if no near-zero values), sMAPE (symmetric), RMSE (penalizes peaks)</li><li><strong>Leakage danger:</strong> future statistics (mean over full series, etc.) in features</li></ul></div>
+<div class="box story"><div class="bl">📖 EMI Collection Analogy</div><p>Predicting which customers will miss their next EMI: use lag features (days since last payment, rolling 3-month payment rate), seasonal patterns (salary cycle — payments spike on 1st), macroeconomic indicators. ARIMA fails here because it's univariate. XGBoost on lag features + Prophet seasonal decomposition wins.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My time series stack: (1) EDA with decomposition (trend/seasonal/residual), (2) ADF test for stationarity, (3) baseline with ARIMA or Prophet — interpretable and hard to beat on short-term univariate, (4) XGBoost on lag features as a strong ML baseline, (5) TFT or N-HiTS for complex multivariate. Walk-forward validation is non-negotiable — future leakage is the #1 mistake. Always check for data collection artifacts (weekends, holidays, reporting delays)."</p></div>
+</section>

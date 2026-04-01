@@ -1,0 +1,42 @@
+<section class="section" id="sec-prob">
+<div class="sec-title">Probability Theory</div>
+<div class="sec-desc">The mathematical language of uncertainty — every ML model is fundamentally making probabilistic statements, whether it admits it or not.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Basic Rules</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbb{P}(A \cup B) = \mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A \cap B) \\
+\mathbb{P}(A \cap B) = \mathbb{P}(A) \cdot \mathbb{P}(B \mid A) \\
+\mathbb{P}(A \mid B) = \mathbb{P}(A \cap B) / \mathbb{P}(B) \\
+\text{Independent: } \mathbb{P}(A \cap B) = \mathbb{P}(A) \cdot \mathbb{P}(B)
+\end{aligned}$$</div></div>
+<div class="card cg"><div class="card-title">Bayes' Theorem</div>
+<div class="formula math-formula">$$\begin{aligned}
+P(H \mid E) = \frac{P(E \mid H) \cdot P(H)}{P(E)} \\[6pt]
+\text{Posterior} = \frac{\text{Likelihood} \times \text{Prior}}{\text{Evidence}}
+\end{aligned}$$</div>
+<div class="box story"><div class="bl">📖 Rare Disease Trap</div><p>A test is 99% accurate for a disease affecting 1% of people. You test positive. P(sick|positive) = 0.99×0.01/(0.99×0.01+0.01×0.99) ≈ 50%! The low prior (1%) kills the intuition. Bayes corrects your panic.</p></div></div>
+</div>
+<div class="card"><div class="card-title">Key Distributions — Quick Reference</div>
+<table class="tbl"><tr><th>Distribution</th><th>Parameters</th><th>Mean/Var</th><th>ML Context</th></tr>
+<tr><td><strong>Bernoulli</strong></td><td>p</td><td>p / p(1−p)</td><td>Binary label, one coin flip</td></tr>
+<tr><td><strong>Binomial</strong></td><td>n, p</td><td>np / np(1−p)</td><td>Count of successes in n trials</td></tr>
+<tr><td><strong>Normal N(μ,σ²)</strong></td><td>μ, σ</td><td>μ / σ²</td><td>Weight init, noise, CLT limit</td></tr>
+<tr><td><strong>Poisson(λ)</strong></td><td>λ</td><td>λ / λ</td><td>Rare event counts (fraud, bugs)</td></tr>
+<tr><td><strong>Exponential</strong></td><td>λ</td><td>1/λ / 1/λ²</td><td>Time between events, survival</td></tr>
+<tr><td><strong>Beta(α,β)</strong></td><td>α, β</td><td>α/(α+β)</td><td>Prior over probability, A/B testing</td></tr>
+<tr><td><strong>Categorical</strong></td><td>p₁…pₖ</td><td>—</td><td>Softmax output, multi-class</td></tr></table></div>
+<div class="g2">
+<div class="card"><div class="card-title">Expectation &amp; Variance</div>
+<div class="formula math-formula">$$\begin{aligned}
+E[X] = \sum x_i P(x_i) \quad \text{(discrete)} \\
+\mathrm{Var}(X) = E[X^2] - (E[X])^2 \\
+\mathrm{Var}(aX+b) = a^2 \mathrm{Var}(X) \\
+\mathrm{Cov}(X,Y) = E\!\left[(X - \mu_x)(Y - \mu_y)\right] \\
+\rho(X,Y) = \mathrm{Cov}(X,Y) / (\sigma_x \sigma_y) \quad \text{(Pearson r)}
+\end{aligned}$$</div></div>
+<div class="card"><div class="card-title">MLE vs MAP</div>
+<ul class="bul"><li><strong>MLE:</strong> θ̂ = argmax P(data|θ). No prior. Logistic regression minimizes CE = maximizes Bernoulli log-likelihood.</li><li><strong>MAP:</strong> θ̂ = argmax P(θ|data). Includes prior.</li></ul>
+<div class="box mem"><div class="bl">💡 Key insight</div><p>Ridge regression (L2) = MAP with Gaussian prior. Lasso (L1) = MAP with Laplace prior. Math and ML are the same thing.</p></div></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Cross-entropy loss comes from maximizing log-likelihood under a Bernoulli/Categorical distribution. KL divergence measures how much one distribution differs from another — used in VAEs, knowledge distillation, and information theory. When I see a loss function, I ask: what probability distribution am I implicitly assuming?"</p></div>
+</section>

@@ -1,0 +1,261 @@
+<section class="section" id="sec-backprop">
+<div class="sec-title">Backpropagation &amp; Training Loop</div>
+<div class="sec-desc">Efficient computation of all gradients using the chain rule, plus the complete gradient descent training loop — from raw data to updated weights. Once you can trace this by hand, backprop becomes mechanical rather than magical.</div>
+
+<div class="card"><div class="card-title">The Complete Training Loop</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">for epoch in range(num_epochs):
+    for X_batch, y_batch in dataloader:        # Step 1: mini-batch
+        # --- FORWARD PASS ---
+        z1 = X_batch @ W1 + b1                 # Step 2a: linear transform
+        h1 = relu(z1)                           # Step 2b: non-linearity
+        z2 = h1 @ W2 + b2                       # Step 2c: output layer
+        y_hat = sigmoid(z2)                     # Step 2d: probability
+
+        # --- LOSS ---
+        loss = binary_cross_entropy(y_hat, y_batch)   # Step 3: scalar loss
+
+        # --- BACKWARD PASS ---
+        optimizer.zero_grad()                   # Step 4a: clear old gradients!
+        loss.backward()                         # Step 4b: compute all ∂L/∂W
+
+        # --- CLIP (optional but critical for RNNs/Transformers) ---
+        clip_grad_norm_(model.parameters(), max_norm=1.0)  # Step 5
+
+        # --- UPDATE ---
+        optimizer.step()                        # Step 6: W ← W − α∇L
+
+    # --- VALIDATION ---
+    model.eval()
+    with torch.no_grad():                       # Step 7: no grad tracking
+        val_loss = evaluate(model, val_loader)
+    model.train()</code></pre></div></div>
+
+<!-- GD Animated Loss Surface -->
+<div class="anim-wrap"><div class="anim-title">Gradient descent: loss surface + parameter update steps</div>
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="gda" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
+  <marker id="ax2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker>
+</defs>
+<line x1="40" y1="170" x2="460" y2="170" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
+<line x1="40" y1="170" x2="40" y2="20" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
+<text x="455" y="185" fill="#4e5a7a" font-size="10" font-family="DM Sans">θ (parameter)</text>
+<text x="5" y="90" fill="#4e5a7a" font-size="10" font-family="DM Sans" transform="rotate(-90 18 90)">Loss L</text>
+<path d="M55,155 C100,70 160,35 250,28 C340,21 380,55 450,155" fill="none" stroke="#5ba4fb" stroke-width="2.5"/>
+<text x="260" y="22" fill="#5ba4fb" font-size="10" font-family="DM Sans" text-anchor="middle">L(θ) — loss landscape</text>
+<circle cx="250" cy="28" r="4" fill="#22d3a0"/>
+<line x1="250" y1="28" x2="250" y2="170" stroke="#22d3a0" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+<text x="250" y="183" fill="#22d3a0" font-size="9" font-family="DM Sans" text-anchor="middle">θ*</text>
+<circle cx="95" cy="98" r="6" fill="#f5a623"/>
+<text x="95" y="90" fill="#f5a623" font-size="9" font-family="DM Sans" text-anchor="middle">θ₀</text>
+<line x1="60" y1="125" x2="130" y2="71" stroke="#f06767" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
+<text x="140" y="68" fill="#f06767" font-size="9" font-family="DM Sans">∇L steep→big step</text>
+<line x1="92" y1="98" x2="147" y2="72" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;1;1;0" dur="3s" repeatCount="indefinite"/>
+</line>
+<circle cx="155" cy="69" r="6" fill="#f5a623">
+  <animate attributeName="opacity" values="0;0;1;1" dur="3s" repeatCount="indefinite"/>
+</circle>
+<line x1="152" y1="69" x2="197" y2="52" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;0;1;0" dur="3s" repeatCount="indefinite"/>
+</line>
+<circle cx="205" cy="50" r="6" fill="#f5a623">
+  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
+</circle>
+<line x1="202" y1="50" x2="233" y2="35" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
+</line>
+<text x="370" y="110" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">SGD noise helps</text>
+<text x="370" y="122" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">escape local minima</text>
+<path d="M310,80 C330,75 350,73 370,73 C390,73 410,75 430,82" fill="none" stroke="#b97cf8" stroke-width="1.5" stroke-dasharray="5,3" opacity=".5"/>
+<text x="370" y="68" fill="#b97cf8" font-size="9" font-family="DM Sans" text-anchor="middle">saddle point</text>
+</svg></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Mini-batch vs Full-batch vs SGD</div>
+<table class="tbl"><tr><th>Type</th><th>Batch Size</th><th>Gradient</th><th>Speed</th></tr>
+<tr><td>Full batch GD</td><td>All N samples</td><td>Exact</td><td>Slow; stable</td></tr>
+<tr><td>Stochastic GD</td><td>1 sample</td><td>Very noisy</td><td>Fast; noisy path</td></tr>
+<tr><td>Mini-batch SGD</td><td>32–512</td><td>Approximate</td><td>Best of both ✅</td></tr></table></div>
+<div class="card cg"><div class="card-title">Critical Steps Often Missed</div>
+<ul class="bul"><li><strong>zero_grad():</strong> PyTorch accumulates gradients — missing this adds previous batch's gradients to the current one. Silent, hard-to-detect bug.</li><li><strong>model.eval() for validation:</strong> disables Dropout and uses BatchNorm running statistics. Missing this corrupts validation metrics.</li><li><strong>torch.no_grad():</strong> stops building the computation graph at inference — 2–3× memory + speed improvement.</li><li><strong>Gradient clipping:</strong> essential for RNNs and Transformers — caps gradient norm to prevent a bad batch from blowing up weights.</li></ul></div>
+</div>
+
+<div class="card"><div class="card-title">Chain Rule on a Computational Graph</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{For } L = \text{softmax}(W^2 \cdot \text{ReLU}(W^1 x + b^1) + b^2): \\
+\frac{\partial L}{\partial W^2} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z^2} \quad \text{(output layer gradient)} \\
+\frac{\partial L}{\partial W^1} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z^2} \cdot \frac{\partial z^2}{\partial h^1} \cdot \frac{\partial h^1}{\partial z^1} \cdot \frac{\partial z^1}{\partial W^1} \\
+\frac{\partial h^1}{\partial z^1} = \mathbb{1}(z^1>0) \quad \text{(ReLU local gradient)} \\
+\frac{\partial z^1}{\partial W^1} = x \quad \text{(linear local gradient)}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Key insight: during the forward pass, cache the intermediate values. During the backward pass, multiply them in reverse order. This makes backprop O(2 × forward pass), not O(parameters).</div></div>
+
+<!-- Backprop Flow Animation -->
+<div class="anim-wrap"><div class="anim-title">Backprop: gradients flow backward layer by layer via chain rule</div>
+<svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="fwd" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#5ba4fb"/></marker>
+  <marker id="bwd" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
+</defs>
+<rect x="10" y="90" width="50" height="30" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="35" y="109" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="JetBrains Mono">x</text>
+<rect x="100" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="130" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">z¹=W¹x+b¹</text>
+<rect x="210" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="240" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">h=ReLU(z¹)</text>
+<rect x="320" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="350" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">z²=W²h+b²</text>
+<rect x="430" y="80" width="55" height="30" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="457" y="99" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="JetBrains Mono">ŷ=σ(z²)</text>
+<rect x="430" y="130" width="55" height="30" rx="5" fill="#f06767" opacity=".3" stroke="#f06767" stroke-width="1.5"/>
+<text x="457" y="149" text-anchor="middle" fill="#f06767" font-size="10" font-family="JetBrains Mono">L(ŷ,y)</text>
+<line x1="60" y1="105" x2="98" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
+<line x1="160" y1="95" x2="208" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
+<line x1="270" y1="95" x2="318" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
+<line x1="380" y1="95" x2="428" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
+<line x1="457" y1="110" x2="457" y2="128" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
+<line x1="428" y1="130" x2="428" y2="115" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
+  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite"/>
+</line>
+<text x="390" y="125" fill="#f06767" font-size="8.5" font-family="JetBrains Mono">∂L/∂ŷ=ŷ−y</text>
+<line x1="428" y1="95" x2="382" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
+  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.2s" repeatCount="indefinite"/>
+</line>
+<text x="395" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">·σ'(z²)</text>
+<text x="350" y="125" fill="#f5a623" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">∂L/∂W²=δ²·hᵀ</text>
+<line x1="350" y1="112" x2="350" y2="108" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="3,2"/>
+<line x1="318" y1="95" x2="272" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
+  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.4s" repeatCount="indefinite"/>
+</line>
+<text x="293" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">W²ᵀ·δ²</text>
+<line x1="208" y1="95" x2="162" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
+  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.6s" repeatCount="indefinite"/>
+</line>
+<text x="183" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">·𝟙(z¹&gt;0)</text>
+<text x="130" y="125" fill="#f5a623" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">∂L/∂W¹=δ¹·xᵀ</text>
+<line x1="130" y1="112" x2="130" y2="108" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="3,2"/>
+<text x="250" y="195" fill="#5ba4fb" font-size="9" font-family="DM Sans" text-anchor="middle">— Forward (blue) · · · Backward gradient (red) · Weight gradient (orange)</text>
+<text x="250" y="210" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">δ² = ∂L/∂z² (output error signal);  δ¹ = ∂L/∂z¹ (hidden error signal)</text>
+</svg></div>
+
+<div class="card"><div class="card-title">Concrete 2-Layer Gradient Computation (Step-by-Step)</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Architecture: } x\,(2D) \rightarrow h\,(3D,\text{ReLU}) \rightarrow \hat{y}\,(1D,\text{sigmoid}) \\
+\textbf{--- OUTPUT LAYER ---} \\
+\frac{\partial L}{\partial \hat{y}} = \frac{\hat{y}-y}{\hat{y}(1-\hat{y})} \quad \text{(BCE w.r.t. } \hat{y}\text{)} \\
+\frac{\partial \hat{y}}{\partial z^2} = \hat{y}(1-\hat{y}) \quad \text{(sigmoid derivative)} \\
+\delta^2 = \frac{\partial L}{\partial z^2} = \hat{y}-y \quad \text{[these cancel nicely!]} \\
+\frac{\partial L}{\partial W^2} = \delta^2 \cdot (h^1)^T \quad \text{(outer product)} \\
+\frac{\partial L}{\partial b^2} = \delta^2 \\
+\textbf{--- HIDDEN LAYER ---} \\
+\frac{\partial L}{\partial h^1} = (W^2)^T \cdot \delta^2 \quad \text{[}W^{2T}\text{ routes gradient back]} \\
+\frac{\partial h^1}{\partial z^1} = \mathbb{1}(z^1>0) \quad \text{(ReLU: 1 if positive, 0 if not)} \\
+\delta^1 = \frac{\partial L}{\partial z^1} = (W^2)^T\cdot\delta^2 \odot \mathbb{1}(z^1>0) \\
+\frac{\partial L}{\partial W^1} = \delta^1 \cdot x^T \\
+\frac{\partial L}{\partial b^1} = \delta^1 \\
+\textbf{--- WEIGHT UPDATE ---} \\
+W^2 \leftarrow W^2 - \alpha \cdot \frac{\partial L}{\partial W^2} \\
+W^1 \leftarrow W^1 - \alpha \cdot \frac{\partial L}{\partial W^1}
+\end{aligned}$$</div></div>
+
+<div class="g2">
+<div class="card cr"><div class="card-title">Vanishing Gradients</div>
+<ul class="bul"><li>Gradients → 0 as they multiply through many saturating activations (sigmoid, tanh)</li><li>Early layers learn nothing — training stalls</li><li><strong>Fixes:</strong> ReLU activations, BatchNorm, residual connections (ResNets), careful init</li></ul></div>
+<div class="card ca"><div class="card-title">Exploding Gradients</div>
+<ul class="bul"><li>Gradients grow exponentially → weights become NaN</li><li>Common in RNNs with long sequences</li><li><strong>Fixes:</strong> gradient clipping (clip_grad_norm), lower learning rate, BatchNorm, weight decay</li></ul></div>
+</div>
+
+<div class="card"><div class="card-title">BatchNorm — The Stability Breakthrough</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{BatchNorm}(x) = \gamma \cdot \frac{x - \mu_B}{\sqrt{\sigma^2_B + \varepsilon}} + \beta \\
+\mu_B = \text{batch mean},\quad \sigma^2_B = \text{batch variance} \\
+\gamma,\,\beta = \text{learned scale and shift parameters}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Normalizes activations per mini-batch — keeps gradients in a healthy range</li><li>Acts as regularizer (noisy normalization during training)</li><li>Allows higher learning rates — training is much faster and stable</li><li>Applied before or after activation (debate; pre-activation ResNets say before)</li></ul></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">What Autograd Does For You</div>
+<div class="card-body">In PyTorch, <code>loss.backward()</code> executes the entire chain automatically by traversing the computation graph in reverse. Each operation records its local gradient during the forward pass, then multiplies them in chain-rule order during backward.</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">x = torch.tensor([...], requires_grad=True)
+z1 = x @ W1 + b1          # records: ∂z1/∂W1 = x
+h  = z1.clamp(min=0)       # records: ∂h/∂z1 = 1(z1&gt;0)
+z2 = h @ W2 + b2
+loss = F.binary_cross_entropy(z2.sigmoid(), y)
+loss.backward()            # traverses graph, accumulates grads
+print(W1.grad)             # ∂L/∂W1 is now populated</code></pre></div></div>
+<div class="card cg"><div class="card-title">Computational Graph</div>
+<ul class="bul"><li>Every tensor operation creates a node in the graph</li><li>Each node stores: its output value + its local gradient function</li><li>backward() walks this DAG in reverse topological order</li><li><code>detach()</code>: cuts gradient flow (e.g., for target network in RL)</li><li><code>retain_graph=True</code>: allows multiple backward passes (used in GANs)</li><li><code>torch.no_grad()</code>: don't build graph at all (inference mode)</li></ul></div>
+</div>
+
+<div class="card"><div class="card-title">Learning Rate — The Most Impactful Hyperparameter</div>
+<table class="tbl"><tr><th>LR Value</th><th>Effect</th><th>Symptom</th></tr>
+<tr><td>Too high (e.g. 0.1 for Adam)</td><td>Overshoots minimum; diverges</td><td>Loss oscillates or NaN</td></tr>
+<tr><td>Too low (e.g. 1e-6)</td><td>Glacially slow convergence</td><td>Loss barely moves</td></tr>
+<tr><td>Just right (1e-3 for Adam)</td><td>Smooth descent to a good minimum</td><td>Loss steadily decreasing</td></tr>
+<tr><td>Warmup then decay</td><td>Stable start + convergence boost</td><td>Best final perf for Transformers</td></tr></table></div>
+
+<div class="box story"><div class="bl">📖 Telephone Game</div><p>Backprop is feedback traveling backward through 100 student pairs whispering to each other. By the time it reaches student #1 (first layer), the message is either completely garbled (vanishing) or shouted so loud it's noise (exploding). BatchNorm is a relay station every 10 pairs ensuring the message arrives intact and at the right volume.</p></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>Backprop is O(2 × forward pass) — not O(parameters) — because of the shared computation in the chain rule. The beautiful thing: ∂L/∂z² = ŷ − y for BCE + sigmoid — the sigmoid derivative cancels with the BCE derivative perfectly. This is not coincidence — BCE is the canonical loss for Bernoulli outputs precisely because of this mathematical elegance. The residual connection y = F(x) + x creates a gradient highway — the gradient flows directly through the skip connection without multiplication, so early layers always receive some gradient. That's why ResNet-152 trained successfully while a plain 152-layer net didn't.</p></div>
+
+<div class="card cc">
+  <div class="card-title">▶ Run It: Manual Backprop (edit &amp; re-run)</div>
+  <div class="code-runner" id="runner-backprop">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-backprop')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-backprop')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
+np.random.seed(42)
+
+# --- Setup: 2-layer net, 1 sample ---
+X = np.array([[0.5, 0.8]])      # input (1×2)
+y = np.array([[1.0]])           # label
+
+W1 = np.random.randn(2, 3) * 0.1   # (2×3)
+b1 = np.zeros((1, 3))
+W2 = np.random.randn(3, 1) * 0.1   # (3×1)
+b2 = np.zeros((1, 1))
+
+# --- Forward pass ---
+z1    = X @ W1 + b1
+h     = np.maximum(0, z1)          # ReLU
+z2    = h @ W2 + b2
+y_hat = 1 / (1 + np.exp(-z2))      # sigmoid
+
+loss = -(y * np.log(y_hat) + (1-y) * np.log(1-y_hat))
+print(f"Forward:  ŷ={y_hat[0,0]:.4f}  loss={loss[0,0]:.4f}")
+
+# --- Backward pass ---
+delta2 = y_hat - y                  # ∂L/∂z2  (BCE + sigmoid cancels nicely)
+dW2    = h.T @ delta2
+db2    = delta2
+
+dh     = delta2 @ W2.T
+dz1    = dh * (z1 > 0)             # ReLU gate
+dW1    = X.T @ dz1
+db1    = dz1
+
+# --- Weight update ---
+lr = 0.1
+W1 -= lr * dW1;  b1 -= lr * db1
+W2 -= lr * dW2;  b2 -= lr * db2
+
+# --- Verify loss decreased ---
+z1b   = X @ W1 + b1
+hb    = np.maximum(0, z1b)
+z2b   = hb @ W2 + b2
+y_hat2 = 1 / (1 + np.exp(-z2b))
+loss2  = -(y * np.log(y_hat2) + (1-y) * np.log(1-y_hat2))
+print(f"After 1 step: ŷ={y_hat2[0,0]:.4f}  loss={loss2[0,0]:.4f}  ✓ loss decreased")
+print(f"dW2 = {dW2.flatten().round(4)}")
+    </textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div>
+</div>
+
+</section>

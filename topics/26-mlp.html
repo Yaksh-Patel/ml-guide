@@ -1,0 +1,93 @@
+<section class="section" id="sec-nn_basics">
+<div class="sec-title">Perceptron &amp; Multi-Layer Perceptron</div>
+<div class="sec-desc">From the simplest possible model (a weighted sum) to the universal function approximator that powers modern AI — the difference is just layers and non-linearities.</div>
+<div class="card"><div class="card-title">Perceptron — The Atom</div>
+<div class="formula math-formula">$$\begin{aligned}
+z = w_1x_1 + w_2x_2 + ... + w_nx_n + b = w^Tx + b \\
+output = activation(z)
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Learned by updating weights toward correct outputs (perceptron learning rule). Can only learn linearly separable patterns — hence the need to stack layers.</div></div>
+<!-- MLP Architecture Animation -->
+<div class="anim-wrap"><div class="anim-title">Multi-Layer Perceptron — forward pass signal flow</div>
+<svg viewBox="0 0 520 210" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="mn" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#2e3a58"/></marker>
+</defs>
+<!-- Layer labels -->
+<text x="60" y="18" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Input (x)</text>
+<text x="190" y="18" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Hidden 1</text>
+<text x="320" y="18" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Hidden 2</text>
+<text x="450" y="18" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Output (ŷ)</text>
+<!-- Input neurons -->
+<circle cx="60" cy="60" r="16" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="60" y="64" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="JetBrains Mono">x₁</text>
+<circle cx="60" cy="105" r="16" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="60" y="109" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="JetBrains Mono">x₂</text>
+<circle cx="60" cy="150" r="16" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="60" y="154" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="JetBrains Mono">x₃</text>
+<!-- Hidden 1 neurons -->
+<circle cx="190" cy="45" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="190" y="49" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h¹₁</text>
+<circle cx="190" cy="90" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="190" y="94" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h¹₂</text>
+<circle cx="190" cy="135" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="190" y="139" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h¹₃</text>
+<circle cx="190" cy="175" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="190" y="179" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h¹₄</text>
+<!-- Hidden 2 neurons -->
+<circle cx="320" cy="60" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="320" y="64" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h²₁</text>
+<circle cx="320" cy="105" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="320" y="109" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h²₂</text>
+<circle cx="320" cy="150" r="16" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="320" y="154" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="JetBrains Mono">h²₃</text>
+<!-- Output neuron -->
+<circle cx="450" cy="105" r="18" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="450" y="109" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="JetBrains Mono">ŷ</text>
+<!-- Connections input→h1 (just some visible) -->
+<line x1="76" y1="60" x2="174" y2="45" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="60" x2="174" y2="90" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="60" x2="174" y2="135" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="60" x2="174" y2="175" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="105" x2="174" y2="45" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="105" x2="174" y2="90" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="105" x2="174" y2="135" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="105" x2="174" y2="175" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="150" x2="174" y2="45" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="150" x2="174" y2="90" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="150" x2="174" y2="135" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="76" y1="150" x2="174" y2="175" stroke="#2e3a58" stroke-width="0.8"/>
+<!-- h1→h2 connections -->
+<line x1="206" y1="45" x2="304" y2="60" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="45" x2="304" y2="105" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="45" x2="304" y2="150" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="90" x2="304" y2="60" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="90" x2="304" y2="105" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="90" x2="304" y2="150" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="135" x2="304" y2="60" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="135" x2="304" y2="105" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="135" x2="304" y2="150" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="175" x2="304" y2="60" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="175" x2="304" y2="105" stroke="#2e3a58" stroke-width="0.8"/>
+<line x1="206" y1="175" x2="304" y2="150" stroke="#2e3a58" stroke-width="0.8"/>
+<!-- h2→output -->
+<line x1="336" y1="60" x2="432" y2="105" stroke="#5ba4fb" stroke-width="1.2"/>
+<line x1="336" y1="105" x2="432" y2="105" stroke="#5ba4fb" stroke-width="1.2"/>
+<line x1="336" y1="150" x2="432" y2="105" stroke="#5ba4fb" stroke-width="1.2"/>
+<!-- Forward signal pulse animation -->
+<circle r="4" fill="#22d3a0" opacity="0.8">
+  <animateMotion dur="2s" repeatCount="indefinite" path="M60,105 L190,90 L320,105 L450,105"/>
+</circle>
+<text x="260" y="200" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">⚡ Each connection has a learnable weight w. Bias b shifts the activation.</text>
+</svg></div>
+<div class="card"><div class="card-title">Forward Pass — Layer by Layer</div>
+<div class="formula math-formula">$$\begin{aligned}
+h^1 = activation(W^1x + b^1) \\
+h^2 = activation(W^2h^1 + b^2) \\
+\hat{y}  = \text{softmax}(W^3h^2 + b^3) \quad \text{(classification)} \\
+\hat{y}  = W^3h^2 + b^3 \quad \text{(regression)}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Without activation functions, stacking linear layers collapses to a single linear layer: W₃(W₂(W₁x)) = Wx. The non-linearity is what enables learning non-linear decision boundaries.</div></div>
+<div class="box story"><div class="bl">📖 The Brilliant Intern</div><p>A neural network is a brilliant intern. 10M training examples + 6 months = outperforms everyone. 200 examples on day one = memorizes them exactly, fails on anything new. And it can never explain its decisions. "I just... feel it's a cat."</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Universal approximation theorem: a single hidden layer with enough neurons can approximate any continuous function on a compact domain. But 'enough neurons' can be exponential — depth is more efficient than width. Each layer learns increasingly abstract representations: pixels → edges → shapes → objects. For tabular data with &lt;100K rows, XGBoost almost always beats an MLP. Neural networks shine when data is unstructured (images, text) or when scale is massive."</p></div>
+</section>

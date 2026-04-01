@@ -1,0 +1,23 @@
+<section class="section" id="sec-knn">
+<div class="sec-title">k-Nearest Neighbors (KNN)</div>
+<div class="sec-desc">The laziest learner in ML — literally stores all training data and defers all computation to prediction time. No training phase, no parameters.</div>
+<div class="card"><div class="card-title">How It Works</div>
+<ol class="num"><li><strong>Store</strong> all training examples (X_train, y_train)</li><li><strong>At prediction:</strong> find the k nearest neighbors of query point x using a distance metric</li><li><strong>Vote:</strong> majority class (classification) or mean of k labels (regression)</li></ol>
+<div class="formula math-formula">$$\begin{aligned}
+d_{\text{euclidean}}(\mathbf{a},\mathbf{b}) &= \sqrt{\textstyle\sum_i (a_i - b_i)^2} \\
+d_{\text{manhattan}}(\mathbf{a},\mathbf{b}) &= \textstyle\sum_i |a_i - b_i| \\
+d_{\text{cosine}}(\mathbf{a},\mathbf{b}) &= 1 - \dfrac{\mathbf{a}\cdot\mathbf{b}}{|\mathbf{a}||\mathbf{b}|}
+\end{aligned}$$</div></div>
+
+
+<div class="g2">
+<div class="card cg"><div class="card-title">Strengths</div>
+<ul class="bul"><li>Zero training time</li><li>Non-parametric — no assumptions about data distribution</li><li>Naturally multi-class</li><li>Simple to understand and implement</li><li>Works well for low-dimensional, small datasets</li></ul></div>
+<div class="card cr"><div class="card-title">Weaknesses</div>
+<ul class="bul"><li><strong>Curse of dimensionality:</strong> in high-D, everything is equidistant</li><li>Slow prediction: O(n) per query (use KD-tree or Ball-tree for speed)</li><li>Memory-intensive: stores entire training set</li><li>Sensitive to irrelevant features — feature scaling required</li><li>No feature importance output</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Choosing k</div>
+<ul class="bul"><li><strong>Small k (e.g., k=1):</strong> low bias, high variance — overfits, noisy boundaries</li><li><strong>Large k:</strong> high bias, low variance — over-smooths boundaries</li><li><strong>Rule of thumb:</strong> k = √n as starting point; tune via CV</li><li>Use odd k for binary classification to avoid ties</li></ul></div>
+<div class="box story"><div class="bl">📖 New Neighborhood Analogy</div><p>You move to a new city and want to know if a neighborhood is safe. KNN asks: "What are the 5 closest data points (past reports) to this location? If 4/5 say unsafe, predict unsafe." It's pure pattern matching — no model, just memory. Works great if you have good data; fails if data is sparse or high-dimensional.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"KNN is useful as a baseline and for anomaly detection, but has two fatal flaws at scale: O(n) prediction time and curse of dimensionality. For production with large datasets, I'd use approximate nearest neighbors (Faiss, HNSW) which trade a little accuracy for massive speed gains. Always scale features before KNN — a feature with range [0,1000] will dominate a feature with range [0,1] in Euclidean distance."</p></div>
+</section>

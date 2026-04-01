@@ -1,0 +1,31 @@
+<section class="section" id="sec-tokenization">
+<div class="sec-title">Tokenization &amp; Embeddings</div>
+<div class="sec-desc">Before any model can process text, it must be converted to vectors. The tokenization and embedding strategy profoundly affects what the model can learn.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Tokenization Methods</div>
+<table class="tbl"><tr><th>Method</th><th>Unit</th><th>Vocab Size</th><th>Used By</th></tr>
+<tr><td>Word-level</td><td>Whole words</td><td>50K–200K</td><td>Old approaches</td></tr>
+<tr><td>Character-level</td><td>Single chars</td><td>~100</td><td>CharCNN, some multilingual</td></tr>
+<tr><td>BPE</td><td>Byte-pair merged subwords</td><td>30K–60K</td><td>GPT-2/3/4, RoBERTa</td></tr>
+<tr><td>WordPiece</td><td>Likelihood-based subwords</td><td>30K</td><td>BERT, DistilBERT</td></tr>
+<tr><td>SentencePiece</td><td>Subwords from raw text</td><td>32K</td><td>T5, Llama, multilingual</td></tr></table>
+<div class="card-body" style="margin-top:8px"><strong>BPE:</strong> starts with characters, merges most frequent adjacent pairs repeatedly. "unhappiness" → ["un", "happy", "ness"]. Handles unknown words gracefully as subwords.</div></div>
+<div class="card cg"><div class="card-title">Word Embeddings</div>
+<ul class="bul"><li><strong>Word2Vec:</strong> predict surrounding words (CBOW) or center word from context (Skip-gram). Same word → same embedding regardless of context.</li><li><strong>GloVe:</strong> factorize word co-occurrence matrix. Captures global statistics.</li><li><strong>FastText:</strong> extends Word2Vec with character n-grams — handles OOV words and morphology.</li><li><strong>Contextual (BERT etc.):</strong> same word gets different embeddings in different contexts. "bank" in "river bank" vs "savings bank" → different vectors.</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Embedding Space Properties</div>
+<div class="formula math-formula">$$\begin{aligned}
+king - man + woman \approx queen \quad \text{[Word2Vec analogy]} \\
+cosine_similarity(Paris, France) \approx cosine_similarity(Berlin, Germany) \\
+Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Embeddings encode semantic relationships. Arithmetic in embedding space reflects semantic relationships — the famous "king - man + woman = queen" property. This emerges purely from co-occurrence statistics, not explicit semantic rules.</div></div>
+<div class="card"><div class="card-title">Sentence &amp; Document Embeddings</div>
+<table class="tbl"><tr><th>Method</th><th>How</th><th>Best For</th></tr>
+<tr><td>Average word embeddings</td><td>Mean of word2vec vectors</td><td>Simple baseline; surprisingly competitive</td></tr>
+<tr><td>[CLS] token (BERT)</td><td>First token's hidden state after fine-tuning</td><td>Classification with fine-tuning</td></tr>
+<tr><td>Mean pooling (BERT)</td><td>Average of all token hidden states</td><td>Sentence similarity without fine-tuning</td></tr>
+<tr><td>Sentence-BERT (SBERT)</td><td>Siamese BERT fine-tuned for semantic similarity</td><td>Semantic search, clustering</td></tr>
+<tr><td>OpenAI text-embedding-3</td><td>Proprietary fine-tuned embeddings</td><td>RAG, search, classification</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"BPE tokenization elegantly handles OOV words — a word like 'ChatGPT' gets tokenized as ['Chat', 'G', 'PT'] and the model can still work with it. The key limitation of Word2Vec is polysemy — 'bank' gets one embedding regardless of whether it's financial or river. BERT's contextual embeddings fix this but require a full forward pass per sentence. For semantic search in production, I use SBERT with FAISS for approximate nearest-neighbor retrieval — fast and accurate at scale."</p></div>
+</section>

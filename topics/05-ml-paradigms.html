@@ -1,0 +1,28 @@
+<section class="section" id="sec-mlconcepts">
+<div class="sec-title">ML Paradigms</div>
+<div class="sec-desc">How you frame the problem determines everything — the algorithm family, the data you need, the evaluation strategy, and the deployment architecture.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Supervised Learning</div>
+<div class="card-body">Learn a mapping f: X → y from labeled (input, output) pairs. The label is the signal.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Classification:</strong> y is categorical (spam/not-spam, credit default)</li><li><strong>Regression:</strong> y is continuous (house price, revenue)</li><li><strong>Examples:</strong> logistic regression, decision trees, XGBoost, neural networks</li><li><strong>Key risk:</strong> label quality — garbage labels = garbage model</li></ul></div>
+<div class="card cg"><div class="card-title">Unsupervised Learning</div>
+<div class="card-body">Find structure in data without labels. No y — just X.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Clustering:</strong> K-Means, DBSCAN, hierarchical — group similar points</li><li><strong>Dim reduction:</strong> PCA, t-SNE, UMAP — compress feature space</li><li><strong>Density estimation:</strong> GMMs, KDEs — model P(x)</li><li><strong>Anomaly detection:</strong> isolation forest, autoencoders</li></ul></div>
+</div>
+<div class="g2">
+<div class="card ca"><div class="card-title">Semi-Supervised Learning</div>
+<div class="card-body">Tiny labeled set + large unlabeled set. Labels are expensive; data is cheap.</div>
+<ul class="bul" style="margin-top:8px"><li>Self-training: label unlabeled data with your own model, retrain</li><li>Pseudo-labels + consistency regularization</li><li>BERT pretraining is semi-supervised (MLM on unlabeled text)</li></ul></div>
+<div class="card cp"><div class="card-title">Reinforcement Learning</div>
+<div class="card-body">Agent takes actions in an environment, receives reward signals, learns a policy π: state → action to maximize cumulative reward.</div>
+<ul class="bul" style="margin-top:8px"><li>No fixed dataset — agent generates its own data through interaction</li><li>Key challenge: credit assignment &amp; exploration vs exploitation</li><li>Used in RLHF (aligning LLMs), game playing, robotics, trading</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Self-Supervised Learning (the modern paradigm)</div>
+<div class="card-body">Create labels from the data itself — no human annotation needed. The model learns rich representations as a side-effect of solving a pretext task.</div>
+<table class="tbl" style="margin-top:10px"><tr><th>Pretext Task</th><th>Model</th><th>Representation Used For</th></tr>
+<tr><td>Predict next token</td><td>GPT</td><td>Language generation, reasoning</td></tr>
+<tr><td>Predict masked tokens</td><td>BERT</td><td>Text classification, NER, QA</td></tr>
+<tr><td>Contrastive (augmented views)</td><td>SimCLR, MoCo</td><td>Image representation</td></tr>
+<tr><td>Predict masked patches</td><td>MAE (ViT)</td><td>Vision representation</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For a new problem, I first ask: do I have labels? If yes, supervised. If not, unsupervised or self-supervised. The most powerful paradigm today is self-supervised pretraining + fine-tuning — use massive unlabeled data to learn representations, then fine-tune on a small labeled set. This is why BERT and GPT-style models dominate NLP despite labeled data being scarce."</p></div>
+</section>

@@ -1,0 +1,35 @@
+<section class="section" id="sec-bert">
+<div class="sec-title">BERT &amp; Encoder Models</div>
+<div class="sec-desc">Pre-training on masked language modeling gives BERT bidirectional context — the fundamental advantage over GPT-style autoregressive models for understanding tasks.</div>
+<div class="card"><div class="card-title">BERT Pre-Training Objectives</div>
+<div class="g2" style="margin-top:8px">
+<div><strong style="color:var(--text);font-size:13px">Masked Language Model (MLM)</strong>
+<div class="card-body" style="margin-top:4px">15% of tokens randomly masked. Predict them from bidirectional context. Forces model to understand each word from left AND right context. Unlike GPT which only sees left context.</div>
+<div class="formula math-formula">$$\begin{aligned}
+Input: "The_{MASK} sat on the mat" \\
+Target: predict "cat" from all other tokens
+\end{aligned}$$</div></div>
+<div><strong style="color:var(--text);font-size:13px">Next Sentence Prediction (NSP)</strong>
+<div class="card-body" style="margin-top:4px">50% actual next sentence, 50% random. Binary classification. Teaches sentence-level relationships. (Controversial — RoBERTa showed removing NSP helps.)</div></div>
+</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">BERT Architecture</div>
+<ul class="bul"><li>Encoder-only Transformer — bidirectional</li><li>BERT-base: 12 layers, 12 heads, 768 hidden, 110M params</li><li>BERT-large: 24 layers, 16 heads, 1024 hidden, 340M params</li><li>Input: [CLS] + sentence + [SEP] + sentence2 + [SEP]</li><li>[CLS] token: aggregate representation for classification</li></ul></div>
+<div class="card cg"><div class="card-title">BERT Variants</div>
+<table class="tbl"><tr><th>Model</th><th>Key Difference</th><th>Best For</th></tr>
+<tr><td>RoBERTa</td><td>No NSP, larger batches, more data</td><td>Generally better than BERT</td></tr>
+<tr><td>DistilBERT</td><td>60% smaller, 97% of BERT performance</td><td>Production latency constraints</td></tr>
+<tr><td>ALBERT</td><td>Cross-layer parameter sharing, factorized embeddings</td><td>Smaller memory footprint</td></tr>
+<tr><td>DeBERTa</td><td>Disentangled attention, enhanced mask decoder</td><td>SOTA on NLU benchmarks</td></tr>
+<tr><td>SciBERT</td><td>Pre-trained on scientific text</td><td>Scientific NLP tasks</td></tr>
+<tr><td>FinBERT</td><td>Pre-trained on financial text</td><td>Financial sentiment, NLU</td></tr></table></div>
+</div>
+<div class="card"><div class="card-title">Fine-Tuning BERT for Downstream Tasks</div>
+<table class="tbl"><tr><th>Task</th><th>Architecture</th><th>Training Signal</th></tr>
+<tr><td>Text classification</td><td>[CLS] → linear → softmax</td><td>Cross-entropy on labels</td></tr>
+<tr><td>Named Entity Recognition</td><td>Each token → linear → softmax</td><td>Token-level BIO labels</td></tr>
+<tr><td>Question Answering</td><td>Each token → linear → start/end scores</td><td>Span extraction labels</td></tr>
+<tr><td>Semantic similarity</td><td>Siamese BERT; cosine of [CLS] embeddings</td><td>Contrastive / triplet loss</td></tr>
+<tr><td>Sentence embedding</td><td>Mean pooling of token embeddings</td><td>NLI, STS tasks</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"BERT's key insight: bidirectionality matters for understanding. GPT predicts left-to-right (causal masking), which is great for generation but suboptimal for classification because you can't attend to future tokens. BERT masks 15% randomly and predicts them — the entire context (both directions) is available. For credit risk modeling with financial text (earnings calls, credit bureau comments), I'd use FinBERT or fine-tune RoBERTa-large with a classification head on labeled data."</p></div>
+</section>

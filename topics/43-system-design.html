@@ -1,0 +1,21 @@
+<section class="section" id="sec-systemdesign">
+<div class="sec-title">ML System Design</div>
+<div class="sec-desc">Senior-level interview territory — design a fraud detection system, recommendation engine, or credit scoring platform. The framework: requirements → data → features → model → serving → monitoring.</div>
+<div class="card"><div class="card-title">ML System Design Framework</div>
+<ol class="num"><li><strong>Clarify requirements:</strong> latency (real-time vs batch), volume (TPS), accuracy target, update frequency, regulatory constraints</li><li><strong>Problem framing:</strong> supervised/unsupervised/RL? Binary/multi-class/ranking? Objective metric?</li><li><strong>Data strategy:</strong> sources, freshness, labels (how collected?), historical volume, class balance</li><li><strong>Feature engineering:</strong> real-time features (last 5 transactions), pre-computed features (30-day payment rate), embeddings</li><li><strong>Model selection:</strong> baseline, main approach, why it fits requirements</li><li><strong>Training pipeline:</strong> offline training schedule, data versioning, experiment tracking</li><li><strong>Serving infrastructure:</strong> latency budget, scaling, fallback logic</li><li><strong>Monitoring &amp; iteration:</strong> metrics, drift detection, retraining triggers</li></ol></div>
+<div class="card"><div class="card-title">Case Study: Fraud Detection System (Real-Time)</div>
+<table class="tbl"><tr><th>Layer</th><th>Design Decision</th><th>Reasoning</th></tr>
+<tr><td>Latency</td><td>&lt;50ms P99</td><td>Transaction must approve/decline before user timeout</td></tr>
+<tr><td>Features</td><td>Transaction + pre-computed customer features from feature store</td><td>Can't compute 30-day history in real-time; feature store serves in &lt;5ms</td></tr>
+<tr><td>Model</td><td>LightGBM or small neural net</td><td>Fast inference; handles feature importance for investigation</td></tr>
+<tr><td>Output</td><td>Score → rule engine → decision</td><td>Rules allow business override; score enables risk-based decisioning</td></tr>
+<tr><td>Update</td><td>Daily retraining; feature store updated hourly</td><td>Fraud patterns evolve; hourly features catch velocity attacks</td></tr>
+<tr><td>Monitoring</td><td>PSI on feature distributions + FPR + fraud catch rate daily</td><td>Concept drift (fraud patterns change) and data drift both critical</td></tr></table></div>
+<div class="g2">
+<div class="card cp"><div class="card-title">Latency vs Accuracy Trade-offs</div>
+<ul class="bul"><li>Quantize model (INT8): 2–4× faster inference, &lt;1% accuracy drop</li><li>Distill large model → small model: smaller, faster, some accuracy cost</li><li>Feature selection: fewer features → faster inference</li><li>Approximate neighbors (FAISS) instead of exact: 100× faster, tiny accuracy loss</li><li>Async enrichment: serve fast with base features, enrich asynchronously for human review queue</li></ul></div>
+<div class="card cc"><div class="card-title">Scalability Considerations</div>
+<ul class="bul"><li><strong>Stateless serving:</strong> each prediction request is independent — easy horizontal scaling</li><li><strong>Caching:</strong> cache predictions for identical inputs (careful — staleness risk)</li><li><strong>Horizontal scaling:</strong> multiple model servers behind a load balancer</li><li><strong>GPU batching:</strong> accumulate requests into batches; GPUs are efficient at batch operations</li><li><strong>Database bottleneck:</strong> feature lookups often limit throughput — use Redis for feature serving</li></ul></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"When I get a system design problem, I start by anchoring on two things: (1) what latency is acceptable — real-time (&lt;100ms) forces very different choices than batch (hours), and (2) what does failure look like — a wrong fraud decision means customer friction, a wrong credit decision means money loss. Then I work through the data flywheel: more decisions → more labeled data → better model → better decisions. The biggest scaling trap is model serving becoming a monolith — separate the model server from the feature server from the rule engine."</p></div>
+</section>

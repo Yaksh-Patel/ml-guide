@@ -1,0 +1,29 @@
+<section class="section" id="sec-calibration">
+<div class="sec-title">Calibration &amp; Explainability</div>
+<div class="sec-desc">A model that's 70% confident should be right 70% of the time. Calibration checks this. Explainability turns black boxes into stories stakeholders trust.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Model Calibration</div>
+<div class="card-body">A well-calibrated model's predicted probabilities match observed frequencies.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Reliability diagram:</strong> x-axis = predicted prob buckets, y-axis = actual frequency. Perfect calibration = diagonal.</li><li><strong>Overconfident:</strong> sigmoid curve below diagonal (predictions too extreme)</li><li><strong>Underconfident:</strong> S-curve above diagonal (predictions too conservative)</li><li><strong>ECE (Expected Calibration Error):</strong> weighted average of |pred − actual| per bucket</li></ul>
+<div class="card-body" style="margin-top:10px"><strong>Fixing calibration:</strong></div>
+<ul class="bul"><li><strong>Platt scaling:</strong> fit logistic regression on validation scores → calibrated prob</li><li><strong>Isotonic regression:</strong> non-parametric, more flexible, needs more data</li><li><strong>Temperature scaling:</strong> divide logits by T before softmax (for NNs)</li></ul></div>
+<div class="card cg"><div class="card-title">SHAP — SHapley Additive exPlanations</div>
+<div class="card-body">Allocates the model's prediction to each feature based on Shapley values from cooperative game theory.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\phi_i = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|!\,(n-|S|-1)!}{n!} \left[f(S \cup \{i\}) - f(S)\right] \\[4pt]
+\text{(average marginal contribution across all feature orderings)}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Global SHAP:</strong> mean |SHAP| per feature = feature importance ranking</li><li><strong>Local SHAP:</strong> why did THIS prediction get this score?</li><li><strong>SHAP dependence plots:</strong> how does feature X affect predictions across its range?</li><li><strong>TreeSHAP:</strong> O(TLD) exact computation for tree models — very fast</li></ul></div>
+</div>
+<div class="card cp"><div class="card-title">LIME — Local Interpretable Model-Agnostic Explanations</div>
+<div class="card-body">Fit a simple linear model locally around a single prediction to explain it. Perturb the input, see how predictions change, fit interpretable model to those changes.</div>
+<ul class="bul" style="margin-top:8px"><li>Works for any black-box model (text, image, tabular)</li><li>Approximation is local — explanation only valid near the explained instance</li><li>Less stable than SHAP — can give different explanations for similar instances</li></ul></div>
+<div class="card"><div class="card-title">Feature Importance Types</div>
+<table class="tbl"><tr><th>Type</th><th>Method</th><th>Pros / Cons</th></tr>
+<tr><td>Impurity-based</td><td>sklearn feature_importances_</td><td>Fast; biased toward high-cardinality features</td></tr>
+<tr><td>Permutation importance</td><td>Shuffle feature, measure score drop</td><td>Model-agnostic; slower; accounts for correlations poorly</td></tr>
+<tr><td>SHAP</td><td>Shapley values</td><td>Theoretically sound; local + global; best overall</td></tr>
+<tr><td>Coefficient magnitude</td><td>Linear/logistic regression</td><td>Only valid after feature scaling; interpretable</td></tr>
+<tr><td>Gradient-based</td><td>Integrated gradients (NNs)</td><td>Principled; works for images/text</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Calibration matters especially in credit risk and medical applications where the predicted probability IS the output (e.g., P(default) determines the interest rate). XGBoost is poorly calibrated out-of-the-box — I always apply Platt scaling or isotonic regression post-hoc. For explainability, SHAP is my default — it's the only method with theoretical guarantees (efficiency, dummy, symmetry, linearity properties). I use TreeSHAP for tree models (fast and exact) and SHAP KernelExplainer for everything else."</p></div>
+</section>

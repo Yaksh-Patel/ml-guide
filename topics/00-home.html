@@ -1,0 +1,575 @@
+<section class="section" id="sec-home">
+
+<style>
+/* ── Home page specific styles ── */
+.home-hero{margin-bottom:28px}
+.home-hero-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:8px}
+.home-hero-sub{font-size:13.5px;color:var(--text2);line-height:1.75;max-width:640px}
+
+/* Overall progress widget */
+.home-progress-widget{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+.home-progress-ring{position:relative;flex-shrink:0}
+.home-pct-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent)}
+.home-progress-info{flex:1}
+.home-progress-info h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.home-progress-info p{font-size:12px;color:var(--text2)}
+.home-progress-bar-wrap{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:8px}
+.home-progress-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .5s ease;width:0%}
+
+/* Study path track pills */
+.study-path{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:24px}
+.study-path-label{font-size:10px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.path-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.path-step{display:flex;align-items:center;gap:6px}
+.path-pill{padding:4px 12px;border-radius:20px;font-weight:600;font-size:11px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.path-pill:hover{opacity:.8}
+.path-arrow{color:var(--text3);font-size:13px}
+
+/* Section group label */
+.grp-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+/* Home topic grid */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:4px}
+.ht{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
+.ht:hover{border-color:var(--accent);background:var(--surface2);transform:translateY(-1px)}
+.ht-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.hn{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);flex-shrink:0;margin-top:1px}
+.hbadges{display:flex;gap:4px;align-items:center}
+.htime{font-size:9px;color:var(--text3);background:var(--bg3);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.hnew{font-size:8px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:4px;padding:1px 5px}
+.hname{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3}
+.hsub{font-size:11px;color:var(--text3);line-height:1.5}
+.hpre{font-size:10px;color:var(--text3);margin-top:7px;padding-top:6px;border-top:1px solid var(--border)}
+.hpre span{color:var(--blue);font-size:9px}
+
+/* Read state */
+.ht-read{opacity:.5}
+.ht-read::after{content:'✓';position:absolute;top:9px;right:10px;font-size:11px;color:var(--green);font-weight:700}
+
+/* Visual topic map */
+.topic-map{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px 20px;margin-bottom:24px;overflow-x:auto}
+.topic-map-title{font-size:10px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
+.tmap-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:nowrap}
+.tmap-label{font-size:10px;color:var(--text3);min-width:96px;flex-shrink:0;text-align:right;padding-right:8px;border-right:2px solid var(--border)}
+.tmap-nodes{display:flex;gap:6px;flex-wrap:wrap}
+.tmap-node{font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:opacity .15s;border:1px solid transparent}
+.tmap-node:hover{opacity:.8}
+.tn-math{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.tn-think{background:var(--cyan-bg);color:var(--cyan);border-color:var(--cyan-bd)}
+.tn-classical{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.tn-eng{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-bd)}
+.tn-nn{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
+.tn-dl{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
+.tn-nlp{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.tn-llm{background:linear-gradient(135deg,var(--purple-bg),var(--amber-bg));color:var(--amber);border-color:var(--amber-bd);font-weight:700}
+.tn-domains{background:var(--cyan-bg);color:var(--cyan);border-color:var(--cyan-bd)}
+.tn-prod{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+</style>
+
+<!-- Hero -->
+<div class="home-hero">
+  <div class="home-hero-title">ML / DS Master Study Guide</div>
+  <div class="home-hero-sub">57 topics from math foundations to production ML — each with definitions, formulas, animations, analogies, and interview answers. Track your progress as you go, or use the sidebar to jump to any topic.</div>
+</div>
+
+<!-- Progress widget -->
+<div class="home-progress-widget">
+  <div class="home-progress-ring">
+    <svg width="64" height="64" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg3)" stroke-width="6"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--accent)" stroke-width="6"
+        stroke-dasharray="163" stroke-dashoffset="163"
+        id="home-ring-circle" stroke-linecap="round" transform="rotate(-90 32 32)"
+        style="transition:stroke-dashoffset .6s ease"/>
+    </svg>
+    <div class="home-pct-label"><span id="home-pct">0%</span></div>
+  </div>
+  <div class="home-progress-info">
+    <h3>Your Progress</h3>
+    <p id="home-progress-label">Start reading topics and mark them as read using the button in the top bar.</p>
+    <div class="home-progress-bar-wrap">
+      <div class="home-progress-bar-inner" id="home-progress-fill"></div>
+    </div>
+  </div>
+  <button onclick="resetProgress()" style="font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;white-space:nowrap" title="Reset all progress">↺ Reset</button>
+</div>
+
+<script>
+// Sync progress ring
+function syncHomeRing() {
+  try {
+    const p = JSON.parse(localStorage.getItem('ml-guide-progress-v2') || '{}');
+    const total = 54, done = Object.keys(p).length;
+    const pct = Math.round((done/total)*100);
+    const circle = document.getElementById('home-ring-circle');
+    if (circle) circle.style.strokeDashoffset = 163 - (163 * pct / 100);
+    const lbl = document.getElementById('home-progress-label');
+    if (lbl) {
+      if (done === 0) lbl.textContent = 'Start reading topics and mark them as read using the button in the top bar.';
+      else if (done < total) lbl.textContent = done + ' of ' + total + ' topics completed. Keep going!';
+      else lbl.textContent = '🎉 All topics completed! You\'re interview-ready.';
+    }
+  } catch(e) {}
+}
+function resetProgress() {
+  if (confirm('Reset all read progress?')) {
+    try { localStorage.removeItem('ml-guide-progress-v2'); } catch(e) {}
+    if (window.updateProgressUI) updateProgressUI();
+    syncHomeRing();
+  }
+}
+// Run on load and whenever progress updates
+syncHomeRing();
+document.addEventListener('ml-progress-update', syncHomeRing);
+// Also hook into updateProgressUI
+const _origUpdate = window.updateProgressUI;
+window.updateProgressUI = function() { if(_origUpdate) _origUpdate(); syncHomeRing(); };
+</script>
+
+<!-- Visual topic map -->
+<div class="topic-map">
+  <div class="topic-map-title">🗺 Learning Path Overview — click any node to jump to that topic</div>
+  <div class="tmap-row">
+    <div class="tmap-label">Math</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-math" onclick="nav('linalg','Math','Linear Algebra')">Linear Algebra</div>
+      <div class="tmap-node tn-math" onclick="nav('prob','Math','Probability Theory')">Probability</div>
+      <div class="tmap-node tn-math" onclick="nav('stats','Math','Statistics & Inference')">Statistics</div>
+      <div class="tmap-node tn-math" onclick="nav('calc','Math','Calculus & Optimization')">Calculus</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">ML Thinking</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-think" onclick="nav('mlconcepts','ML Thinking','ML Paradigms')">ML Paradigms</div>
+      <div class="tmap-node tn-think" onclick="nav('biasvar','ML Thinking','Bias-Variance')">Bias-Variance</div>
+      <div class="tmap-node tn-think" onclick="nav('crossval','ML Thinking','Cross-Validation')">Cross-Validation</div>
+      <div class="tmap-node tn-think" onclick="nav('metrics','ML Thinking','Eval Metrics')">Eval Metrics</div>
+      <div class="tmap-node tn-think" onclick="nav('confusion','ML Thinking','Confusion & ROC')">Confusion & ROC</div>
+      <div class="tmap-node tn-think" onclick="nav('calibration','ML Thinking','Calibration')">Calibration & SHAP</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Classical ML</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-classical" onclick="nav('linlog','Classical ML','Linear & Logistic')">Linear/Logistic</div>
+      <div class="tmap-node tn-classical" onclick="nav('dtree','Classical ML','Decision Trees')">Decision Trees</div>
+      <div class="tmap-node tn-classical" onclick="nav('rf','Classical ML','Random Forest')">Random Forest</div>
+      <div class="tmap-node tn-classical" onclick="nav('boosting','Classical ML','Gradient Boosting')">Gradient Boosting</div>
+      <div class="tmap-node tn-classical" onclick="nav('xgb','Classical ML','XGBoost')">XGBoost</div>
+      <div class="tmap-node tn-classical" onclick="nav('clustering','Classical ML','Clustering')">Clustering</div>
+      <div class="tmap-node tn-classical" onclick="nav('svm','Classical ML','SVM')">SVM</div>
+      <div class="tmap-node tn-classical" onclick="nav('dimred','Classical ML','Dim. Reduction')">Dim. Reduction</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Engineering</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-eng" onclick="nav('featureeng','Engineering','Feature Engineering')">Feature Eng.</div>
+      <div class="tmap-node tn-eng" onclick="nav('imbalanced','Engineering','Imbalanced Data')">Imbalanced Data</div>
+      <div class="tmap-node tn-eng" onclick="nav('reg','Engineering','Regularization')">Regularization</div>
+      <div class="tmap-node tn-eng" onclick="nav('hyperparam','Engineering','Hyperparameter Tuning')">Hyperparameter Tuning</div>
+      <div class="tmap-node tn-eng" onclick="nav('ensemble','Engineering','Ensemble Methods')">Ensemble Methods</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Neural Nets</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-nn" onclick="nav('nn_basics','Neural Networks','Perceptron & MLP')">MLP</div>
+      <div class="tmap-node tn-nn" onclick="nav('activations','Neural Networks','Activations')">Activations</div>
+      <div class="tmap-node tn-nn" onclick="nav('loss','Neural Networks','Loss Functions')">Loss Functions</div>
+      <div class="tmap-node tn-nn" onclick="nav('backprop','Neural Networks','Backprop')">Backprop</div>
+      <div class="tmap-node tn-nn" onclick="nav('optim','Neural Networks','Optimizers')">Optimizers</div>
+      <div class="tmap-node tn-nn" onclick="nav('weightinit','Neural Networks','Weight Init')">Weight Init</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Deep Learning</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-dl" onclick="nav('cnn','Deep Learning','CNNs')">CNNs</div>
+      <div class="tmap-node tn-dl" onclick="nav('rnn','Deep Learning','RNNs & LSTMs')">RNNs & LSTMs</div>
+      <div class="tmap-node tn-dl" onclick="nav('attention','Deep Learning','Attention')">Attention</div>
+      <div class="tmap-node tn-dl" onclick="nav('transformers','Deep Learning','Transformers')">Transformers</div>
+      <div class="tmap-node tn-dl" onclick="nav('transfer','Deep Learning','Transfer & Distillation')">Transfer & Distillation</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">NLP / LMs</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-nlp" onclick="nav('tokenization','NLP','Tokenization')">Tokenization</div>
+      <div class="tmap-node tn-nlp" onclick="nav('bert','NLP','BERT')">BERT</div>
+      <div class="tmap-node tn-nlp" onclick="nav('llm','NLP','LLMs & RLHF')">LLMs & RLHF</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">✨ LLM Era</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-llm" onclick="nav('vectordb','LLM Era','Vector Databases')">Vector DBs</div>
+      <div class="tmap-node tn-llm" onclick="nav('rag','LLM Era','RAG & Retrieval')">RAG & Retrieval</div>
+      <div class="tmap-node tn-llm" onclick="nav('agents','LLM Era','Agentic AI')">Agentic AI</div>
+      <div class="tmap-node tn-llm" onclick="nav('multimodal','LLM Era','Multimodal Models')">Multimodal</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Domains</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-domains" onclick="nav('timeseries','Domains','Time Series')">Time Series</div>
+      <div class="tmap-node tn-domains" onclick="nav('creditrisk','Domains','Credit Risk')">Credit Risk</div>
+      <div class="tmap-node tn-domains" onclick="nav('gnns','Domains','Graph Neural Networks')">GNNs</div>
+      <div class="tmap-node tn-domains" onclick="nav('responsibleai','Domains','Responsible AI')">Responsible AI</div>
+      <div class="tmap-node tn-domains" onclick="nav('causal','Domains','Causal Inference')">Causal Inference</div>
+      <div class="tmap-node tn-domains" onclick="nav('dataeng','Domains','Data Engineering')">Data Eng.</div>
+    </div>
+  </div>
+  <div class="tmap-row">
+    <div class="tmap-label">Production</div>
+    <div class="tmap-nodes">
+      <div class="tmap-node tn-prod" onclick="nav('mlops','Production','MLOps')">MLOps</div>
+      <div class="tmap-node tn-prod" onclick="nav('systemdesign','Production','ML System Design')">System Design</div>
+      <div class="tmap-node tn-prod" onclick="nav('coding','Production','Python, SQL & DSA')">Python & SQL</div>
+      <div class="tmap-node tn-prod" onclick="nav('frameworks','Reference','Frameworks')">Frameworks</div>
+      <div class="tmap-node tn-prod" onclick="nav('compare','Reference','Model Cheatsheet')">Cheatsheet</div>
+    </div>
+  </div>
+</div>
+
+<!-- Study path -->
+<div class="study-path">
+  <div class="study-path-label">Recommended Study Order</div>
+  <div class="path-steps">
+    <div class="path-step"><div class="path-pill" style="background:var(--blue-bg);color:var(--blue)" onclick="nav('linalg','Math','Linear Algebra')">01–04 Math</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--cyan-bg);color:var(--cyan)" onclick="nav('mlconcepts','ML Thinking','ML Paradigms')">05–10 ML Thinking</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--green-bg);color:var(--green)" onclick="nav('linlog','Classical ML','Linear & Logistic')">11–20 Classical ML</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--purple-bg);color:var(--purple)" onclick="nav('featureeng','Engineering','Feature Engineering')">21–25 Engineering</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--amber-bg);color:var(--amber)" onclick="nav('nn_basics','Neural Networks','MLP')">26–31 Neural Nets</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--red-bg);color:var(--red)" onclick="nav('cnn','Deep Learning','CNNs')">32–39 Deep Learning</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--amber-bg);color:var(--amber);font-weight:700" onclick="nav('vectordb','LLM Era','Vector Databases')">✨ LLM Era</div></div>
+    <span class="path-arrow">→</span>
+    <div class="path-step"><div class="path-pill" style="background:var(--green-bg);color:var(--green)" onclick="nav('mlops','Production','MLOps')">Production</div></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Math ── -->
+<div class="grp-label">🔢 Mathematical Foundations</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="linalg" onclick="nav('linalg','Math','Linear Algebra')">
+    <div class="ht-header"><div class="hn">01</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Linear Algebra</div><div class="hsub">Vectors, matrices, eigenvalues, SVD</div>
+  </div>
+  <div class="ht" data-topic-id="prob" onclick="nav('prob','Math','Probability Theory')">
+    <div class="ht-header"><div class="hn">02</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Probability Theory</div><div class="hsub">Bayes, distributions, expectation</div>
+    <div class="hpre">Needs: <span>Linear Algebra</span></div>
+  </div>
+  <div class="ht" data-topic-id="stats" onclick="nav('stats','Math','Statistics & Inference')">
+    <div class="ht-header"><div class="hn">03</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Statistics &amp; Inference</div><div class="hsub">p-values, CI, hypothesis tests</div>
+    <div class="hpre">Needs: <span>Probability</span></div>
+  </div>
+  <div class="ht" data-topic-id="calc" onclick="nav('calc','Math','Calculus & Optimization')">
+    <div class="ht-header"><div class="hn">04</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Calculus &amp; Optimization</div><div class="hsub">Gradients, chain rule, convexity</div>
+    <div class="hpre">Needs: <span>Linear Algebra</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: ML Thinking ── -->
+<div class="grp-label">🧭 ML Thinking &amp; Evaluation</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="mlconcepts" onclick="nav('mlconcepts','ML Thinking','ML Paradigms')">
+    <div class="ht-header"><div class="hn">05</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">ML Paradigms</div><div class="hsub">Supervised, unsupervised, semi-, RL</div>
+    <div class="hpre">Needs: <span>Statistics</span></div>
+  </div>
+  <div class="ht" data-topic-id="biasvar" onclick="nav('biasvar','ML Thinking','Bias-Variance')">
+    <div class="ht-header"><div class="hn">06</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Bias-Variance</div><div class="hsub">Overfitting, underfitting tradeoff</div>
+    <div class="hpre">Needs: <span>ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="crossval" onclick="nav('crossval','ML Thinking','Cross-Validation')">
+    <div class="ht-header"><div class="hn">07</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Cross-Validation</div><div class="hsub">k-fold, stratified, time-series split</div>
+    <div class="hpre">Needs: <span>Bias-Variance</span></div>
+  </div>
+  <div class="ht" data-topic-id="metrics" onclick="nav('metrics','ML Thinking','Eval Metrics')">
+    <div class="ht-header"><div class="hn">08</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Eval Metrics</div><div class="hsub">MSE, MAE, accuracy, F1, RMSE</div>
+    <div class="hpre">Needs: <span>ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="confusion" onclick="nav('confusion','ML Thinking','Confusion Matrix & ROC')">
+    <div class="ht-header"><div class="hn">09</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Confusion Matrix &amp; ROC</div><div class="hsub">TP/FP/AUC/KS/PR-AUC</div>
+    <div class="hpre">Needs: <span>Eval Metrics</span></div>
+  </div>
+  <div class="ht" data-topic-id="calibration" onclick="nav('calibration','ML Thinking','Calibration & SHAP')">
+    <div class="ht-header"><div class="hn">10</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Calibration &amp; SHAP</div><div class="hsub">Reliability diagrams, LIME, SHAP</div>
+    <div class="hpre">Needs: <span>Confusion Matrix</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Classical ML ── -->
+<div class="grp-label">🌳 Classical ML Algorithms</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="linlog" onclick="nav('linlog','Classical ML','Linear & Logistic Reg.')">
+    <div class="ht-header"><div class="hn">11</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Linear &amp; Logistic Reg.</div><div class="hsub">OLS, sigmoid, assumptions</div>
+    <div class="hpre">Needs: <span>Calculus, Statistics</span></div>
+  </div>
+  <div class="ht" data-topic-id="knn" onclick="nav('knn','Classical ML','k-NN')">
+    <div class="ht-header"><div class="hn">12</div><div class="hbadges"><span class="htime">~6 min</span></div></div>
+    <div class="hname">k-NN</div><div class="hsub">Lazy learning, distance metrics</div>
+    <div class="hpre">Needs: <span>ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="naivebayes" onclick="nav('naivebayes','Classical ML','Naive Bayes')">
+    <div class="ht-header"><div class="hn">13</div><div class="hbadges"><span class="htime">~6 min</span></div></div>
+    <div class="hname">Naive Bayes</div><div class="hsub">Conditional independence, Laplace</div>
+    <div class="hpre">Needs: <span>Probability</span></div>
+  </div>
+  <div class="ht" data-topic-id="svm" onclick="nav('svm','Classical ML','SVM')">
+    <div class="ht-header"><div class="hn">14</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">SVM</div><div class="hsub">Margin, kernel trick, soft margin</div>
+    <div class="hpre">Needs: <span>Calculus, Linear Reg.</span></div>
+  </div>
+  <div class="ht" data-topic-id="dtree" onclick="nav('dtree','Classical ML','Decision Trees')">
+    <div class="ht-header"><div class="hn">15</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Decision Trees</div><div class="hsub">Gini, entropy, pruning</div>
+    <div class="hpre">Needs: <span>ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="rf" onclick="nav('rf','Classical ML','Random Forest')">
+    <div class="ht-header"><div class="hn">16</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Random Forest</div><div class="hsub">Bagging, OOB, feature importance</div>
+    <div class="hpre">Needs: <span>Decision Trees</span></div>
+  </div>
+  <div class="ht" data-topic-id="boosting" onclick="nav('boosting','Classical ML','Gradient Boosting')">
+    <div class="ht-header"><div class="hn">17</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Gradient Boosting</div><div class="hsub">GBM, LightGBM, CatBoost</div>
+    <div class="hpre">Needs: <span>Decision Trees, Calculus</span></div>
+  </div>
+  <div class="ht" data-topic-id="xgb" onclick="nav('xgb','Classical ML','XGBoost Deep Dive')">
+    <div class="ht-header"><div class="hn">18</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">XGBoost Deep Dive</div><div class="hsub">Obj function, Taylor expansion, split gain</div>
+    <div class="hpre">Needs: <span>Gradient Boosting</span></div>
+  </div>
+  <div class="ht" data-topic-id="clustering" onclick="nav('clustering','Classical ML','Clustering')">
+    <div class="ht-header"><div class="hn">19</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Clustering</div><div class="hsub">K-Means, DBSCAN, hierarchical</div>
+    <div class="hpre">Needs: <span>Linear Algebra, Metrics</span></div>
+  </div>
+  <div class="ht" data-topic-id="dimred" onclick="nav('dimred','Classical ML','Dim. Reduction')">
+    <div class="ht-header"><div class="hn">20</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Dim. Reduction</div><div class="hsub">PCA, t-SNE, UMAP</div>
+    <div class="hpre">Needs: <span>Linear Algebra, Probability</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Engineering ── -->
+<div class="grp-label">⚙️ Data &amp; Model Engineering</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="featureeng" onclick="nav('featureeng','Data Engineering','Feature Engineering')">
+    <div class="ht-header"><div class="hn">21</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Feature Engineering</div><div class="hsub">Encoding, scaling, interactions</div>
+    <div class="hpre">Needs: <span>ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="imbalanced" onclick="nav('imbalanced','Data Engineering','Imbalanced Data')">
+    <div class="ht-header"><div class="hn">22</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Imbalanced Data</div><div class="hsub">SMOTE, class weights, threshold</div>
+    <div class="hpre">Needs: <span>Eval Metrics, Feature Eng.</span></div>
+  </div>
+  <div class="ht" data-topic-id="reg" onclick="nav('reg','Data Engineering','Regularization')">
+    <div class="ht-header"><div class="hn">23</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Regularization</div><div class="hsub">L1, L2, dropout, early stopping</div>
+    <div class="hpre">Needs: <span>Linear Reg., Calculus</span></div>
+  </div>
+  <div class="ht" data-topic-id="hyperparam" onclick="nav('hyperparam','Data Engineering','Hyperparameter Tuning')">
+    <div class="ht-header"><div class="hn">24</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Hyperparameter Tuning</div><div class="hsub">Grid, random, Bayesian, Optuna</div>
+    <div class="hpre">Needs: <span>Bias-Variance, Cross-Val</span></div>
+  </div>
+  <div class="ht" data-topic-id="ensemble" onclick="nav('ensemble','Data Engineering','Ensemble Methods')">
+    <div class="ht-header"><div class="hn">25</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Ensemble Methods</div><div class="hsub">Bagging, boosting, stacking, blending</div>
+    <div class="hpre">Needs: <span>Decision Trees, Random Forest</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Neural Networks ── -->
+<div class="grp-label">🧠 Neural Network Foundations</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="nn_basics" onclick="nav('nn_basics','Neural Networks','Perceptron & MLP')">
+    <div class="ht-header"><div class="hn">26</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Perceptron &amp; MLP</div><div class="hsub">Layers, forward pass, universal approx.</div>
+    <div class="hpre">Needs: <span>Calculus, Linear Algebra</span></div>
+  </div>
+  <div class="ht" data-topic-id="activations" onclick="nav('activations','Neural Networks','Activation Functions')">
+    <div class="ht-header"><div class="hn">27</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Activation Functions</div><div class="hsub">ReLU, sigmoid, GELU, softmax</div>
+    <div class="hpre">Needs: <span>MLP</span></div>
+  </div>
+  <div class="ht" data-topic-id="loss" onclick="nav('loss','Neural Networks','Loss Functions')">
+    <div class="ht-header"><div class="hn">28</div><div class="hbadges"><span class="htime">~14 min</span></div></div>
+    <div class="hname">Loss Functions</div><div class="hsub">BCE, MSE, focal loss, KL divergence</div>
+    <div class="hpre">Needs: <span>MLP, Probability</span></div>
+  </div>
+  <div class="ht" data-topic-id="backprop" onclick="nav('backprop','Neural Networks','Backprop & Training Loop')">
+    <div class="ht-header"><div class="hn">29</div><div class="hbadges"><span class="htime">~18 min</span></div></div>
+    <div class="hname">Backprop &amp; Training Loop</div><div class="hsub">Chain rule, GD steps, zero_grad, clip</div>
+    <div class="hpre">Needs: <span>MLP, Calculus</span></div>
+  </div>
+  <div class="ht" data-topic-id="optim" onclick="nav('optim','Neural Networks','Optimizers')">
+    <div class="ht-header"><div class="hn">30</div><div class="hbadges"><span class="htime">~10 min</span></div></div>
+    <div class="hname">Optimizers</div><div class="hsub">SGD, Adam, AdamW, warmup schedules</div>
+    <div class="hpre">Needs: <span>Backprop</span></div>
+  </div>
+  <div class="ht" data-topic-id="weightinit" onclick="nav('weightinit','Neural Networks','Weight Initialization')">
+    <div class="ht-header"><div class="hn">31</div><div class="hbadges"><span class="htime">~6 min</span></div></div>
+    <div class="hname">Weight Initialization</div><div class="hsub">Xavier, He, orthogonal init</div>
+    <div class="hpre">Needs: <span>MLP, Calculus</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Deep Learning ── -->
+<div class="grp-label">🤖 Deep Learning Architectures</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="cnn" onclick="nav('cnn','Deep Learning','CNNs')">
+    <div class="ht-header"><div class="hn">32</div><div class="hbadges"><span class="htime">~14 min</span></div></div>
+    <div class="hname">CNNs</div><div class="hsub">Convolution, pooling, ResNet, EfficientNet</div>
+    <div class="hpre">Needs: <span>MLP, Backprop</span></div>
+  </div>
+  <div class="ht" data-topic-id="rnn" onclick="nav('rnn','Deep Learning','RNNs & LSTMs')">
+    <div class="ht-header"><div class="hn">33</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">RNNs &amp; LSTMs</div><div class="hsub">Sequence modelling, gates, BPTT</div>
+    <div class="hpre">Needs: <span>MLP, Backprop</span></div>
+  </div>
+  <div class="ht" data-topic-id="attention" onclick="nav('attention','Deep Learning','Attention & Architecture')">
+    <div class="ht-header"><div class="hn">34</div><div class="hbadges"><span class="htime">~20 min</span></div></div>
+    <div class="hname">Attention &amp; Architecture</div><div class="hsub">Q/K/V, multi-head, RNN→GPT lineage</div>
+    <div class="hpre">Needs: <span>RNNs, Linear Algebra</span></div>
+  </div>
+  <div class="ht" data-topic-id="transformers" onclick="nav('transformers','Deep Learning','Transformers')">
+    <div class="ht-header"><div class="hn">35</div><div class="hbadges"><span class="htime">~14 min</span></div></div>
+    <div class="hname">Transformers</div><div class="hsub">Encoder-decoder, positional encoding</div>
+    <div class="hpre">Needs: <span>Attention</span></div>
+  </div>
+  <div class="ht" data-topic-id="transfer" onclick="nav('transfer','Deep Learning','Transfer & Distillation')">
+    <div class="ht-header"><div class="hn">36</div><div class="hbadges"><span class="htime">~14 min</span></div></div>
+    <div class="hname">Transfer &amp; Distillation</div><div class="hsub">Fine-tuning, LoRA, teacher-student</div>
+    <div class="hpre">Needs: <span>CNNs, Transformers</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: NLP ── -->
+<div class="grp-label">💬 NLP &amp; Language Models</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="tokenization" onclick="nav('tokenization','NLP','Tokenization & Embeddings')">
+    <div class="ht-header"><div class="hn">37</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Tokenization &amp; Embeddings</div><div class="hsub">BPE, WordPiece, Word2Vec, BERT embed</div>
+    <div class="hpre">Needs: <span>Probability</span></div>
+  </div>
+  <div class="ht" data-topic-id="bert" onclick="nav('bert','NLP','BERT & Encoder Models')">
+    <div class="ht-header"><div class="hn">38</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">BERT &amp; Encoder Models</div><div class="hsub">MLM, bidirectional context, NSP</div>
+    <div class="hpre">Needs: <span>Transformers, Tokenization</span></div>
+  </div>
+  <div class="ht" data-topic-id="llm" onclick="nav('llm','NLP','LLMs, SLMs & RLHF')">
+    <div class="ht-header"><div class="hn">39</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">LLMs &amp; RLHF</div><div class="hsub">GPT, Claude, SLMs, PPO fine-tuning</div>
+    <div class="hpre">Needs: <span>BERT, Optimizers</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: LLM Era (NEW) ── -->
+<div class="grp-label">✨ LLM Era — New &amp; High-Demand Topics</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="vectordb" onclick="nav('vectordb','LLM Era','Vector Databases')">
+    <div class="ht-header"><div class="hn">49</div><div class="hbadges"><span class="htime">~10 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Vector Databases</div><div class="hsub">FAISS, HNSW, ANN search, embedding pipelines</div>
+    <div class="hpre">Needs: <span>Linear Algebra, Tokenization</span></div>
+  </div>
+  <div class="ht" data-topic-id="rag" onclick="nav('rag','LLM Era','RAG & Retrieval')">
+    <div class="ht-header"><div class="hn">48</div><div class="hbadges"><span class="htime">~14 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">RAG &amp; Retrieval</div><div class="hsub">Chunking, hybrid search, reranking, RAGAS eval</div>
+    <div class="hpre">Needs: <span>LLMs, Vector DBs</span></div>
+  </div>
+  <div class="ht" data-topic-id="agents" onclick="nav('agents','LLM Era','Agentic AI')">
+    <div class="ht-header"><div class="hn">50</div><div class="hbadges"><span class="htime">~14 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Agentic AI</div><div class="hsub">ReAct, tool calling, multi-agent, memory, guardrails</div>
+    <div class="hpre">Needs: <span>LLMs, RAG</span></div>
+  </div>
+  <div class="ht" data-topic-id="multimodal" onclick="nav('multimodal','LLM Era','Multimodal Models')">
+    <div class="ht-header"><div class="hn">54</div><div class="hbadges"><span class="htime">~12 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Multimodal Models</div><div class="hsub">CLIP, LLaVA, vision-language, image-text embeddings</div>
+    <div class="hpre">Needs: <span>CNNs, BERT</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Specialized Domains ── -->
+<div class="grp-label">📡 Specialized Domains</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="timeseries" onclick="nav('timeseries','Domains','Time Series Modeling')">
+    <div class="ht-header"><div class="hn">40</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Time Series</div><div class="hsub">ARIMA, Prophet, LSTM forecasting</div>
+    <div class="hpre">Needs: <span>Statistics, RNNs</span></div>
+  </div>
+  <div class="ht" data-topic-id="creditrisk" onclick="nav('creditrisk','Domains','Credit Risk & Scorecards')">
+    <div class="ht-header"><div class="hn">41</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Credit Risk &amp; Scorecards</div><div class="hsub">PD, LGD, scorecard, WOE/IV</div>
+    <div class="hpre">Needs: <span>Linear Reg., XGBoost, Metrics</span></div>
+  </div>
+  <div class="ht" data-topic-id="gnns" onclick="nav('gnns','Domains','Graph Neural Networks')">
+    <div class="ht-header"><div class="hn">46</div><div class="hbadges"><span class="htime">~12 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Graph Neural Networks</div><div class="hsub">Message passing, GraphSAGE, GCN, link prediction</div>
+    <div class="hpre">Needs: <span>MLP, Linear Algebra</span></div>
+  </div>
+  <div class="ht" data-topic-id="responsibleai" onclick="nav('responsibleai','Domains','Responsible AI & Fairness')">
+    <div class="ht-header"><div class="hn">51</div><div class="hbadges"><span class="htime">~10 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Responsible AI &amp; Fairness</div><div class="hsub">Bias metrics, demographic parity, model cards, governance</div>
+    <div class="hpre">Needs: <span>Eval Metrics, ML Paradigms</span></div>
+  </div>
+  <div class="ht" data-topic-id="causal" onclick="nav('causal','Domains','Causal Inference & A/B Testing')">
+    <div class="ht-header"><div class="hn">52</div><div class="hbadges"><span class="htime">~14 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Causal Inference &amp; A/B Testing</div><div class="hsub">Power, uplift models, DiD, DoWhy</div>
+    <div class="hpre">Needs: <span>Statistics, Probability</span></div>
+  </div>
+  <div class="ht" data-topic-id="dataeng" onclick="nav('dataeng','Domains','Data Engineering for ML')">
+    <div class="ht-header"><div class="hn">53</div><div class="hbadges"><span class="htime">~12 min</span><span class="hnew">NEW</span></div></div>
+    <div class="hname">Data Engineering for ML</div><div class="hsub">dbt, Spark, feature pipelines, Delta Lake</div>
+    <div class="hpre">Needs: <span>Feature Engineering</span></div>
+  </div>
+</div>
+
+<!-- ── SECTION: Production ── -->
+<div class="grp-label">🚀 Production &amp; System Design</div>
+<div class="home-grid">
+  <div class="ht" data-topic-id="mlops" onclick="nav('mlops','Production','MLOps & Deployment')">
+    <div class="ht-header"><div class="hn">42</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">MLOps &amp; Deployment</div><div class="hsub">CI/CD, model drift, feature stores</div>
+    <div class="hpre">Needs: <span>MLP, Feature Engineering</span></div>
+  </div>
+  <div class="ht" data-topic-id="systemdesign" onclick="nav('systemdesign','Production','ML System Design')">
+    <div class="ht-header"><div class="hn">43</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">ML System Design</div><div class="hsub">Recsys, fraud, search, latency</div>
+    <div class="hpre">Needs: <span>MLOps, Eval Metrics</span></div>
+  </div>
+  <div class="ht" data-topic-id="coding" onclick="nav('coding','Production','Python, SQL & DSA')">
+    <div class="ht-header"><div class="hn">44</div><div class="hbadges"><span class="htime">~12 min</span></div></div>
+    <div class="hname">Python, SQL &amp; DSA</div><div class="hsub">Pandas, SQL joins, sliding windows</div>
+  </div>
+  <div class="ht" data-topic-id="compare" onclick="nav('compare','Reference','Model Cheatsheet')">
+    <div class="ht-header"><div class="hn">45</div><div class="hbadges"><span class="htime">~8 min</span></div></div>
+    <div class="hname">Model Cheatsheet</div><div class="hsub">Algorithm comparison, when to use what</div>
+  </div>
+  <div class="ht" data-topic-id="frameworks" onclick="nav('frameworks','Reference','TF, Keras & PyTorch')">
+    <div class="ht-header"><div class="hn">47</div><div class="hbadges"><span class="htime">~14 min</span></div></div>
+    <div class="hname">TF, Keras &amp; PyTorch</div><div class="hsub">Framework comparison, training APIs</div>
+    <div class="hpre">Needs: <span>Backprop</span></div>
+  </div>
+</div>
+
+</section>

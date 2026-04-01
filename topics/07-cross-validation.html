@@ -1,0 +1,65 @@
+<section class="section" id="sec-crossval">
+<div class="sec-title">Cross-Validation</div>
+<div class="sec-desc">The honest way to estimate how your model will perform on unseen data — without wasting data on a fixed test set during development.</div>
+<div class="card"><div class="card-title">k-Fold Cross-Validation</div>
+<div class="card-body">Split data into k equal folds. Train on k−1 folds, validate on the held-out fold. Rotate k times. Average the k validation scores.</div>
+<!-- CV animation -->
+<div class="anim-wrap"><div class="anim-title">5-Fold Cross-Validation — each fold takes a turn as validation</div>
+<svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<rect id="train" width="88" height="22" rx="4"/>
+<rect id="val" width="88" height="22" rx="4"/>
+</defs>
+<!-- Fold labels -->
+<text x="10" y="18" fill="#4e5a7a" font-size="10" font-family="DM Sans">Fold</text>
+<text x="10" y="38" fill="#4e5a7a" font-size="10" font-family="DM Sans">1</text>
+<text x="10" y="60" fill="#4e5a7a" font-size="10" font-family="DM Sans">2</text>
+<text x="10" y="82" fill="#4e5a7a" font-size="10" font-family="DM Sans">3</text>
+<text x="10" y="104" fill="#4e5a7a" font-size="10" font-family="DM Sans">4</text>
+<text x="10" y="126" fill="#4e5a7a" font-size="10" font-family="DM Sans">5</text>
+<!-- Fold 1: val=block1, train=rest -->
+<rect x="30" y="26" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="74" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+<rect x="122" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="166" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
+<rect x="214" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="258" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
+<rect x="306" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="350" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
+<rect x="398" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="442" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
+<!-- Fold 2 -->
+<rect x="30" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="74" y="60" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
+<rect x="122" y="48" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="166" y="60" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+<rect x="214" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="306" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="398" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<!-- Fold 3 -->
+<rect x="30" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="122" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="214" y="70" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="258" y="82" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+<rect x="306" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="398" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<!-- Fold 4 -->
+<rect x="30" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="122" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="214" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="306" y="92" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="350" y="104" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+<rect x="398" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<!-- Fold 5 -->
+<rect x="30" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="122" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="214" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="306" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
+<rect x="398" y="114" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="442" y="126" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+</svg></div></div>
+<div class="g2">
+<div class="card"><div class="card-title">CV Variants</div>
+<table class="tbl"><tr><th>Type</th><th>When to Use</th></tr>
+<tr><td><strong>k-Fold (k=5 or 10)</strong></td><td>Default for tabular data</td></tr>
+<tr><td><strong>Stratified k-Fold</strong></td><td>Imbalanced classes — preserves class ratio in each fold</td></tr>
+<tr><td><strong>Leave-One-Out (LOO)</strong></td><td>Tiny datasets (&lt;50 rows); expensive</td></tr>
+<tr><td><strong>TimeSeriesSplit</strong></td><td>Time series — never use future data to validate past</td></tr>
+<tr><td><strong>Group k-Fold</strong></td><td>Groups must stay intact (patient IDs, user sessions)</td></tr>
+<tr><td><strong>Nested CV</strong></td><td>Hyperparameter tuning — outer loop for eval, inner for tuning</td></tr></table></div>
+<div class="card"><div class="card-title">Common CV Mistakes</div>
+<ul class="bul"><li><strong>Data leakage from preprocessing:</strong> fit scaler on all data before splitting → test info leaks into training</li><li><strong>Peeking at test set:</strong> using test performance to make modeling decisions inflates estimates</li><li><strong>No stratification:</strong> imbalanced classes can produce folds with 0 positives</li><li><strong>Time series with random split:</strong> future data leaks into training — always use temporal split</li></ul></div>
+</div>
+<div class="box warn"><div class="bl">⚠️ The Golden Rule</div><p>Preprocessing (scaling, imputation, encoding) must be fit ONLY on the training fold, then applied to validation. Use sklearn Pipelines to enforce this automatically. Never fit on the full dataset before splitting.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I always use stratified k-fold (k=5) for classification with imbalanced classes, and TimeSeriesSplit for temporal data. I wrap all preprocessing in a Pipeline so feature scaling is re-fit on each fold's training data — this prevents leakage. Nested CV when I need to tune hyperparameters and estimate generalization performance simultaneously — but it's expensive."</p></div>
+</section>

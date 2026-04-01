@@ -1,0 +1,68 @@
+<section class="section" id="sec-linalg">
+<div class="sec-title">Linear Algebra</div>
+<div class="sec-desc">The language of ML — every dataset is a matrix, every model is a transformation, every distance is a norm. Master this and the rest of ML becomes legible.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Vectors</div><div class="card-body">An ordered list of numbers. A single data point is a vector. Carries both direction and magnitude.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbf{v} = [v_1, v_2, \ldots, v_n]^T \quad \text{(column vector)} \\
+\|\mathbf{v}\|_2 = \sqrt{v_1^2 + v_2^2 + \cdots + v_n^2} \quad \text{(L2 norm / length)} \\
+\mathbf{u} \cdot \mathbf{v} = \sum_i u_i v_i = |\mathbf{u}||\mathbf{v}|\cos\theta \quad \text{(dot product)}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Dot product = 0:</strong> vectors are perpendicular</li><li><strong>cos θ close to 1:</strong> vectors point in same direction (used in similarity search)</li></ul></div>
+<div class="card cg"><div class="card-title">Matrices</div><div class="card-body">A 2D grid of numbers. Your dataset X is an (n×d) matrix — n rows = samples, d cols = features.</div>
+<div class="formula math-formula">$$\begin{aligned}
+A \in \mathbb{R}^{n \times d} \\
+(AB)_{i,j} = \sum_k A_{i,k} B_{k,j} \quad \text{(inner dims must match)} \\
+A^T \text{ transposes rows} \leftrightarrow \text{columns} \\
+A^{-1} \text{: exists iff } \det(A) \neq 0 \text{ (square, full rank)}
+\end{aligned}$$</div></div>
+</div>
+<div class="card"><div class="card-title">Eigenvalues &amp; Eigenvectors</div>
+<div class="card-body">For square matrix A: Av = λv — the matrix only scales vector v (doesn't rotate it). λ is the eigenvalue (scale factor), v is the eigenvector.</div>
+<div class="formula math-formula">$$\det(A - \lambda I) = 0 \;\rightarrow\; \text{solve for } \lambda \;\rightarrow\; \text{then solve } (A - \lambda I)\mathbf{v} = 0 \text{ for } \mathbf{v}$$</div>
+<ul class="bul" style="margin-top:8px"><li><strong>PCA uses this:</strong> eigenvectors of covariance matrix = principal components</li><li><strong>Largest eigenvalue:</strong> direction of maximum variance</li><li><strong>Sum of eigenvalues = trace(A);</strong> Product = det(A)</li></ul>
+<!-- Eigen animation -->
+<div class="anim-wrap"><div class="anim-title">Eigenvector: only scaled, not rotated</div>
+<svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#5ba4fb"/></marker>
+<marker id="ah2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#22d3a0"/></marker>
+<marker id="ah3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f5a623"/></marker></defs>
+<text x="200" y="20" fill="#4e5a7a" font-size="11" text-anchor="middle" font-family="DM Sans">Matrix A acts on two vectors. Blue=eigenvector (only scaled). Orange=regular vector (rotated+scaled).</text>
+<!-- coordinate axes -->
+<line x1="60" y1="90" x2="340" y2="90" stroke="#242d45" stroke-width="1"/>
+<line x1="200" y1="160" x2="200" y2="30" stroke="#242d45" stroke-width="1"/>
+<!-- eigenvector before -->
+<line x1="200" y1="90" x2="260" y2="48" stroke="#5ba4fb" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ah)"/>
+<text x="268" y="45" fill="#5ba4fb" font-size="10" font-family="DM Sans">v</text>
+<!-- eigenvector after (scaled, same direction) -->
+<line x1="200" y1="90" x2="290" y2="27" stroke="#22d3a0" stroke-width="2.5" marker-end="url(#ah2)"/>
+<text x="298" y="24" fill="#22d3a0" font-size="10" font-family="DM Sans">Av=λv</text>
+<!-- regular vector before -->
+<line x1="200" y1="90" x2="240" y2="130" stroke="#f5a623" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ah3)"/>
+<text x="248" y="136" fill="#f5a623" font-size="10" font-family="DM Sans">u</text>
+<!-- regular vector after (rotated) -->
+<line x1="200" y1="90" x2="280" y2="150" stroke="#f06767" stroke-width="2.5" marker-end="url(#ah3)"/>
+<text x="286" y="156" fill="#f5a623" font-size="10" font-family="DM Sans">Au (rotated)</text>
+<text x="70" y="105" fill="#4e5a7a" font-size="10" font-family="DM Sans">dashed = before · solid = after</text>
+</svg></div>
+</div>
+<div class="g2">
+<div class="card ca"><div class="card-title">SVD — Singular Value Decomposition</div>
+<div class="formula math-formula">$$\begin{aligned}
+A = U \Sigma V^T \\
+U\text{: left singular vectors } (m \times m) \\
+\Sigma\text{: diagonal singular values} \\
+V^T\text{: right singular vectors } (n \times n)
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:6px"><li><strong>Truncated SVD:</strong> keep top-k → compression / PCA</li><li><strong>Recommender systems:</strong> matrix factorization via SVD</li><li><strong>LSA:</strong> SVD on TF-IDF matrix for text</li></ul></div>
+<div class="card cp"><div class="card-title">Key ML Applications</div>
+<table class="tbl"><tr><th>Concept</th><th>ML Use</th></tr>
+<tr><td>Dot product</td><td>Attention scores, similarity</td></tr>
+<tr><td>L1 / L2 norm</td><td>Lasso / Ridge regularization</td></tr>
+<tr><td>Covariance matrix</td><td>PCA, multivariate analysis</td></tr>
+<tr><td>Matrix multiply</td><td>Every neural network layer</td></tr>
+<tr><td>Pseudo-inverse A⁺</td><td>OLS solution: β = (XᵀX)⁻¹Xᵀy</td></tr>
+<tr><td>Rank</td><td>Multicollinearity detection</td></tr></table></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Linear algebra underpins virtually everything. Neural network forward passes are matrix multiplications. Attention is scaled dot-product between Q and K matrices. PCA eigendecomposes the covariance matrix. If your gradient has the wrong shape, you made a linear algebra error."</p></div>
+</section>

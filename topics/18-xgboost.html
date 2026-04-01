@@ -1,0 +1,35 @@
+<section class="section" id="sec-xgb">
+<div class="sec-title">XGBoost — Deep Dive</div>
+<div class="sec-desc">The algorithm that dominated Kaggle for 5 years. Understanding it mathematically separates "I used XGBoost" from "I understand why XGBoost works."</div>
+<div class="card"><div class="card-title">XGBoost Objective Function</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathcal{L} &= \sum_i L(y_i,\hat{y}_i) + \sum_k \Omega(f_k) \\
+\Omega(f) &= \gamma T + \tfrac{1}{2}\lambda\|w\|^2 + \alpha\|w\|_1 \\
+&\quad T = \text{leaves},\; w = \text{leaf weights} \\
+&\quad \gamma\text{: tree complexity},\; \lambda\text{: L2},\; \alpha\text{: L1 on weights}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">This is the key innovation: regularization inside the tree structure itself. XGBoost optimizes a regularized objective, not just prediction error. Other boosting implementations lack this.</div></div>
+<div class="card"><div class="card-title">Second-Order Taylor Expansion (why it's faster)</div>
+<div class="formula math-formula">$$\begin{aligned}
+L(y_i, \hat{y}_i^{(t)}) &\approx L(y_i, \hat{y}_i^{(t-1)}) + g_i f_t(x_i) + \tfrac{1}{2} h_i f_t(x_i)^2 \\
+g_i &= \partial L / \partial \hat{y}_i^{(t-1)} \quad [\text{gradient}] \\
+h_i &= \partial^2 L / \partial (\hat{y}_i^{(t-1)})^2 \quad [\text{hessian}] \\
+w_j^* &= -\frac{\sum_{i \in j} g_i}{\sum_{i \in j} h_i + \lambda} \quad [\text{optimal leaf weight for leaf } j]
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Using the hessian (2nd derivative) means XGBoost takes curvature into account — it takes larger steps where the loss is flat and smaller steps where it curves sharply. This is why it converges faster than vanilla gradient boosting.</div></div>
+<div class="card"><div class="card-title">Split Gain Formula</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Gain} &= \frac{1}{2}\left[\frac{G_L^2}{H_L+\lambda} + \frac{G_R^2}{H_R+\lambda} - \frac{G^2}{H+\lambda}\right] - \gamma \\
+G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
+&\quad L/R\text{ subscripts} = \text{left/right child} \\
+&\quad \text{Split is rejected if Gain} < 0 \quad\text{(this IS the pruning)}
+
+\end{aligned}$$</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Missing Value Handling</div>
+<div class="card-body">XGBoost learns the default direction for missing values during training. At each split, it tries sending missing values both left and right, picks the one with higher Gain. This is why XGBoost handles NaNs natively without imputation.</div></div>
+<div class="card cg"><div class="card-title">System Optimizations</div>
+<ul class="bul"><li><strong>Column blocks:</strong> pre-sorted feature values stored in compressed blocks for parallel access</li><li><strong>Cache-aware access:</strong> allocates internal buffers to reduce cache misses</li><li><strong>Out-of-core computation:</strong> processes data larger than RAM in blocks</li><li><strong>Approximate algorithm:</strong> sketch/histogram for continuous features — faster split finding</li></ul></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"XGBoost's edge over vanilla gradient boosting: (1) second-order Taylor expansion gives better gradient estimates and allows analytical optimal leaf weights; (2) built-in regularization (γ penalizes tree complexity, λ regularizes weights) prevents overfitting without needing post-hoc pruning; (3) approximate split finding via weighted quantile sketch scales to large datasets. My tuning strategy: fix learning_rate=0.05, n_estimators=5000 with early stopping, then tune max_depth, min_child_weight, subsample, colsample_bytree via Bayesian optimization."</p></div>
+</section>

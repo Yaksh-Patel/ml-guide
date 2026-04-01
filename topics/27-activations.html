@@ -1,0 +1,51 @@
+<section class="section" id="sec-activations">
+<div class="sec-title">Activation Functions</div>
+<div class="sec-desc">The non-linearity that makes deep networks more than stacked linear algebra. Without activations, depth is useless. With the right activation, gradients flow freely.</div>
+<div class="card"><div class="card-title">Why They're Critical</div>
+<div class="card-body">W₃(W₂(W₁x)) = (W₃W₂W₁)x — stack of linear layers = one linear layer. Activation functions break this and allow networks to learn arbitrary functions. Choice also controls gradient flow (vanishing/exploding) during backpropagation.</div></div>
+<div class="card"><div class="card-title">Activation Function Comparison</div>
+<table class="tbl"><tr><th>Function</th><th>Formula</th><th>Range</th><th>Gradient at saturation</th><th>Use Case</th></tr>
+<tr><td><strong>Sigmoid</strong></td><td>1/(1+e⁻ˣ)</td><td>(0,1)</td><td>→0 (vanishes!)</td><td>Binary output, LSTM gates</td></tr>
+<tr><td><strong>Tanh</strong></td><td>(eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)</td><td>(−1,1)</td><td>→0 at extremes</td><td>Hidden layers (zero-centered)</td></tr>
+<tr><td><strong>ReLU</strong></td><td>max(0,x)</td><td>[0,∞)</td><td>1 for x&gt;0</td><td>Default hidden layer activation</td></tr>
+<tr><td><strong>Leaky ReLU</strong></td><td>x if x≥0, else 0.01x</td><td>(−∞,∞)</td><td>0.01 for x&lt;0</td><td>Fixes dying ReLU</td></tr>
+<tr><td><strong>ELU</strong></td><td>x if x≥0, else α(eˣ−1)</td><td>(−α,∞)</td><td>Smooth for x&lt;0</td><td>Faster convergence than ReLU</td></tr>
+<tr><td><strong>GELU</strong></td><td>x·Φ(x)</td><td>(−∞,∞)</td><td>Smooth everywhere</td><td>Transformers (BERT, GPT)</td></tr>
+<tr><td><strong>Swish</strong></td><td>x·σ(x)</td><td>(−∞,∞)</td><td>Non-monotonic</td><td>EfficientNet; better than ReLU empirically</td></tr>
+<tr><td><strong>Softmax</strong></td><td>eˣⁱ/Σeˣʲ</td><td>(0,1)→1</td><td>—</td><td>Multi-class output</td></tr>
+<tr><td><strong>Sigmoid</strong></td><td>σ(x)</td><td>(0,1)</td><td>—</td><td>Binary classification output</td></tr></table></div>
+<!-- Activation function visualization -->
+<div class="anim-wrap"><div class="anim-title">Activation function shapes</div>
+<svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="axm" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#4e5a7a"/></marker></defs>
+<!-- Panel 1: Sigmoid -->
+<line x1="20" y1="90" x2="130" y2="90" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<line x1="75" y1="160" x2="75" y2="20" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<path d="M25,155 C35,155 45,145 55,130 C65,115 70,100 75,90 C80,80 85,65 95,50 C105,35 115,25 125,25" fill="none" stroke="#5ba4fb" stroke-width="2.5"/>
+<text x="75" y="172" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">Sigmoid</text>
+<text x="75" y="12" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Saturates → vanishing grad</text>
+<!-- Panel 2: ReLU -->
+<line x1="155" y1="90" x2="265" y2="90" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<line x1="210" y1="160" x2="210" y2="20" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<path d="M160,90 L210,90 L255,28" fill="none" stroke="#22d3a0" stroke-width="2.5"/>
+<text x="210" y="172" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans">ReLU</text>
+<text x="210" y="12" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Gradient=1 for x&gt;0 ✓</text>
+<!-- Panel 3: GELU -->
+<line x1="290" y1="90" x2="400" y2="90" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<line x1="345" y1="160" x2="345" y2="20" stroke="#4e5a7a" stroke-width="1" marker-end="url(#axm)"/>
+<path d="M295,90 C310,90 315,93 320,95 C325,97 327,96 330,94 C335,90 340,84 345,78 C350,68 358,48 390,25" fill="none" stroke="#b97cf8" stroke-width="2.5"/>
+<text x="345" y="172" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="DM Sans">GELU</text>
+<text x="345" y="12" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Smooth, Transformer default</text>
+<!-- Panel 4: Softmax -->
+<rect x="415" y="40" width="70" height="120" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<rect x="425" y="60" width="15" height="80" rx="2" fill="#f5a623" opacity=".8"/>
+<rect x="445" y="80" width="15" height="60" rx="2" fill="#5ba4fb" opacity=".8"/>
+<rect x="465" y="100" width="15" height="40" rx="2" fill="#f06767" opacity=".8"/>
+<text x="450" y="175" text-anchor="middle" fill="#f5a623" font-size="10" font-family="DM Sans">Softmax</text>
+<text x="450" y="12" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Sums to 1 → prob dist</text>
+</svg></div>
+<div class="card ca"><div class="card-title">Dying ReLU Problem &amp; Fixes</div>
+<div class="card-body">If a neuron receives consistently negative input, its output is always 0 and its gradient is always 0 — it can never recover. "Dead neurons" contribute nothing to the network.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Leaky ReLU:</strong> α=0.01 for negative inputs — always has a non-zero gradient</li><li><strong>ELU:</strong> smooth negative saturation — better gradient properties</li><li><strong>Careful initialization + BatchNorm:</strong> prevents weights from going too negative initially</li><li><strong>Lower learning rate:</strong> reduces risk of neurons being pushed into dead zone early</li></ul></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"ReLU is my default for hidden layers — gradient=1 for positive inputs prevents vanishing gradients, and it's computationally cheap. For Transformer architectures I use GELU (smoother, was shown to work better empirically in BERT/GPT). Output layer: sigmoid for binary, softmax for multi-class, linear for regression. BatchNorm + ReLU (or GELU) is the standard block in modern deep learning."</p></div>
+</section>

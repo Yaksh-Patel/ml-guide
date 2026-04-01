@@ -1,0 +1,25 @@
+<section class="section" id="sec-naivebayes">
+<div class="sec-title">Naive Bayes Classifier</div>
+<div class="sec-desc">Applies Bayes' theorem with a "naive" independence assumption — and works shockingly well despite that assumption being almost always wrong.</div>
+<div class="card"><div class="card-title">The Algorithm</div>
+<div class="formula math-formula">$$\begin{aligned}
+P(y \mid x_1,\ldots,x_n) &\propto P(y) \times \prod_i P(x_i \mid y) \\
+\hat{y} &= \arg\max_y \bigl[\log P(y) + \textstyle\sum_i \log P(x_i \mid y)\bigr] \\
+&\quad\text{(use log-sum to avoid numerical underflow)}
+\end{aligned}$$</div>
+
+
+<div class="card-body" style="margin-top:8px">The "naive" assumption: features x₁,...,xₙ are conditionally independent given y. This is almost never true, yet the classifier often dominates.</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Variants</div>
+<table class="tbl"><tr><th>Type</th><th>P(xᵢ|y)</th><th>Use Case</th></tr>
+<tr><td>Gaussian NB</td><td>Normal distribution</td><td>Continuous features</td></tr>
+<tr><td>Multinomial NB</td><td>Multinomial (counts)</td><td>Word frequency, TF-IDF</td></tr>
+<tr><td>Bernoulli NB</td><td>Bernoulli (binary)</td><td>Word presence/absence</td></tr>
+<tr><td>Complement NB</td><td>Complement class freq</td><td>Imbalanced text data</td></tr></table></div>
+<div class="card cr"><div class="card-title">Limitations</div>
+<ul class="bul"><li><strong>Zero-frequency problem:</strong> if a feature-class combo never appeared in training, P = 0 kills the whole product → fix with <strong>Laplace smoothing</strong> (+1 to all counts)</li><li>Poor probability calibration — outputs aren't well-calibrated</li><li>Independence assumption breaks with correlated features</li><li>Cannot capture feature interactions</li></ul></div>
+</div>
+<div class="box story"><div class="bl">📖 Spam Filter Analogy</div><p>You see "FREE MONEY NIGERIA" in an email. NB asks: what % of spam had "FREE"? "MONEY"? "NIGERIA"? Multiply these probabilities (naively assuming word independence). Compare to legit email. Works because the words signal spam strongly — independence doesn't matter when signals are loud.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Naive Bayes is my go-to for text classification when I need speed and a strong baseline. It trains in O(n·d), predicts in O(d), and works well with very small datasets. I always use Laplace smoothing and log-probabilities to avoid underflow. For structured tabular data with correlated features, it loses badly to tree-based models — but as a text classifier, it often matches neural approaches with a fraction of the compute."</p></div>
+</section>

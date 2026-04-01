@@ -1,0 +1,295 @@
+<section class="section" id="sec-attention">
+<div class="sec-title">Attention &amp; Transformer Architecture</div>
+<div class="sec-desc">The complete architectural lineage from vanilla RNNs to GPT — understanding exactly why each component was invented, what problem it solved, and how they compose into the architecture that powers modern AI.</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PART 1 — THE PROBLEM: SEQUENCE MODELLING BEFORE ATTENTION
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — The Problem: Sequence Modelling Before Attention</div>
+
+<div class="g2">
+<div class="card cr"><div class="card-title">Vanilla RNN — The Goldfish</div>
+<div class="card-body">At each timestep: <code>hₜ = tanh(Wₓxₜ + Wₕhₜ₋₁ + b)</code>. The hidden state must encode everything seen so far in a fixed-size vector. Works for short sequences. Fails on long ones — gradients vanish over 10+ steps, early tokens are forgotten.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Vanishing gradient:</strong> multiplying by Wₕ at every step → gradients shrink to zero</li>
+  <li><strong>Sequential:</strong> each step depends on the previous — cannot parallelise training</li>
+  <li><strong>Fixed memory:</strong> entire history must fit in hₜ — information bottleneck</li>
+</ul></div>
+<div class="card ca"><div class="card-title">LSTM — Adding Controlled Memory</div>
+<div class="card-body">Introduced a cell state Cₜ — a "conveyor belt" running alongside hₜ. Three gates (forget, input, output) learn to selectively erase, write, and read from Cₜ, allowing gradients to flow across hundreds of timesteps.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Fixes:</strong> vanishing gradients, long-range dependencies</li>
+  <li><strong>Still sequential:</strong> cannot parallelise — slow to train on long documents</li>
+  <li><strong>Still bottlenecked:</strong> must compress source into one vector for translation</li>
+</ul></div>
+</div>
+
+<div class="card"><div class="card-title">The Seq2Seq Bottleneck (Sutskever et al., 2014)</div>
+<div class="card-body">For machine translation, two LSTMs were chained: an encoder read the full source, producing a single context vector <strong>c = h_T</strong>, and a decoder generated the target from it. This worked — but a single vector had to summarise an entire sentence.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Encoder: } h_t &= \text{LSTM}(x_t, h_{t-1}) \quad\rightarrow\quad c = h_T \text{ (final hidden state only)} \\
+\text{Decoder: } s_t &= \text{LSTM}(y_{t-1},\, s_{t-1},\, c),\quad y_t = \text{softmax}(W s_t) \\
+&\text{Problem: entire source sentence} \rightarrow \text{one vector } c \rightarrow \text{bottleneck}
+\end{aligned}$$</div>
+<div class="box warn"><div class="bl">⚠️ The Bottleneck Problem</div><p>Translating "The cat sat on the mat because it was tired" requires knowing that "it" refers to "the cat" — but by the time the decoder generates "it", that information has been diluted through many LSTM steps into the single vector c. Quality degrades sharply for sentences longer than ~20 words.</p></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PART 2 — THE SOLUTION: ATTENTION MECHANISM
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 2 — The Solution: Attention Mechanism (Bahdanau et al., 2015)</div>
+
+<div class="card"><div class="card-title">The Core Idea — Dynamic Context</div>
+<div class="card-body">Instead of compressing the source into one vector, keep <em>all</em> encoder hidden states and let the decoder <strong>attend</strong> to whichever ones are relevant at each step. The attention weight αₜᵢ says: "when generating output word t, how much should I look at source position i?"</div>
+<div class="formula math-formula">$$\begin{aligned}
+e_{ti} &= \text{score}(s_{t-1}, h_i) \quad \text{(alignment score — how relevant is } h_i \text{ to decoder state } s_{t-1}\text{?)} \\
+\alpha_{ti} &= \frac{\exp(e_{ti})}{\sum_j \exp(e_{tj})} \quad \text{(softmax over all encoder positions)} \\
+c_t &= \sum_i \alpha_{ti}\, h_i \quad \text{(weighted sum — dynamic context vector per decoder step)}
+\end{aligned}$$</div></div>
+
+<div class="anim-wrap"><div class="anim-title">Encoder-Decoder with Attention — decoder attends to all encoder states, not just the last</div>
+<svg viewBox="0 0 500 230" xmlns="http://www.w3.org/2000/svg">
+<text x="95" y="14" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="Syne" font-weight="700">ENCODER</text>
+<rect x="15" y="22" width="50" height="35" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="40" y="43" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="DM Sans">h₁</text>
+<rect x="75" y="22" width="50" height="35" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="100" y="43" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="DM Sans">h₂</text>
+<rect x="135" y="22" width="50" height="35" rx="6" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="160" y="43" text-anchor="middle" fill="#5ba4fb" font-size="9" font-family="DM Sans">h₃</text>
+<text x="40" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">I</text>
+<text x="100" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">love</text>
+<text x="160" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Paris</text>
+<line x1="65" y1="40" x2="73" y2="40" stroke="#5ba4fb" stroke-width="1.5"/>
+<line x1="125" y1="40" x2="133" y2="40" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="95" y="95" text-anchor="middle" fill="#f5a623" font-size="10" font-family="Syne" font-weight="700">ATTENTION</text>
+<text x="95" y="108" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">αₜᵢ = softmax(eₜᵢ)</text>
+<rect x="25" y="115" width="30" height="20" rx="2" fill="#f5a623" opacity=".3"/>
+<rect x="85" y="110" width="30" height="25" rx="2" fill="#f5a623" opacity=".5"/>
+<rect x="145" y="103" width="30" height="32" rx="2" fill="#f5a623" opacity=".9"/>
+<text x="40" y="143" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">α=0.1</text>
+<text x="100" y="143" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">α=0.2</text>
+<text x="160" y="143" text-anchor="middle" fill="#f5a623" font-size="8" font-family="DM Sans">α=0.7 ✓</text>
+<rect x="55" y="150" width="80" height="25" rx="4" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.5"/>
+<text x="95" y="166" text-anchor="middle" fill="#f5a623" font-size="9" font-family="DM Sans">cₜ=Σαᵢhᵢ</text>
+<line x1="40" y1="135" x2="80" y2="150" stroke="#f5a623" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>
+<line x1="100" y1="135" x2="97" y2="150" stroke="#f5a623" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>
+<line x1="160" y1="135" x2="120" y2="150" stroke="#f5a623" stroke-width="2" stroke-dasharray="3,2" opacity=".9"/>
+<text x="350" y="14" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="Syne" font-weight="700">DECODER</text>
+<rect x="300" y="22" width="50" height="35" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="325" y="43" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">s₁</text>
+<rect x="360" y="22" width="50" height="35" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="385" y="43" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">s₂</text>
+<rect x="420" y="22" width="55" height="35" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
+<text x="447" y="43" text-anchor="middle" fill="#22d3a0" font-size="9" font-family="DM Sans">s₃</text>
+<text x="325" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">J'</text>
+<text x="385" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">aime</text>
+<text x="447" y="70" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Paris</text>
+<line x1="350" y1="40" x2="358" y2="40" stroke="#22d3a0" stroke-width="1.5"/>
+<line x1="410" y1="40" x2="418" y2="40" stroke="#22d3a0" stroke-width="1.5"/>
+<line x1="137" y1="162" x2="300" y2="40" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
+<text x="210" y="95" fill="#f5a623" font-size="9" font-family="DM Sans" text-anchor="middle">context cₜ →</text>
+<rect x="15" y="185" width="470" height="38" rx="8" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
+<text x="250" y="200" text-anchor="middle" fill="#b97cf8" font-size="11" font-family="Syne" font-weight="700">TRANSFORMER = Replace RNN encoder/decoder with stacked Multi-Head Self-Attention blocks</text>
+<text x="250" y="216" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">No recurrence → fully parallel training · Position-invariant → add positional encoding · O(n²) attention</text>
+</svg></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PART 3 — SCALED DOT-PRODUCT & MULTI-HEAD ATTENTION
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 3 — Scaled Dot-Product &amp; Multi-Head Attention</div>
+
+<div class="card"><div class="card-title">Scaled Dot-Product Attention — The Core Operation</div>
+<div class="card-body">The Transformer generalises attention into a fully learnable operation. Each token is projected into three roles simultaneously: a Query (what am I looking for?), a Key (what do I advertise?), and a Value (what do I output when matched?). Attention scores are computed as dot-products between all Q–K pairs, scaled and softmaxed to produce weights over V.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Attention}(Q,K,V) &= \text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right)\!V \\[6pt]
+Q = XW^Q &\quad \text{[queries: "what am I looking for?"]} \\
+K = XW^K &\quad \text{[keys: "what information do I have?"]} \\
+V = XW^V &\quad \text{[values: "what to output if matched?"]} \\
+d_k &= \text{key/query dimension (scale factor prevents softmax saturation)}
+\end{aligned}$$</div>
+</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Why √dₖ Scaling?</div>
+<div class="card-body">Dot products grow as O(√dₖ) with dimension — without scaling, large dₖ produces very large logits → softmax saturates → near-zero gradients for all non-maximum positions. Dividing by √dₖ keeps the softmax in a gradient-friendly range.</div>
+<div class="box mem"><div class="bl">💡 Rule of thumb</div><p>If dₖ = 64 (typical), divide by 8. If dₖ = 512 (large model), divide by ~22. The scale factor is always √dₖ regardless of model size.</p></div></div>
+<div class="card cg"><div class="card-title">Self-Attention vs Cross-Attention</div>
+<ul class="bul">
+  <li><strong>Self-Attention:</strong> Q, K, V all from the <em>same</em> sequence. Each token attends to all other tokens in the same sequence. Used in both Encoder and Decoder self-attention blocks.</li>
+  <li><strong>Cross-Attention:</strong> Q from decoder, K and V from encoder. Decoder positions attend to relevant encoder positions — the "lookup" that connects encoder knowledge to decoder generation.</li>
+  <li><strong>Masked Self-Attention:</strong> causal mask prevents each position from attending to future tokens. Used in decoder-only models (GPT) at training time.</li>
+</ul></div>
+</div>
+
+<div class="card ca"><div class="card-title">Multi-Head Attention — Learning Multiple Perspectives in Parallel</div>
+<div class="card-body">Running a single attention head learns one relationship pattern. Running h heads in parallel, each with its own Q/K/V projections, lets the model simultaneously attend to syntax, semantics, coreference, and positional patterns — then concatenate and project the results.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{head}_i &= \text{Attention}(QW_i^Q,\; KW_i^K,\; VW_i^V) \\
+\text{MultiHead}(Q,K,V) &= \text{Concat}(\text{head}_1,\ldots,\text{head}_h)\,W^O \\
+&\text{Typical: } h=8 \text{ heads},\; d_k = d_v = d_{\text{model}}/h = 64
+\end{aligned}$$</div>
+<div class="anim-wrap"><div class="anim-title">Attention: token "bank" attends — high weight to "deposit" and "$", low to other tokens</div>
+<svg viewBox="0 0 480 145" xmlns="http://www.w3.org/2000/svg">
+<text x="240" y="14" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Query token "bank" attends to all tokens — learns it means the financial kind from context</text>
+<rect x="10" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="37" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">I</text>
+<rect x="73" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="100" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">went</text>
+<rect x="136" y="25" width="55" height="26" rx="4" fill="#5ba4fb" stroke="#5ba4fb" opacity=".9"/>
+<text x="163" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">to</text>
+<rect x="199" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#f5a623" stroke-width="2"/>
+<text x="226" y="42" text-anchor="middle" fill="#f5a623" font-size="11" font-family="DM Sans">bank</text>
+<rect x="262" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="289" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">to</text>
+<rect x="325" y="25" width="68" height="26" rx="4" fill="#22d3a0" stroke="#22d3a0" opacity=".9"/>
+<text x="359" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">deposit</text>
+<rect x="401" y="25" width="45" height="26" rx="4" fill="#22d3a0" stroke="#22d3a0" opacity=".9"/>
+<text x="424" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">$</text>
+<text x="240" y="72" text-anchor="middle" fill="#4e5a7a" font-size="8.5" font-family="DM Sans">attention weights (QK score after softmax)</text>
+<rect x="10" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
+<rect x="10" y="80" width="10" height="5" rx="2" fill="#5ba4fb" opacity=".5"/>
+<rect x="73" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
+<rect x="73" y="80" width="12" height="5" rx="2" fill="#5ba4fb" opacity=".5"/>
+<rect x="136" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
+<rect x="136" y="80" width="24" height="5" rx="2" fill="#5ba4fb" opacity=".8"/>
+<rect x="199" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
+<rect x="199" y="80" width="16" height="5" rx="2" fill="#f5a623" opacity=".6"/>
+<rect x="262" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
+<rect x="262" y="80" width="14" height="5" rx="2" fill="#5ba4fb" opacity=".4"/>
+<rect x="325" y="80" width="68" height="5" rx="2" fill="#2e3a58"/>
+<rect x="325" y="80" width="66" height="5" rx="2" fill="#22d3a0" opacity=".9"/>
+<rect x="401" y="80" width="45" height="5" rx="2" fill="#2e3a58"/>
+<rect x="401" y="80" width="43" height="5" rx="2" fill="#22d3a0" opacity=".8"/>
+<text x="37" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.04</text>
+<text x="100" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.06</text>
+<text x="163" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.10</text>
+<text x="226" y="98" text-anchor="middle" fill="#f5a623" font-size="8" font-family="DM Sans">0.08</text>
+<text x="289" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.05</text>
+<text x="359" y="98" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="DM Sans">0.42 ↑</text>
+<text x="424" y="98" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="DM Sans">0.25 ↑</text>
+<text x="240" y="126" text-anchor="middle" fill="#4e5a7a" font-size="9.5" font-family="DM Sans">High attention to "deposit" and "$" → model learns "bank" = financial institution, not riverbank</text>
+<text x="240" y="140" text-anchor="middle" fill="#4e5a7a" font-size="8.5" font-family="DM Sans">Head 1: syntax · Head 2: coreference · Head 3: semantics · Heads 4–8: other specialisations</text>
+</svg></div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PART 4 — THE TRANSFORMER ARCHITECTURE
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 4 — The Transformer Architecture ("Attention Is All You Need", 2017)</div>
+
+<div class="card"><div class="card-title">Why Replace RNNs Entirely?</div>
+<div class="card-body">Attention alone already allows any token to directly attend to any other token — O(1) path length between any two positions regardless of distance. RNNs have O(n) path length. The key insight of Vaswani et al. (2017): if attention already handles long-range dependencies, the recurrence is just adding sequential computation overhead. Remove it entirely.</div>
+<div class="g2" style="margin-top:12px">
+<div><ul class="bul">
+  <li><strong>No recurrence:</strong> all positions processed in parallel → 10–100× faster training on GPUs</li>
+  <li><strong>O(1) path length:</strong> any token can attend to any other in a single layer</li>
+</ul></div>
+<div><ul class="bul">
+  <li><strong>Position-invariant:</strong> must inject positional information explicitly via PE</li>
+  <li><strong>O(n²) memory:</strong> QKᵀ matrix is seq_len × seq_len — scales poorly to very long sequences</li>
+</ul></div>
+</div></div>
+
+<div class="card ca"><div class="card-title">Positional Encoding — Injecting Order Without Recurrence</div>
+<div class="card-body">Self-attention is permutation-invariant — it produces the same output regardless of token order. Positional encodings are added to the token embeddings before the first layer to inject position information. The original paper used sinusoidal encodings; modern LLMs use learned or rotary (RoPE) encodings.</div>
+<div class="formula math-formula">$$\begin{aligned}
+PE(\text{pos}, 2i)   &= \sin\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+\text{Input to each layer} &= \text{token embedding} + \text{positional encoding}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Different frequencies encode different scales: high-frequency dimensions change rapidly between adjacent positions (local info), low-frequency dimensions change slowly across the sequence (global position). <strong>RoPE</strong> (used in LLaMA, GPT-NeoX) rotates Q and K vectors instead of adding to embeddings — better extrapolation to unseen sequence lengths.</div></div>
+
+<div class="card cp"><div class="card-title">Transformer Encoder Block — Complete Forward Pass</div>
+<div class="card-body">One Transformer encoder layer = two sub-layers (self-attention + FFN), each wrapped with a residual connection and Layer Norm. BERT uses 12 such layers; GPT-3 uses 96.</div>
+<div class="formula math-formula">$$\begin{aligned}
+&\text{Input: } x \in \mathbb{R}^{\text{seq\_len} \times d_{\text{model}}} \\[4pt]
+&\textbf{Sub-layer 1 — Multi-Head Self-Attention:} \\
+&x' = \text{LayerNorm}(x) \quad\text{[pre-norm variant]} \\
+&\text{att} = \text{MultiHeadSelfAttention}(x', x', x') \\
+&x = x + \text{att} \quad\text{(residual connection)} \\[4pt]
+&\textbf{Sub-layer 2 — Feed-Forward Network:} \\
+&x' = \text{LayerNorm}(x) \\
+&\text{ffn} = \text{Linear}_2(\text{GELU}(\text{Linear}_1(x'))) \quad\text{[}d \to 4d \to d\text{]} \\
+&x = x + \text{ffn} \quad\text{(residual connection)} \\[4pt]
+&\text{Repeat } N \text{ times (}N{=}12 \text{ for BERT-base, } N{=}96 \text{ for GPT-3)}
+\end{aligned}$$</div>
+<div class="g2" style="margin-top:10px">
+<div><ul class="bul">
+  <li><strong>Residual connections:</strong> enable gradient flow through 100+ layers without vanishing</li>
+  <li><strong>Layer Norm</strong> (not Batch Norm): position-independent, handles variable sequence lengths</li>
+</ul></div>
+<div><ul class="bul">
+  <li><strong>FFN = knowledge memory:</strong> 2/3 of parameters live here — stores factual associations</li>
+  <li><strong>4× expansion:</strong> dₘₒdₑₗ → 4dₘₒdₑₗ → dₘₒdₑₗ; GELU activates the "memory" selectively</li>
+</ul></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PART 5 — FROM TRANSFORMER TO GPT: THE EVOLUTION
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 5 — From Transformer to GPT: The Complete Evolution</div>
+
+<div class="card"><div class="card-title">Architecture Family Tree — Incremental Improvements</div>
+<table class="tbl">
+<tr><th>Era</th><th>Architecture</th><th>Year</th><th>Key Innovation</th><th>Limitation It Solved</th><th>New Limitation</th></tr>
+<tr><td>Recurrent</td><td>Vanilla RNN</td><td>1986</td><td>Hidden state carries sequence context</td><td>Fixed-length I/O</td><td>Vanishing gradients, no parallelism</td></tr>
+<tr><td>Recurrent</td><td>LSTM / GRU</td><td>1997 / 2014</td><td>Cell state + gates for long memory</td><td>Vanishing gradients</td><td>Still sequential; bottleneck in seq2seq</td></tr>
+<tr><td>Attention+RNN</td><td>Seq2Seq + Attention</td><td>2015</td><td>Dynamic context vector per decoder step</td><td>Information bottleneck</td><td>Still uses RNN; still sequential</td></tr>
+<tr><td><strong>Transformer</strong></td><td><strong>Original Transformer</strong></td><td><strong>2017</strong></td><td><strong>Replace RNN entirely with self-attention</strong></td><td><strong>Sequential training</strong></td><td>O(n²) memory; no positional info by default</td></tr>
+<tr><td>Encoder-only</td><td>BERT</td><td>2018</td><td>Bidirectional attention + MLM pretraining</td><td>Left-context-only (GPT-1)</td><td>Cannot generate text autoregressively</td></tr>
+<tr><td>Encoder-Decoder</td><td>T5</td><td>2019</td><td>Unified text-to-text framework</td><td>Task-specific heads</td><td>Slower inference than decoder-only</td></tr>
+<tr><td>Decoder-only</td><td>GPT-2 / GPT-3</td><td>2019 / 2020</td><td>Autoregressive generation at massive scale</td><td>Task-specific fine-tuning</td><td>No instruction following; misaligned</td></tr>
+<tr><td>Decoder-only</td><td>InstructGPT / ChatGPT</td><td>2022</td><td>RLHF alignment — follows human intent</td><td>Misalignment, harmful outputs</td><td>High inference cost; hallucinations</td></tr>
+<tr><td>Decoder-only</td><td>LLaMA / Mistral / Gemma</td><td>2023+</td><td>Open weights + efficient architectures (GQA, SWA)</td><td>API-only access</td><td>Still O(n²) attention; context limits</td></tr>
+<tr><td>Decoder-only</td><td>GPT-4 / Claude / Gemini</td><td>2023+</td><td>Scale + RLHF + long context (128K+)</td><td>Short context, limited reasoning</td><td>Frontier: cost, latency, reasoning depth</td></tr>
+</table></div>
+
+<div class="card"><div class="card-title">Three Transformer Variants — When to Use Which</div>
+<table class="tbl">
+<tr><th>Variant</th><th>Attention Type</th><th>Pretraining Task</th><th>Best For</th><th>Examples</th></tr>
+<tr><td><strong>Encoder-only</strong></td><td>Bidirectional self-attention (sees all tokens)</td><td>Masked Language Modelling (MLM)</td><td>Understanding tasks: classification, NER, QA, embeddings</td><td>BERT, RoBERTa, DistilBERT</td></tr>
+<tr><td><strong>Decoder-only</strong></td><td>Causal (masked) self-attention (left-to-right only)</td><td>Next-token prediction (CLM)</td><td>Generation: chatbots, code, summarisation, LLMs</td><td>GPT-4, Claude, LLaMA, Mistral</td></tr>
+<tr><td><strong>Encoder-Decoder</strong></td><td>Bidirectional encoder + cross-attention decoder</td><td>Span corruption (T5) or translation</td><td>Seq2Seq: translation, summarisation, question generation</td><td>T5, BART, MarianMT</td></tr>
+</table></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Modern Architecture Improvements</div>
+<ul class="bul">
+  <li><strong>RoPE (Rotary Position Embedding):</strong> rotates Q and K vectors by position angle — better length generalisation than sinusoidal. Used in LLaMA, GPT-NeoX.</li>
+  <li><strong>GQA (Grouped Query Attention):</strong> fewer K/V heads than Q heads — reduces KV cache memory by 4–8× at inference with minimal quality loss. Used in Mistral, LLaMA-3.</li>
+  <li><strong>SwiGLU activation:</strong> replaces ReLU in FFN with <code>x · σ(W₁x) ⊗ W₂x</code> — better gradients. Used in LLaMA, PaLM.</li>
+  <li><strong>RMSNorm:</strong> simpler than LayerNorm — omits the mean-centring step. Faster and equally effective.</li>
+  <li><strong>Flash Attention:</strong> tiling trick — computes attention in SRAM instead of HBM, reducing memory from O(n²) to O(n) while maintaining exact results. 4× faster.</li>
+</ul></div>
+<div class="card cg"><div class="card-title">Transformer vs RNN — Head to Head</div>
+<table class="tbl">
+<tr><th>Property</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+<tr><td>Long-range dependency path</td><td>O(n) — degrades over distance</td><td>O(1) — direct attention</td></tr>
+<tr><td>Training parallelism</td><td>Sequential — slow</td><td>Fully parallel — fast</td></tr>
+<tr><td>Memory per layer</td><td>O(n)</td><td>O(n²) attention matrix</td></tr>
+<tr><td>Context window</td><td>~200 tokens effective</td><td>4K–128K+ with tricks</td></tr>
+<tr><td>Streaming / online</td><td>Natural (stateful)</td><td>Needs full context or KV cache</td></tr>
+<tr><td>Parameter count (same capacity)</td><td>Fewer</td><td>More (larger FFN)</td></tr>
+</table></div>
+</div>
+
+<div class="box story"><div class="bl">📖 The Library Analogy</div><p>An RNN reads a book page by page, maintaining a single notepad summary. By chapter 20 it has mostly forgotten chapter 1. An LSTM has a better notepad with sticky notes — but still reads page by page. A Transformer gets the entire book at once, draws lines between every relevant passage simultaneously (attention), and builds its understanding in parallel across all pages. The FFN is the interpreter that extracts facts from the underlined passages. That's why Transformers understand "it" in chapter 20 refers to the cat mentioned in chapter 1 — both are visible at once.</p></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The Transformer's key insight is that attention — which lets any position directly attend to any other — subsumes what recurrence was trying to do, while being fully parallelisable. The three design choices that make it work: (1) residual connections around every sub-layer for gradient flow through depth; (2) Layer Norm for training stability without batch dependence; (3) multi-head attention so the model can simultaneously track syntax, semantics, and coreference. The FFN between attention layers acts as key-value memory — this is where factual knowledge is stored and why scaling model width improves factual accuracy. Modern decoder-only GPT-style models drop the encoder entirely and train autoregressively — simpler, scalable, and generalist enough to handle any task via prompting."</p></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RESOURCES
+     ══════════════════════════════════════════════════════════════ -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Resources</div>
+
+<div class="card"><div class="card-title">Key Papers &amp; Further Reading</div>
+<table class="tbl">
+<tr><th>Paper</th><th>Authors</th><th>Year</th><th>Link</th></tr>
+<tr><td><strong>Attention Is All You Need</strong> — the original Transformer paper</td><td>Vaswani et al.</td><td>2017</td><td><a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/1706.03762</a></td></tr>
+<tr><td>Neural Machine Translation by Jointly Learning to Align and Translate — original attention</td><td>Bahdanau et al.</td><td>2015</td><td><a href="https://arxiv.org/abs/1409.0473" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/1409.0473</a></td></tr>
+<tr><td>BERT: Pre-training of Deep Bidirectional Transformers</td><td>Devlin et al.</td><td>2018</td><td><a href="https://arxiv.org/abs/1810.04805" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/1810.04805</a></td></tr>
+<tr><td>Language Models are Few-Shot Learners (GPT-3)</td><td>Brown et al.</td><td>2020</td><td><a href="https://arxiv.org/abs/2005.14165" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/2005.14165</a></td></tr>
+<tr><td>FlashAttention: Fast and Memory-Efficient Exact Attention</td><td>Dao et al.</td><td>2022</td><td><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/2205.14135</a></td></tr>
+<tr><td>RoFormer: Enhanced Transformer with Rotary Position Embedding (RoPE)</td><td>Su et al.</td><td>2021</td><td><a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/2104.09864</a></td></tr>
+</table></div>
+
+</section>

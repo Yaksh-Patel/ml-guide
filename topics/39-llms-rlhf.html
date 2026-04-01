@@ -1,0 +1,39 @@
+<section class="section" id="sec-llm">
+<div class="sec-title">LLMs, SLMs &amp; RLHF</div>
+<div class="sec-desc">The current frontier — massive language models that emergently acquire reasoning, coding, and instruction-following capabilities at scale. Understanding why they work (and why they fail) is increasingly essential.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Architecture of a Modern LLM</div>
+<ul class="bul"><li>Decoder-only Transformer (GPT-style)</li><li>Causal (masked) self-attention — each token attends to previous tokens only</li><li>RoPE positional encodings (extends to long contexts better)</li><li>GroupedQuery Attention (GQA): fewer KV heads than Q heads → faster inference</li><li>RMSNorm (not LayerNorm) — faster</li><li>SwiGLU activation in FFN layers</li><li>Flash Attention for memory-efficient attention</li></ul></div>
+<div class="card cg"><div class="card-title">Scaling Laws</div>
+<div class="formula math-formula">$$\begin{aligned}
+Loss \propto (C/Copt)^{-\alpha C} \quad \text{[compute scaling]} \\
+Chinchilla: N_params \approx 20 \times N_tokens (optimal)
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Hoffman et al. (Chinchilla): for a given compute budget, train a smaller model on more tokens, not a larger model on fewer</li><li>Emergent abilities: capabilities appear suddenly at certain scale thresholds</li><li>Power law relationship between model size, data, compute, and performance</li></ul></div>
+</div>
+<div class="card ca"><div class="card-title">RLHF — Reinforcement Learning from Human Feedback</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Stage 1: Pre-train LLM on massive text corpus} \\
+\text{Stage 2: Supervised Fine-Tuning (SFT) on high-quality demonstrations} \\
+\text{Stage 3: Train Reward Model (RM) on human preference pairs (A vs B)} \\
+\text{Stage 4: PPO: } \max\, \mathbb{E}[\text{RM(response)}] - \beta\cdot\text{KL}(\pi \| \pi_{\text{SFT}})
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">The KL penalty prevents the model from drifting too far from the SFT base — without it, the model would learn to "hack" the reward model with degenerate outputs. RLHF is what makes ChatGPT/Claude helpful, harmless, and honest — not just a next-token predictor.</div></div>
+<div class="card"><div class="card-title">SLMs (Small Language Models)</div>
+<div class="card-body">Models under 7B parameters that achieve competitive performance on specific tasks. Trend: distilling capabilities of large models into small ones for deployment.</div>
+<table class="tbl" style="margin-top:8px"><tr><th>Model</th><th>Params</th><th>Architecture</th></tr>
+<tr><td>Llama-3.2 3B</td><td>3B</td><td>GQA, RoPE; state-of-the-art at 3B</td></tr>
+<tr><td>Phi-4-mini</td><td>3.8B</td><td>Microsoft; textbook data quality</td></tr>
+<tr><td>Gemma-3 4B</td><td>4B</td><td>Google; strong reasoning</td></tr>
+<tr><td>Qwen-2.5 7B</td><td>7B</td><td>Alibaba; coding + multilingual</td></tr>
+<tr><td>Mistral 7B</td><td>7B</td><td>Sliding window attention; efficient</td></tr></table></div>
+<div class="card"><div class="card-title">Inference Techniques</div>
+<table class="tbl"><tr><th>Technique</th><th>What It Does</th><th>Effect</th></tr>
+<tr><td>KV Cache</td><td>Cache key-value pairs across tokens</td><td>Avoids recomputation; essential for fast generation</td></tr>
+<tr><td>Quantization (INT8/INT4)</td><td>Reduce weight precision</td><td>2–4× smaller; minimal accuracy loss</td></tr>
+<tr><td>Flash Attention</td><td>Memory-efficient attention via tiling</td><td>4× faster, 10× less memory</td></tr>
+<tr><td>Speculative decoding</td><td>Small model drafts, large model verifies</td><td>2–3× faster inference</td></tr>
+<tr><td>Continuous batching</td><td>Dynamic batching as requests arrive</td><td>Higher GPU utilization</td></tr>
+<tr><td>RAG</td><td>Retrieve relevant docs; inject into context</td><td>Reduces hallucination; updates without retraining</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The LLM training pipeline: pre-train on internet-scale data (self-supervised, next-token prediction) → SFT on demonstration data → RLHF to align with human preferences. RLHF is what transforms a weird text-completer into a helpful assistant. For production deployment: 4-bit quantization + vLLM/TGI for batched serving + RAG for knowledge freshness. Hallucination is the core challenge — mitigated by grounding via RAG, careful prompt engineering, and confidence calibration."</p></div>
+</section>

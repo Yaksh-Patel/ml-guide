@@ -1,0 +1,47 @@
+<section class="section" id="sec-featureeng">
+<div class="sec-title">Feature Engineering &amp; Data Processing</div>
+<div class="sec-desc">The art and science of turning raw data into signals that algorithms can use — arguably the highest-ROI activity in applied ML. Better features beat better algorithms every time.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Missing Value Strategies</div>
+<table class="tbl"><tr><th>Method</th><th>When to Use</th></tr>
+<tr><td>Drop rows</td><td>Only if &lt;5% missing and random (MCAR)</td></tr>
+<tr><td>Mean/median imputation</td><td>MCAR; doesn't preserve variance</td></tr>
+<tr><td>Mode imputation</td><td>Categorical features</td></tr>
+<tr><td>KNN imputation</td><td>MAR; uses similar rows; expensive</td></tr>
+<tr><td>Model imputation</td><td>Best accuracy; risk of leakage</td></tr>
+<tr><td>Missing indicator + impute</td><td>When missingness itself is signal</td></tr>
+<tr><td>XGBoost/LightGBM</td><td>Handle NaN natively — no imputation needed</td></tr></table>
+<div class="box warn"><div class="bl">⚠️ Types of Missingness</div><p><strong>MCAR</strong> (completely at random): safe to drop. <strong>MAR</strong> (at random given other vars): impute. <strong>MNAR</strong> (not at random — the value is missing because of what it is): add missingness indicator as feature!</p></div></div>
+<div class="card cg"><div class="card-title">Encoding Categorical Features</div>
+<table class="tbl"><tr><th>Method</th><th>Best For</th><th>Watch Out</th></tr>
+<tr><td>One-hot encoding</td><td>Low cardinality (&lt;10 cats)</td><td>Curse of dim for high cardinality</td></tr>
+<tr><td>Label encoding</td><td>Ordinal categories; tree models</td><td>Implies order for nominal data</td></tr>
+<tr><td>Target encoding</td><td>High cardinality</td><td>Severe leakage without CV-in-fold</td></tr>
+<tr><td>Count/freq encoding</td><td>High cardinality; trees</td><td>Same count for different cats</td></tr>
+<tr><td>Binary encoding</td><td>Medium cardinality</td><td>Log₂(k) columns</td></tr>
+<tr><td>Embeddings (NN)</td><td>Very high cardinality (user ID)</td><td>Needs training; complex</td></tr>
+<tr><td>Hashing</td><td>Very high cardinality; streaming</td><td>Hash collisions</td></tr></table></div>
+</div>
+<div class="card ca"><div class="card-title">Feature Scaling</div>
+<div class="g2" style="margin-top:8px">
+<div><strong style="color:var(--text);font-size:13px">Standardization (Z-score)</strong>
+<div class="formula math-formula">$$x' = (x - \mu) / \sigma  \rightarrow  N(0,1)$$</div>
+<div class="card-body">Use for: linear models, SVM, PCA, neural networks. Does NOT bound to [0,1] — outliers still present.</div></div>
+<div><strong style="color:var(--text);font-size:13px">Min-Max Normalization</strong>
+<div class="formula math-formula">$$x' = (x - xmin) / (xmax - xmin)  \rightarrow \quad \text{[0,1]}$$</div>
+<div class="card-body">Use for: neural networks when you need bounded input. Sensitive to outliers — one extreme value squashes everything else.</div></div>
+</div>
+<div class="card-body" style="margin-top:8px"><strong>Never scale:</strong> tree-based models (XGBoost, RF, decision trees) — splits are rank-based, scale doesn't matter. <strong>Always scale:</strong> KNN, SVM, linear/logistic, neural networks, PCA.</div></div>
+<div class="card"><div class="card-title">Feature Selection Methods</div>
+<table class="tbl"><tr><th>Method</th><th>Type</th><th>When to Use</th></tr>
+<tr><td>Variance threshold</td><td>Filter</td><td>Remove near-constant features</td></tr>
+<tr><td>Correlation filter</td><td>Filter</td><td>Remove highly correlated pairs (keep one)</td></tr>
+<tr><td>Chi-square test</td><td>Filter</td><td>Categorical feature vs target independence</td></tr>
+<tr><td>Mutual information</td><td>Filter</td><td>Non-linear dependency feature vs target</td></tr>
+<tr><td>L1 (Lasso)</td><td>Embedded</td><td>Feature selection via regularization</td></tr>
+<tr><td>Tree importance</td><td>Embedded</td><td>Tree models; fast; MDI-biased</td></tr>
+<tr><td>SHAP importance</td><td>Embedded</td><td>Unbiased, theoretically principled</td></tr>
+<tr><td>Recursive Feature Elimination (RFE)</td><td>Wrapper</td><td>Expensive but accurate selection</td></tr>
+<tr><td>Boruta algorithm</td><td>Wrapper</td><td>RF-based; excellent but slow</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Feature engineering is where I spend most of my time in real ML projects. For credit risk: payment ratio = payments_made / total_due is more predictive than either raw number. For e-commerce: days_since_last_purchase + log(purchase_frequency) + interaction terms often dominate raw features. I use SHAP for feature selection — it's unbiased and shows both direction and magnitude of impact. Target encoding with 5-fold CV-in-fold is the best technique for high-cardinality categories but leakage is the #1 risk."</p></div>
+</section>

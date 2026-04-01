@@ -1,0 +1,389 @@
+/*
+ * prism-theme.css
+ * Custom Prism.js token colours that match the ML Guide dark/light design system.
+ * Applied to ALL static code snippets: <pre class="language-python">, etc.
+ * The .formula class is also covered via the .formula pre rule below.
+ */
+
+/* ── Base code block wrapper ──────────────────────────────────── */
+pre[class*="language-"],
+code[class*="language-"] {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.85;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  tab-size: 4;
+  hyphens: none;
+}
+
+pre[class*="language-"] {
+  margin: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 0 0 9px 9px; /* flush with .formula container */
+}
+
+/* ── .formula wrapper upgrade ─────────────────────────────────── */
+/* When a .formula contains a <pre class="language-python">, 
+   override the old monochrome style */
+.formula:has(pre[class*="language-"]) {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+/* Standalone .formula (plain text, no Prism) — keep as before */
+.formula:not(:has(pre)) {
+  white-space: pre;
+}
+
+/* ── DARK THEME tokens ────────────────────────────────────────── */
+[data-theme="dark"] pre[class*="language-"],
+[data-theme="dark"] code[class*="language-"] {
+  background: #0b0d12;
+  color: #e6e9f4;
+}
+
+/* Comments — muted, italic */
+[data-theme="dark"] .token.comment,
+[data-theme="dark"] .token.prolog,
+[data-theme="dark"] .token.doctype,
+[data-theme="dark"] .token.cdata {
+  color: #4e5a7a;
+  font-style: italic;
+}
+
+/* Strings */
+[data-theme="dark"] .token.string,
+[data-theme="dark"] .token.attr-value {
+  color: #f5a623;
+}
+
+/* Numbers */
+[data-theme="dark"] .token.number,
+[data-theme="dark"] .token.integer,
+[data-theme="dark"] .token.float {
+  color: #34d4e8;
+}
+
+/* Keywords: def, class, for, if, import, return, lambda, with, as, in, not, and, or */
+[data-theme="dark"] .token.keyword {
+  color: #b97cf8;
+  font-weight: 500;
+}
+
+/* Built-in functions: print, len, range, type, super, None, True, False */
+[data-theme="dark"] .token.builtin {
+  color: #38c9b9;
+}
+
+/* Boolean / None */
+[data-theme="dark"] .token.boolean,
+[data-theme="dark"] .token.constant,
+[data-theme="dark"] .token.null {
+  color: #34d4e8;
+}
+
+/* Function / class names at definition site */
+[data-theme="dark"] .token.function,
+[data-theme="dark"] .token.class-name {
+  color: #5ba4fb;
+  font-weight: 500;
+}
+
+/* Operators: =, +, -, *, /, @, %, ==, != */
+[data-theme="dark"] .token.operator {
+  color: #f06767;
+}
+
+/* Punctuation: ( ) [ ] { } , . : */
+[data-theme="dark"] .token.punctuation {
+  color: #8e97b8;
+}
+
+/* Decorator: @torch.no_grad() */
+[data-theme="dark"] .token.decorator,
+[data-theme="dark"] .token.annotation {
+  color: #22d3a0;
+}
+
+/* Variable names / identifiers */
+[data-theme="dark"] .token.variable {
+  color: #e6e9f4;
+}
+
+/* Module / namespace import names */
+[data-theme="dark"] .token.namespace,
+[data-theme="dark"] .token.module {
+  color: #8e97b8;
+}
+
+/* SQL-specific */
+[data-theme="dark"] .token.keyword.sql-keyword {
+  color: #b97cf8;
+}
+
+/* Regex / special */
+[data-theme="dark"] .token.regex,
+[data-theme="dark"] .token.important {
+  color: #f5a623;
+}
+
+/* Selection highlight */
+[data-theme="dark"] pre[class*="language-"] ::selection {
+  background: rgba(91, 125, 248, 0.25);
+}
+
+/* Scrollbar */
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar { height: 5px; }
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-track { background: #10131a; }
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: #242d45; border-radius: 3px; }
+
+
+/* ── LIGHT THEME tokens ───────────────────────────────────────── */
+[data-theme="light"] pre[class*="language-"],
+[data-theme="light"] code[class*="language-"] {
+  background: #eef1f8;
+  color: #1a1d2e;
+}
+
+[data-theme="light"] .token.comment,
+[data-theme="light"] .token.prolog,
+[data-theme="light"] .token.doctype,
+[data-theme="light"] .token.cdata {
+  color: #8892b4;
+  font-style: italic;
+}
+
+[data-theme="light"] .token.string,
+[data-theme="light"] .token.attr-value {
+  color: #d4820a;
+}
+
+[data-theme="light"] .token.number,
+[data-theme="light"] .token.integer,
+[data-theme="light"] .token.float {
+  color: #0a9fb5;
+}
+
+[data-theme="light"] .token.keyword {
+  color: #7b40d6;
+  font-weight: 500;
+}
+
+[data-theme="light"] .token.builtin {
+  color: #0fa89a;
+}
+
+[data-theme="light"] .token.boolean,
+[data-theme="light"] .token.constant,
+[data-theme="light"] .token.null {
+  color: #0a9fb5;
+}
+
+[data-theme="light"] .token.function,
+[data-theme="light"] .token.class-name {
+  color: #2e6fe8;
+  font-weight: 500;
+}
+
+[data-theme="light"] .token.operator {
+  color: #d94040;
+}
+
+[data-theme="light"] .token.punctuation {
+  color: #4a5278;
+}
+
+[data-theme="light"] .token.decorator,
+[data-theme="light"] .token.annotation {
+  color: #0fa875;
+}
+
+[data-theme="light"] .token.variable {
+  color: #1a1d2e;
+}
+
+[data-theme="light"] .token.namespace,
+[data-theme="light"] .token.module {
+  color: #4a5278;
+}
+
+[data-theme="light"] .token.regex,
+[data-theme="light"] .token.important {
+  color: #d4820a;
+}
+
+[data-theme="light"] pre[class*="language-"] ::selection {
+  background: rgba(64, 96, 232, 0.2);
+}
+
+[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar { height: 5px; }
+[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-track { background: #f4f6fb; }
+[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: #c2cbea; border-radius: 3px; }
+
+
+/* ── .formula wrapper that holds language-tagged <pre> ─────────── */
+/* Give it a border+radius as a container, let Prism style inside */
+.formula-block {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  margin: 9px 0;
+  overflow: hidden;
+  transition: background .25s;
+}
+.formula-block .formula-lang-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.formula-block pre[class*="language-"] {
+  border-radius: 0;
+  margin: 0;
+}
+[data-theme="light"] .formula-block {
+  background: var(--bg3);
+}
+
+/* ── Math (KaTeX) display style ──────────────────────────────── */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 0;
+  margin: 4px 0;
+}
+.katex {
+  font-size: 1.05em;
+}
+
+/* Math block inside a .formula wrapper */
+.formula .katex-display {
+  padding: 8px 0;
+}
+
+/* ── Inline code (plain <code> tags) ─────────────────────────── */
+/* Keep existing style from style.css — just ensure consistency */
+code:not([class*="language-"]) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--bg3);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent2);
+  border: 1px solid var(--border);
+}
+[data-theme="light"] code:not([class*="language-"]) {
+  color: var(--accent);
+}
+
+/* ── Code runner: output area tweaks ─────────────────────────── */
+.code-runner {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin: 12px 0;
+}
+.code-runner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.code-runner-header span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.runner-btns { display: flex; gap: 6px; }
+.run-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.run-btn:hover { opacity: .85; }
+.run-btn:disabled { opacity: .5; cursor: not-allowed; }
+.reset-btn {
+  background: var(--bg4);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all .15s;
+}
+.reset-btn:hover { border-color: var(--border2); color: var(--text); }
+
+/* Raw textarea (hidden when CM is active) */
+.code-input {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  background: var(--bg);
+  color: var(--accent2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 12px 14px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  tab-size: 4;
+}
+[data-theme="light"] .code-input { color: var(--accent); }
+
+/* Output area */
+.code-output {
+  display: block;
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  min-height: 28px;
+  border-top: 1px solid var(--border);
+  white-space: pre-wrap;
+  color: var(--text2);
+}
+.code-output.ok { color: var(--green); }
+.code-output.err { color: var(--red); }
+
+/* Colab link badge */
+.colab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  text-decoration: none;
+  transition: all .15s;
+}
+.colab-link:hover { border-color: var(--amber); color: var(--amber); }

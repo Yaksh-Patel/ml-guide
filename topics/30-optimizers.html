@@ -1,0 +1,46 @@
+<section class="section" id="sec-optim">
+<div class="sec-title">Optimization Algorithms</div>
+<div class="sec-desc">How parameters update — the choice of optimizer affects convergence speed, final performance, and training stability. Learning rate is the single most important hyperparameter.</div>
+<div class="card"><div class="card-title">SGD — Stochastic Gradient Descent</div>
+<div class="formula math-formula">$$\begin{aligned}
+\theta   \leftarrow \theta - \alpha\nabla L(\theta; x_{\text{batch}}) \quad \text{[vanilla]} \\
+v   \leftarrow \beta v - \alpha\nabla L(\theta; x_{\text{batch}}) \quad \text{[momentum]} \\
+\theta   \leftarrow \theta + v
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Vanilla SGD: update with gradient from mini-batch. Noisy but regularizing. Momentum: builds speed in consistent directions, dampens oscillations. β=0.9 is standard.</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">RMSprop</div>
+<div class="formula math-formula">$$\begin{aligned}
+s   \leftarrow \beta s + (1-\beta)\nabla L^2 \\
+\theta   \leftarrow \theta - \alpha\nabla L / (\sqrt{s + \varepsilon)}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:6px">Divides learning rate by running RMS of past gradients. Adapts learning rate per parameter. Good for RNNs — non-stationary objectives with noisy gradients.</div></div>
+<div class="card cg"><div class="card-title">Adam (Adaptive Moment Estimation)</div>
+<div class="formula math-formula">$$\begin{aligned}
+m   \leftarrow \beta_1 m + (1-\beta_1)\nabla L \quad \text{[1st moment / mean]} \\
+v   \leftarrow \beta_2 v + (1-\beta_2)(\nabla L)^2 \quad \text{[2nd moment / variance]} \\
+\hat{m} = m/(1-\beta_1^t) \\
+\hat{v} = v/(1-\beta_2^t) \\
+\theta   \leftarrow \theta - \alpha \cdot \hat{m}/(\sqrt{\hat{v} + \varepsilon} \\
+Defaults: \beta_1=0.9, \beta_2=0.999, \varepsilon=1e-8
+\end{aligned}$$</div></div>
+</div>
+<div class="card"><div class="card-title">Optimizer Comparison</div>
+<table class="tbl"><tr><th>Optimizer</th><th>Adaptive LR?</th><th>Best For</th><th>Watch Out</th></tr>
+<tr><td>SGD</td><td>No</td><td>CV tasks with proper LR schedule — often best final performance</td><td>Very sensitive to LR; needs tuning</td></tr>
+<tr><td>SGD+Momentum</td><td>No</td><td>CV; matches Adam with cosine LR</td><td>Same LR sensitivity</td></tr>
+<tr><td>RMSprop</td><td>Yes</td><td>RNNs, non-stationary problems</td><td>May not converge for all problems</td></tr>
+<tr><td>Adam</td><td>Yes</td><td>NLP, Transformers, default choice</td><td>L2 decay doesn't work as expected (use AdamW)</td></tr>
+<tr><td>AdamW</td><td>Yes</td><td>Transformers — decouples weight decay from gradient adaptation</td><td>Need to tune weight_decay separately</td></tr>
+<tr><td>Adamax</td><td>Yes</td><td>Embeddings with sparse gradients</td><td>Less commonly used</td></tr></table></div>
+<div class="card"><div class="card-title">Learning Rate Scheduling</div>
+<table class="tbl"><tr><th>Schedule</th><th>Description</th><th>When to Use</th></tr>
+<tr><td>Constant</td><td>Fixed LR</td><td>Quick experiments; often suboptimal</td></tr>
+<tr><td>Step decay</td><td>Reduce by factor every N epochs</td><td>Simple; works reasonably well</td></tr>
+<tr><td>Cosine annealing</td><td>Cosine decay with optional warm restarts</td><td>CV tasks with SGD</td></tr>
+<tr><td>Linear warmup + decay</td><td>Warm up then linear decay</td><td>Transformers; BERT; GPT</td></tr>
+<tr><td>OneCycleLR</td><td>Triangular LR with aggressive max</td><td>Fast convergence in fewer epochs</td></tr>
+<tr><td>Reduce on plateau</td><td>Halve LR when val loss stops improving</td><td>When you don't know the right schedule</td></tr></table></div>
+<div class="box story"><div class="bl">📖 Mountain Descent Analogy</div><p><strong>SGD:</strong> walking downhill blindly — fast but zigzags unpredictably. <strong>Momentum:</strong> rolling a ball — builds speed on gentle slopes. <strong>Adam:</strong> smart GPS-equipped hiker — adapts step size to terrain, big steps on flat ground, tiny steps on steep cliffs. Usually gets to the valley fastest — but SGD with a good schedule sometimes finds a better valley.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Adam with AdamW is my default for everything involving Transformers — decoupled weight decay is important because Adam's L2 doesn't apply decay correctly (the adaptive learning rate interacts with the regularization in unexpected ways). For ResNets / image tasks, SGD + cosine annealing often achieves better final accuracy than Adam. Learning rate is the most important hyperparameter — I always use warmup for Transformers (avoids catastrophic gradient updates at start) and cosine decay for everything."</p></div>
+</section>

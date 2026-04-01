@@ -1,0 +1,37 @@
+<section class="section" id="sec-creditrisk">
+<div class="sec-title">Credit Risk &amp; Scorecards</div>
+<div class="sec-desc">The intersection of statistics, banking regulation, and ML — where interpretability is mandated, not optional, and the cost of errors is asymmetric.</div>
+<div class="card"><div class="card-title">The PD-LGD-EAD Framework</div>
+<div class="formula math-formula">$$\begin{aligned}
+Expected Loss = PD \times LGD \times EAD \\
+PD  = Probability of Default (what we model) \\
+LGD = Loss Given Default (% of exposure lost) \\
+EAD = Exposure at Default (outstanding balance)
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Credit scoring primarily models PD. A score maps to PD via a calibrated model. Regulatory frameworks (Basel III, IFRS 9) require banks to model all three components for capital requirements.</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Scorecard Development (Traditional)</div>
+<ol class="num"><li><strong>Data preparation:</strong> observation point (vintage), outcome window (12 months), performance definition (90+ DPD)</li><li><strong>WOE (Weight of Evidence):</strong> log(Events%/Non-Events%) per bin</li><li><strong>IV (Information Value):</strong> Σ(Events% − NonEvents%) × WOE. IV&lt;0.02 weak, &gt;0.5 too perfect (suspicious)</li><li><strong>Logistic regression</strong> on WOE-transformed features → interpretable coefficients</li><li><strong>Calibration:</strong> align predicted PD with observed default rates</li><li><strong>Validation:</strong> Gini/AUC, KS stat, PSI for drift, stability indices</li></ol></div>
+<div class="card cg"><div class="card-title">WOE/IV — The Risk Analytics Staple</div>
+<div class="formula math-formula">$$\begin{aligned}
+WOE_i = \ln(Events_i/TotalEvents \div NonEvents_i/TotalNon) \\
+IV = \Sigma_i (Events_i% - NonEvents_i%) \times WOE_i \\
+WOE encoding converts ordinal/nominal to a numeric scale ordered by default risk
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Monotonic binning: bins ordered by risk — ensures scorecard logic is intuitive</li><li>IV used for variable selection — comparable across different types of variables</li><li>WOE-transformed features automatically handle non-linearity and missing values</li><li>Regulatory teams love it — every feature's impact is explicit and monotonic</li></ul></div>
+</div>
+<div class="card ca"><div class="card-title">Collections &amp; Behavioral Scoring</div>
+<div class="card-body">Unlike application scoring (predict if new customer will default), behavioral scoring updates monthly using payment history — far more predictive.</div>
+<ul class="bul" style="margin-top:8px"><li><strong>Features:</strong> DPD (days past due) history, utilization rate, payment-to-minimum ratio, number of missed EMIs, balance trends</li><li><strong>Triggers:</strong> predict which accounts to call proactively (early intervention)</li><li><strong>Segmentation:</strong> early delinquency (1–30 DPD) vs late (90+ DPD) — different propensity models, different treatment strategies</li><li><strong>Roll-rate analysis:</strong> what % of 30-DPD accounts roll to 60-DPD? Key input to provisioning models</li></ul></div>
+<div class="card"><div class="card-title">Model Validation &amp; Regulatory Compliance</div>
+<table class="tbl"><tr><th>Test</th><th>What It Checks</th><th>Threshold</th></tr>
+<tr><td>Gini / AUC</td><td>Discrimination power</td><td>Gini &gt; 30% (application), &gt; 40% (behavioral)</td></tr>
+<tr><td>KS Statistic</td><td>Max separation between score distributions</td><td>KS &gt; 20 acceptable, &gt; 40 good</td></tr>
+<tr><td>PSI (Population Stability Index)</td><td>Has score distribution shifted since model was built?</td><td>PSI &lt; 0.10 stable, &gt; 0.25 rebuild needed</td></tr>
+<tr><td>CSI (Characteristic Stability Index)</td><td>Has each feature's distribution shifted?</td><td>Same thresholds as PSI</td></tr>
+<tr><td>Calibration test</td><td>Does predicted PD match observed default rate?</td><td>Binomial test per score band</td></tr>
+<tr><td>Backtesting</td><td>How would model have performed on historical vintage?</td><td>Gini within 5% of current = stable</td></tr></table></div>
+<div class="card"><div class="card-title">IFRS 9 &amp; Basel Modeling</div>
+<ul class="bul"><li><strong>IFRS 9 staging:</strong> Stage 1 (no significant deterioration) → Stage 2 (significant increase in credit risk) → Stage 3 (default). Models predict stage transitions.</li><li><strong>Lifetime PD (IFRS 9):</strong> probability of defaulting at any point over the remaining life of the loan. Requires scenario-conditional forecasting (macro overlays).</li><li><strong>Point-in-time (PIT) vs Through-the-cycle (TTC):</strong> IFRS 9 requires PIT (current conditions); Basel requires TTC (long-run average). Different calibration targets.</li><li><strong>Macro overlays:</strong> adjust base PD for GDP growth, unemployment rate, interest rate scenarios</li></ul></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My scorecard development process: (1) Define the observation point and performance window carefully — leakage is the #1 risk; (2) WOE binning with monotonic constraint (regulatory requirement); (3) Feature selection via IV then logistic regression for interpretability; (4) Calibrate predicted PDs against observed rates using isotonic regression; (5) Monthly monitoring via PSI and CSI — I set automated alerts at PSI &gt; 0.10 for early warning. The difference between application scoring and behavioral: behavioral uses 12–24 months of payment history as the primary features, which makes it 15–20 Gini points better but requires monthly scoring infrastructure."</p></div>
+</section>

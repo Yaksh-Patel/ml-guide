@@ -1,0 +1,24 @@
+<section class="section" id="sec-hyperparam">
+<div class="sec-title">Hyperparameter Tuning</div>
+<div class="sec-desc">The systematic search for the model configuration that maximizes validation performance — done right, it can be the difference between a good model and a great one.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Grid Search</div>
+<div class="card-body">Exhaustively evaluate all combinations of a predefined hyperparameter grid.</div>
+<ul class="bul" style="margin-top:8px"><li>Simple, reproducible, parallelizable</li><li><strong>Weakness:</strong> exponential in number of hyperparameters — 5 params × 10 values = 100,000 evaluations</li><li>Use when: small grid, fast model, few hyperparameters</li></ul></div>
+<div class="card cg"><div class="card-title">Random Search</div>
+<div class="card-body">Sample configurations randomly from distributions over each hyperparameter.</div>
+<ul class="bul" style="margin-top:8px"><li>Covers more diverse configurations in same budget</li><li>Key insight: if only a few hyperparameters matter, random search wastes less budget on the unimportant ones</li><li>Typically 10x more efficient than grid search</li><li>Bergstra &amp; Bengio (2012): random &gt; grid for most practical cases</li></ul></div>
+</div>
+<div class="card cp"><div class="card-title">Bayesian Optimization</div>
+<div class="card-body">Build a probabilistic model (surrogate) of the objective function. Use it to select next configurations that maximize expected improvement.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Acquisition (EI):} & \quad EI(x) = \mathbb{E}[\max(f(x)-f^*,\, 0)] \\
+\text{Surrogate:} & \quad \text{Gaussian Process (GP) or TPE (Tree Parzen Estimator)}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px"><li>Samples more from promising regions, less from bad ones</li><li>Each evaluation informs the next — learns the landscape</li><li>Best for expensive models (each trial takes minutes/hours)</li><li><strong>Tools:</strong> Optuna (TPE), Hyperopt, Ray Tune, W&amp;B Sweeps</li></ul>
+<div class="card-body" style="margin-top:8px"><strong>Optuna example:</strong> <code>study = optuna.create_study(); study.optimize(objective, n_trials=100)</code></div>
+<div class="card-body" style="margin-top:6px"><strong>Hyperopt:</strong> One of the earliest Bayesian optimisation libraries. Uses TPE by default and integrates with MLflow. <code>fmin(objective, space, algo=tpe.suggest, max_evals=100)</code>. Optuna is generally preferred today for its cleaner API and pruning support, but Hyperopt remains widely used in legacy codebases.</div></div>
+<div class="card"><div class="card-title">Best Practices</div>
+<ul class="bul"><li><strong>Search order:</strong> learning_rate and n_estimators first (most impactful), then regularization params, then minor ones</li><li><strong>Early stopping in each trial:</strong> don't waste budget on clearly bad configs</li><li><strong>Log scale for learning rate:</strong> sample from [1e-4, 1e-1] in log space, not linearly</li><li><strong>Nested CV for unbiased evaluation:</strong> inner loop for tuning, outer loop for evaluation</li><li><strong>Budget allocation:</strong> 50% Bayesian, 50% manual exploration around best found region</li></ul></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My tuning strategy: (1) fix n_estimators large + early stopping so I only need to tune other params; (2) use Optuna with TPE sampler for Bayesian optimization; (3) start broad — large range, few trials; (4) refine — narrow range around best config, more trials. For XGBoost, learning_rate and max_depth give the most bang per trial. For neural networks: learning_rate is #1, then architecture, then regularization."</p></div>
+</section>

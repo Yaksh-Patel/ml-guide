@@ -1,0 +1,47 @@
+<section class="section" id="sec-compare">
+<div class="sec-title">Model Cheatsheet</div>
+<div class="sec-desc">Quick reference — algorithm comparison across dimensions: problem type, data size, interpretability, performance, and key hyperparameters.</div>
+<div class="card"><div class="card-title">Algorithm Selection Guide</div>
+<div style="overflow-x:auto"><table class="tbl">
+<tr><th>Algorithm</th><th>Task</th><th>Data Size</th><th>Interpretable?</th><th>Strengths</th><th>Weaknesses</th></tr>
+<tr><td><strong>Linear / Logistic</strong></td><td>Reg / Clf</td><td>Any</td><td>✅ Fully</td><td>Fast, stable, calibrated</td><td>Linear only, needs feature eng</td></tr>
+<tr><td><strong>KNN</strong></td><td>Both</td><td>Small/Med</td><td>⚠️ Partial</td><td>No training, multi-class</td><td>Slow inference, high-dim fails</td></tr>
+<tr><td><strong>Naive Bayes</strong></td><td>Clf</td><td>Any</td><td>✅ Fully</td><td>Very fast, works with tiny data</td><td>Independence assumption</td></tr>
+<tr><td><strong>Decision Tree</strong></td><td>Both</td><td>Any</td><td>✅ Fully</td><td>Visual, non-linear, no scaling</td><td>High variance, overfits</td></tr>
+<tr><td><strong>Random Forest</strong></td><td>Both</td><td>Med/Large</td><td>⚠️ Partial</td><td>Robust, OOB eval, feature imp</td><td>Slower than XGB, less accurate</td></tr>
+<tr><td><strong>XGBoost/LightGBM</strong></td><td>Both</td><td>Med/Large</td><td>⚠️ SHAP</td><td>Best tabular performance</td><td>Many hyperparams, no extrapolation</td></tr>
+<tr><td><strong>SVM (RBF)</strong></td><td>Both</td><td>Small/Med</td><td>❌ No</td><td>High-dim, kernel flexibility</td><td>Slow on large data, no prob</td></tr>
+<tr><td><strong>Neural Network</strong></td><td>Both</td><td>Large</td><td>❌ No</td><td>Unstructured data, SOTA</td><td>Needs data, compute, tuning</td></tr>
+<tr><td><strong>K-Means</strong></td><td>Cluster</td><td>Any</td><td>✅ Fully</td><td>Fast, simple, scalable</td><td>Spherical only, needs k</td></tr>
+<tr><td><strong>DBSCAN</strong></td><td>Cluster</td><td>Med</td><td>⚠️ Partial</td><td>Arbitrary shape, finds outliers</td><td>Sensitive to ε, high-dim fails</td></tr>
+<tr><td><strong>PCA</strong></td><td>Dim Red</td><td>Any</td><td>⚠️ Partial</td><td>Linear compression, decorrelate</td><td>Linear only, interprets poorly</td></tr>
+</table></div></div>
+<div class="card"><div class="card-title">When to Use Which Loss</div>
+<table class="tbl"><tr><th>Problem</th><th>Loss Function</th><th>Output Layer</th></tr>
+<tr><td>Binary classification (balanced)</td><td>Binary Cross-Entropy</td><td>Sigmoid</td></tr>
+<tr><td>Binary classification (imbalanced)</td><td>Focal Loss (γ=2)</td><td>Sigmoid</td></tr>
+<tr><td>Multi-class classification</td><td>Categorical Cross-Entropy</td><td>Softmax</td></tr>
+<tr><td>Regression (no outliers)</td><td>MSE / RMSE</td><td>Linear</td></tr>
+<tr><td>Regression (with outliers)</td><td>Huber / MAE</td><td>Linear</td></tr>
+<tr><td>Probability ranking</td><td>BCE + calibration</td><td>Sigmoid + Platt/Isotonic</td></tr>
+<tr><td>Sequence (CTC)</td><td>CTC Loss</td><td>Softmax at each step</td></tr>
+<tr><td>LLM alignment</td><td>RLHF reward + KL</td><td>Language model head</td></tr></table></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Bias-Variance Cheatsheet</div>
+<table class="tbl"><tr><th>Symptom</th><th>Problem</th><th>Fix</th></tr>
+<tr><td>Train high, Val high</td><td>High bias</td><td>More complexity, less regularization</td></tr>
+<tr><td>Train low, Val high</td><td>High variance</td><td>More data, regularization, dropout</td></tr>
+<tr><td>Both low</td><td>Ideal</td><td>Ship it ✅</td></tr>
+<tr><td>Both low, test high</td><td>Test leakage</td><td>Re-evaluate your train/val/test split</td></tr></table></div>
+<div class="card cg"><div class="card-title">Regularization Cheatsheet</div>
+<table class="tbl"><tr><th>Technique</th><th>Reduces</th><th>Use When</th></tr>
+<tr><td>L1 (Lasso)</td><td>Variance + features</td><td>Many irrelevant features</td></tr>
+<tr><td>L2 (Ridge)</td><td>Variance</td><td>All features somewhat useful</td></tr>
+<tr><td>Dropout</td><td>Variance</td><td>Deep neural networks</td></tr>
+<tr><td>Early stopping</td><td>Variance</td><td>Gradient boosting, NNs</td></tr>
+<tr><td>More data</td><td>Variance</td><td>Always the best fix</td></tr>
+<tr><td>Simpler model</td><td>Variance</td><td>High overfitting</td></tr></table></div>
+</div>
+<div class="card"><div class="card-title">Data Problem Diagnostic Checklist</div>
+<ul class="bul"><li><span style="color:var(--green)">✅</span> <strong>Class imbalance?</strong> → PR-AUC metric, class weights or SMOTE, threshold tuning</li><li><span style="color:var(--green)">✅</span> <strong>High cardinality categoricals?</strong> → target encoding with CV, embeddings, count encoding</li><li><span style="color:var(--green)">✅</span> <strong>Missing data?</strong> → add missingness indicator + impute; XGBoost handles NaN natively</li><li><span style="color:var(--green)">✅</span> <strong>Multicollinearity?</strong> → check VIF, use Ridge or PCA before linear models</li><li><span style="color:var(--green)">✅</span> <strong>Outliers?</strong> → Huber loss for regression; robust scalers; Winsorize at 1st/99th percentile</li><li><span style="color:var(--green)">✅</span> <strong>Data leakage?</strong> → features collected after prediction time; always check temporal ordering</li><li><span style="color:var(--green)">✅</span> <strong>Label noise?</strong> → label smoothing, robust loss functions, confidence learning (cleanlab)</li><li><span style="color:var(--green)">✅</span> <strong>Distribution shift at serving?</strong> → PSI monitoring, trigger retraining when PSI &gt; 0.1</li></ul></div>
+</section>

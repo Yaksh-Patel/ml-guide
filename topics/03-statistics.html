@@ -1,0 +1,38 @@
+<section class="section" id="sec-stats">
+<div class="sec-title">Statistics &amp; Inference</div>
+<div class="sec-desc">Where probability meets data. The toolkit for making confident, honest claims from noisy observations — the foundation of A/B testing and scientific ML.</div>
+<div class="card"><div class="card-title">p-value — the most misunderstood number in science</div>
+<div class="card-body">P(observing data this extreme | H₀ is true). NOT the probability that H₀ is true.</div>
+<div class="box warn"><div class="bl">⚠️ Three Things p-value Is NOT</div><p>1) Not the probability H₀ is true. 2) Not the probability your result happened by chance. 3) Not a measure of effect size. With 10M users, p &lt; 0.001 for a 0.0001% CTR change — statistically significant, practically irrelevant. Always pair with effect size + CI.</p></div>
+<div class="box story"><div class="bl">📖 The Coin Story</div><p>You flip a coin 10 times, get 9 heads. p ≈ 1% = "if this were a fair coin, I'd see this by luck only 1% of the time." Since 1% &lt; 5% (your threshold), you reject "it's a fair coin." p = 30%? Meh — totally plausible by chance, don't reject.</p></div></div>
+<div class="g2">
+<div class="card cr"><div class="card-title">Type I Error (α) — False Positive</div>
+<div class="card-body">Reject H₀ when it's true. See an effect that doesn't exist.</div>
+<div class="box warn"><div class="bl">🔥 Fire alarm, no fire</div><p>You ran outside for nothing. α = 0.05 means 5% chance of this mistake per test.</p></div></div>
+<div class="card ca"><div class="card-title">Type II Error (β) — False Negative</div>
+<div class="card-body">Fail to reject H₀ when it's false. Miss a real effect.</div>
+<div class="box story"><div class="bl">🏠 Real fire, no alarm</div><p>Power = 1 − β = probability of detecting a real effect. More data = higher power.</p></div></div>
+</div>
+<div class="card"><div class="card-title">Confidence Interval &amp; Hypothesis Testing</div>
+<div class="formula math-formula">$$\begin{aligned}
+95\%\ \text{CI:} \quad \bar{x} \pm 1.96 \times \frac{\sigma}{\sqrt{n}}
+\end{aligned}$$</div>
+<div class="formula" style="margin-top:8px">5-step process:
+
+1. H₀ (no effect) vs H₁ (effect exists)
+2. Choose α (usually 0.05)
+3. Collect data, pick test
+4. Compute p-value
+5. p &lt; α → reject H₀ (≠ accept H₁!)</div>
+<div class="box mem"><div class="bl">💡 CI Interpretation</div><p>A 95% CI does NOT mean "95% probability the true value is in this range." It means: if we repeated this experiment 100 times, ~95 of those intervals would contain the true value. The interval either contains the true value or it doesn't.</p></div></div>
+<div class="card"><div class="card-title">Which Statistical Test?</div>
+<table class="tbl"><tr><th>Situation</th><th>Test</th><th>Assumption</th></tr>
+<tr><td>Compare means, 2 groups, normal</td><td>t-test (Welch's)</td><td>Normality, independence</td></tr>
+<tr><td>Compare means, 3+ groups</td><td>ANOVA</td><td>Normality, equal variance</td></tr>
+<tr><td>Categorical outcomes / proportions</td><td>Chi-square</td><td>Expected freq ≥ 5</td></tr>
+<tr><td>Non-normal / ordinal, 2 groups</td><td>Mann-Whitney U</td><td>None parametric</td></tr>
+<tr><td>Linear relationship between 2 vars</td><td>Pearson correlation</td><td>Normality, linearity</td></tr>
+<tr><td>Rank-based correlation</td><td>Spearman</td><td>Monotonic relationship</td></tr>
+<tr><td>Paired samples</td><td>Paired t-test / Wilcoxon</td><td>Before/after same subjects</td></tr></table></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I always pair p-values with effect sizes and confidence intervals. For A/B tests I pre-register sample size (power analysis) before peeking — peeking inflates Type I error. At massive scale, almost everything becomes 'significant' — the real question is whether the effect size matters for the business. For skewed metrics like revenue, I prefer Mann-Whitney U or bootstrap CIs over parametric tests."</p></div>
+</section>

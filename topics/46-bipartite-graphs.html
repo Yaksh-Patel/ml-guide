@@ -1,0 +1,102 @@
+<section class="section" id="sec-bipartite">
+<div class="sec-title">Bipartite Graphs in ML</div>
+<div class="sec-desc">A fundamental graph structure where nodes split into two disjoint sets with edges only between sets — the natural model for recommendations, matching, and collaborative filtering.</div>
+
+<div class="card"><div class="card-title">What Is a Bipartite Graph?</div>
+<div class="card-body">A graph G = (U ∪ V, E) where U and V are disjoint node sets, and every edge connects a node in U to a node in V. No edges within U or within V.</div>
+<div class="formula math-formula">$$\begin{aligned}
+G = (U, V, E) \\
+U = {users},  V = {items/movies/products} \\
+E = {(u,v) | user u interacted with item v} \\
+Bipartite iff: no odd-length cycles (can 2-color the graph)
+\end{aligned}$$</div></div>
+
+<div class="anim-wrap"><div class="anim-title">Bipartite graph: users ↔ items — edges = interactions (ratings, purchases, clicks)</div>
+<svg viewBox="0 0 500 210" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="bpa" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#2e3a58"/></marker>
+</defs>
+<!-- U set (users) -->
+<rect x="10" y="20" width="170" height="175" rx="8" fill="none" stroke="#5ba4fb" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="95" y="14" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans" font-weight="700">U — Users</text>
+<!-- User nodes -->
+<circle cx="95" cy="55" r="18" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="2"/>
+<text x="95" y="59" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">u₁</text>
+<circle cx="95" cy="105" r="18" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="2"/>
+<text x="95" y="109" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">u₂</text>
+<circle cx="95" cy="155" r="18" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="2"/>
+<text x="95" y="159" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="DM Sans">u₃</text>
+
+<!-- V set (items) -->
+<rect x="320" y="20" width="170" height="175" rx="8" fill="none" stroke="#22d3a0" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="405" y="14" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans" font-weight="700">V — Items</text>
+<!-- Item nodes -->
+<circle cx="405" cy="45" r="18" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="405" y="49" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans">v₁</text>
+<circle cx="405" cy="90" r="18" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="405" y="94" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans">v₂</text>
+<circle cx="405" cy="135" r="18" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="405" y="139" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans">v₃</text>
+<circle cx="405" cy="180" r="18" fill="#1a1f2e" stroke="#22d3a0" stroke-width="2"/>
+<text x="405" y="184" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="DM Sans">v₄</text>
+
+<!-- Edges (interactions) -->
+<line x1="113" y1="55" x2="385" y2="45" stroke="#5ba4fb" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="55" x2="385" y2="90" stroke="#5ba4fb" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="105" x2="385" y2="45" stroke="#22d3a0" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="105" x2="385" y2="135" stroke="#22d3a0" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="105" x2="385" y2="180" stroke="#22d3a0" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="155" x2="385" y2="90" stroke="#f5a623" stroke-width="1.5" opacity=".7"/>
+<line x1="113" y1="155" x2="385" y2="180" stroke="#f5a623" stroke-width="1.5" opacity=".7"/>
+
+<!-- Edge weight labels -->
+<text x="240" y="47" fill="#5ba4fb" font-size="9" font-family="JetBrains Mono" text-anchor="middle">r=5★</text>
+<text x="240" y="78" fill="#5ba4fb" font-size="9" font-family="JetBrains Mono" text-anchor="middle">r=3★</text>
+<text x="240" y="96" fill="#22d3a0" font-size="9" font-family="JetBrains Mono" text-anchor="middle">r=4★</text>
+<text x="240" y="168" fill="#f5a623" font-size="9" font-family="JetBrains Mono" text-anchor="middle">r=5★</text>
+<!-- Missing edge = recommendation opportunity -->
+<line x1="113" y1="55" x2="385" y2="135" stroke="#f06767" stroke-width="1.5" stroke-dasharray="5,4" opacity=".7"/>
+<text x="248" y="116" fill="#f06767" font-size="9" font-family="DM Sans" text-anchor="middle">? (predict this)</text>
+</svg></div>
+
+<div class="card"><div class="card-title">Bipartite Graph → Adjacency / Rating Matrix</div>
+<div class="formula math-formula">$$\begin{aligned}
+R[u,v] &= \text{rating user } u \text{ gave item } v \;(0 \text{ if no interaction}) \\
+&\text{sparse matrix, shape: } |U| \times |V| \\
+R &\approx U \cdot V^T \quad U \in \mathbb{R}^{|U|\times k},\; V \in \mathbb{R}^{|V|\times k} \\
+\hat{R}[u,v] &= U[u,:]\cdot V[v,:]^T \\
+\text{Minimize: } & \sum_{(u,v)\in\text{observed}} (R[u,v] - U[u,:]\cdot V[v,:]^T)^2 + \lambda\|U\|^2 + \lambda\|V\|^2
+\end{aligned}$$</div></div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">Collaborative Filtering via Bipartite Graph</div>
+<ul class="bul"><li><strong>User-based CF:</strong> find similar users (similar rows in R), recommend what they liked</li><li><strong>Item-based CF:</strong> find similar items (similar columns in R), recommend similar to what user liked</li><li><strong>Matrix factorization (SVD):</strong> latent factors capture hidden user preferences and item characteristics</li><li><strong>Cold start problem:</strong> new user or item has no edges in bipartite graph → can't recommend</li></ul></div>
+<div class="card cp"><div class="card-title">Graph Neural Networks on Bipartite Graphs</div>
+<ul class="bul"><li><strong>LightGCN:</strong> propagate embeddings along bipartite edges — user embedding influenced by connected items, item embedding influenced by connected users</li><li><strong>PinSage:</strong> Pinterest's GNN on bipartite pin-board graph — samples neighborhoods, aggregates features</li><li><strong>Bipartite matching:</strong> assignment problem — maximum matching (e.g., Hopcroft-Karp algorithm) for allocation, ridesharing, job assignment</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Algorithmic Uses (DSA Context)</div>
+<table class="tbl"><tr><th>Problem</th><th>Bipartite Formulation</th><th>Algorithm</th></tr>
+<tr><td>Maximum matching</td><td>Match workers to jobs — one job per worker</td><td>Hopcroft-Karp: O(E√V)</td></tr>
+<tr><td>Vertex cover</td><td>Minimum set covering all edges</td><td>König's theorem: MVC = max matching size</td></tr>
+<tr><td>Assignment problem</td><td>Minimize total cost of matching</td><td>Hungarian algorithm: O(n³)</td></tr>
+<tr><td>Is graph bipartite?</td><td>Can we 2-color the graph?</td><td>BFS/DFS coloring: O(V+E)</td></tr>
+<tr><td>Recommendation</td><td>User-item interaction matrix</td><td>Matrix factorization, GNN</td></tr></table>
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql"># Check if graph is bipartite (BFS 2-coloring)
+from collections import deque
+def is_bipartite(graph, n):
+    color = [-1] * n
+    for start in range(n):
+        if color[start] != -1: continue
+        color[start] = 0
+        q = deque([start])
+        while q:
+            u = q.popleft()
+            for v in graph[u]:
+                if color[v] == -1:
+                    color[v] = 1 - color[u]
+                    q.append(v)
+                elif color[v] == color[u]:
+                    return False   # odd cycle → not bipartite
+    return True</code></pre></div></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"In recommender systems, the bipartite user-item graph IS the data. Matrix factorization decomposes it into user and item latent embeddings — the dot product of a user's embedding and item's embedding predicts the rating. Modern GNN-based recommenders (LightGCN, NGCF) message-pass along this bipartite graph: a user's embedding is updated by the embeddings of items they interacted with, and vice versa — iteratively enriching representations. The cold-start problem is a graph problem: a new node has no edges, so its embedding is uninitialized."</p></div>
+</section>

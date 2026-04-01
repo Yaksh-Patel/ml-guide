@@ -1,0 +1,69 @@
+<section class="section" id="sec-calc">
+<div class="sec-title">Calculus &amp; Optimization</div>
+<div class="sec-desc">The engine behind every learning algorithm — gradients tell the model which direction to nudge its parameters to reduce error. Without this, gradient descent is magic. With it, it's engineering.</div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Derivatives</div>
+<div class="formula math-formula">$$\begin{aligned}
+f'(x) = \lim_{h \to 0} (f(x+h)-f(x))/h \\
+\frac{d}{dx}(x^{n}) = nx^{n-1} \\
+\frac{d}{dx}(e^x) = e^x \\
+\frac{d}{dx}(\ln x) = 1/x \\
+\frac{d}{dx}(\sigma (x)) = \sigma (x)(1-\sigma (x))     \; (\text{\text{sigmoid} gradient}) \\
+\frac{d}{dx}(\text{ReLU}(x)) = \begin{cases}1 & x > 0 \\ 0 & \text{otherwise}\end{cases}
+\end{aligned}$$</div></div>
+<div class="card cg"><div class="card-title">Gradient (Multivariable)</div>
+<div class="formula math-formula">$$\begin{aligned}
+\nabla f = \left[\frac{\partial f}{\partial x_1},\, \frac{\partial f}{\partial x_2},\, \ldots,\, \frac{\partial f}{\partial x_n}\right]^T \quad \text{(points in direction of steepest ascent)} \\
+\text{Gradient descent: } \theta \leftarrow \theta - \alpha \nabla L(\theta) \\
+\text{Partial derivative: hold all other vars constant}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">The gradient is a vector field — at each point it shows the direction to climb fastest. Gradient descent walks <em>opposite</em> to this, descending toward a minimum.</div></div>
+</div>
+<div class="card cp"><div class="card-title">Chain Rule — The Heart of Backpropagation</div>
+<div class="card-body">If L = f(g(h(x))), then dL/dx = (dL/df)(df/dg)(dg/dh)(dh/dx) — multiply local gradients along the path.</div>
+<div class="formula math-formula">$$\partial L/\partial W^1 = (\partial L/\partial \hat{y})\cdot(\partial \hat{y}/\partial h^2)\cdot(\partial h^2/\partial h^1)\cdot(\partial h^1/\partial W^1)$$</div>
+<!-- Chain rule animation -->
+<div class="anim-wrap"><div class="anim-title">Chain Rule: gradient flows backward</div>
+<svg viewBox="0 0 500 100" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="ca" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
+<linearGradient id="flowg" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0%" stop-color="#f06767"/><stop offset="100%" stop-color="#5ba4fb"/>
+</linearGradient>
+</defs>
+<!-- boxes -->
+<rect x="10" y="35" width="80" height="30" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="50" y="54" text-anchor="middle" fill="#e6e9f4" font-size="11" font-family="JetBrains Mono">x (input)</text>
+<rect x="130" y="35" width="80" height="30" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="170" y="54" text-anchor="middle" fill="#e6e9f4" font-size="11" font-family="JetBrains Mono">h¹ = Wx</text>
+<rect x="250" y="35" width="80" height="30" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="290" y="54" text-anchor="middle" fill="#e6e9f4" font-size="11" font-family="JetBrains Mono">h² = σ(h¹)</text>
+<rect x="370" y="35" width="80" height="30" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="410" y="54" text-anchor="middle" fill="#e6e9f4" font-size="11" font-family="JetBrains Mono">L(h², y)</text>
+<!-- forward arrows -->
+<line x1="92" y1="50" x2="128" y2="50" stroke="#5ba4fb" stroke-width="1.5"/>
+<line x1="212" y1="50" x2="248" y2="50" stroke="#5ba4fb" stroke-width="1.5"/>
+<line x1="332" y1="50" x2="368" y2="50" stroke="#5ba4fb" stroke-width="1.5"/>
+<text x="110" y="44" fill="#5ba4fb" font-size="9" font-family="DM Sans" text-anchor="middle">→</text>
+<text x="230" y="44" fill="#5ba4fb" font-size="9" font-family="DM Sans" text-anchor="middle">→</text>
+<text x="350" y="44" fill="#5ba4fb" font-size="9" font-family="DM Sans" text-anchor="middle">→</text>
+<!-- backward gradient arrows (animated) -->
+<line x1="368" y1="62" x2="334" y2="62" stroke="#f06767" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ca)">
+  <animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.2s" repeatCount="indefinite"/>
+</line>
+<line x1="248" y1="62" x2="214" y2="62" stroke="#f06767" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ca)">
+  <animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.2s" begin="0.3s" repeatCount="indefinite"/>
+</line>
+<line x1="128" y1="62" x2="94" y2="62" stroke="#f06767" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ca)">
+  <animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+</line>
+<text x="250" y="88" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">🔵 Forward pass (predict)   🔴 Backward pass (learn)</text>
+</svg></div></div>
+<div class="g2">
+<div class="card"><div class="card-title">Convexity</div>
+<ul class="bul"><li><strong>Convex function:</strong> any local min = global min. Logistic regression loss is convex.</li><li><strong>Non-convex:</strong> neural networks — many local minima, but in practice most are good enough</li><li><strong>Saddle points:</strong> gradient = 0 but not a min — SGD noise helps escape these</li></ul></div>
+<div class="card"><div class="card-title">Useful Calculus Tricks</div>
+<ul class="bul"><li><strong>Log-trick:</strong> max P(data) ≡ max log P(data) — turns products into sums</li><li><strong>Jensen's inequality:</strong> E[f(X)] ≥ f(E[X]) for convex f — used in ELBO</li><li><strong>Hessian (∂²L/∂θ²):</strong> matrix of 2nd derivatives — curvature, used in Newton's method</li></ul></div>
+</div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Every training step is calculus: compute the gradient of loss w.r.t. every parameter via chain rule (backprop), then step in the negative gradient direction (gradient descent). Understanding this means you can debug vanishing gradients — if activations saturate (sigmoid at extremes), local derivatives → 0, gradients vanish, early layers stop learning. ReLU fixes this because its derivative is 1 for positive inputs."</p></div>
+</section>

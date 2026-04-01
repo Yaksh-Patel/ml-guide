@@ -1,0 +1,35 @@
+<section class="section" id="sec-dtree">
+<div class="sec-title">Decision Trees</div>
+<div class="sec-desc">Recursive binary partitioning of feature space — the building block of all tree-based ensemble methods, and the only non-linear model that's truly self-explanatory.</div>
+<div class="card"><div class="card-title">Split Criteria</div>
+<div class="g2" style="margin-top:8px">
+<div><div class="card-title" style="font-size:13px">Gini Impurity</div>
+<div class="formula math-formula">$$\begin{aligned}
+Gini = 1 - \sum_i p_i^2 \\
+\text{Range: } [0,\; 0.5]. \text{ Lower = purer.} \\
+Gini = 0 \rightarrow \text{leaf has only one class}
+\end{aligned}$$</div></div>
+<div><div class="card-title" style="font-size:13px">Entropy / Information Gain</div>
+<div class="formula math-formula">$$\begin{aligned}
+H = -\sum_i p_i \log_2(p_i) \\
+IG = H(\text{parent}) - \sum_i w_i \cdot H(\text{child}_i) \\
+\text{Choose split that maximizes } IG
+\end{aligned}$$</div></div>
+</div>
+<div class="card-body" style="margin-top:8px"><strong>Gini vs Entropy:</strong> Gini is computationally cheaper; Entropy is more principled (information-theoretic). In practice, results are nearly identical. sklearn uses Gini by default.</div></div>
+<div class="g2">
+<div class="card cg"><div class="card-title">Strengths</div>
+<ul class="bul"><li>Fully interpretable — literally draw the tree</li><li>No feature scaling needed (rank-based splits)</li><li>Handles mixed data types natively</li><li>Captures non-linear relationships and interactions</li><li>No distributional assumptions</li><li>Handles missing values (with impurity trick)</li></ul></div>
+<div class="card cr"><div class="card-title">Weaknesses</div>
+<ul class="bul"><li>High variance — small data change = completely different tree</li><li>Overfits without pruning (grows until leaves are pure)</li><li>Cannot extrapolate beyond training range</li><li>Biased toward high-cardinality features in split selection</li><li>Piecewise constant predictions — stepped, not smooth</li></ul></div>
+</div>
+<div class="card"><div class="card-title">Pruning &amp; Controlling Complexity</div>
+<table class="tbl"><tr><th>Parameter</th><th>Effect</th><th>Typical Value</th></tr>
+<tr><td>max_depth</td><td>Max levels in tree</td><td>3–8 (3 for interpretable)</td></tr>
+<tr><td>min_samples_split</td><td>Min samples to split a node</td><td>2–20</td></tr>
+<tr><td>min_samples_leaf</td><td>Min samples in a leaf</td><td>1–20</td></tr>
+<tr><td>max_features</td><td>Features to consider per split</td><td>√d or log₂(d)</td></tr>
+<tr><td>ccp_alpha</td><td>Cost-complexity pruning strength</td><td>Find via CV</td></tr></table></div>
+<div class="box story"><div class="bl">📖 20 Questions Analogy</div><p>A decision tree plays 20 Questions: "Is income &gt; 50K?" → "Is credit score &gt; 700?" → "Has ever defaulted?" Each question splits the universe into purer subsets. Best questions are the ones that most cleanly separate the classes — those are the high information gain splits.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Decision trees are the most interpretable non-linear model — I can show a risk committee the actual decision logic. But a single tree has unacceptably high variance. My rule: depth-3 trees for regulatory interpretability requirements; deeper trees as base learners inside Random Forest or XGBoost where the ensemble fixes the variance problem. I always visualize the tree for stakeholders — it builds trust in the model."</p></div>
+</section>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ML/DS Master Study Guide</title>
+<meta name="description" content="57-topic ML/DS interview prep guide covering math foundations, classical ML, deep learning, LLMs, RAG, agents, MLOps and more."/>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<link rel="stylesheet" href="assets/style.css"/>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});"></script>
+
+<!-- Prism -->
+<link rel="stylesheet" href="assets/prism-theme.css"/>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-sql.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+
+<!-- Pyodide -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js" defer></script>
+
+<!-- CodeMirror -->
+<script type="module" src="assets/codemirror-init.js"></script>
+
+<style>
+/* ── Progress bar ── */
+.sb-progress{padding:8px 14px 10px;border-bottom:1px solid var(--border)}
+.sb-progress-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px}
+.sb-progress-track{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.sb-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease;width:0%}
+
+/* ── Read dot on sidebar items ── */
+.read-dot{width:5px;height:5px;border-radius:50%;background:var(--green);margin-left:auto;flex-shrink:0;opacity:0;transition:opacity .2s}
+.sb-item{display:flex;align-items:center;gap:8px}
+.sb-read .read-dot{opacity:1}
+.sb-read{color:var(--text3)!important}
+
+/* ── Mark Read topbar button ── */
+.tb-read-btn{display:none;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tb-read-btn:hover{border-color:var(--green);color:var(--green)}
+.tb-read-btn.tb-read-done{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
+
+/* ── Search dropdown ── */
+.sb-search{position:relative}
+.search-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.search-result-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+.search-result-item:last-child{border-bottom:none}
+.search-result-item:hover{background:var(--bg3)}
+.sr-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.sr-title mark{background:var(--accent);color:#fff;border-radius:2px;padding:0 2px}
+.sr-snippet{font-size:11px;color:var(--text3);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── New-topic badge ── */
+.sb-new{font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:4px;padding:1px 5px;flex-shrink:0}
+.sb-coming{font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-bd);border-radius:4px;padding:1px 5px;flex-shrink:0}
+
+/* ── Mobile overlay ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0!important}
+  .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+  .sidebar.open~.mob-overlay{display:block}
+}
+
+/* ── Home card read state ── */
+.ht-read{opacity:.55}
+.ht-read .hname::after{content:' ✓';color:var(--green);font-size:10px}
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-hdr">
+    <div class="sb-logo">ML/DS Study Guide</div>
+    <div class="sb-sub">57 Topics · Interview &amp; Concept Reference</div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="sb-progress">
+    <div class="sb-progress-label">
+      <span id="progress-label">0 / 54 read</span>
+      <span id="home-pct">0%</span>
+    </div>
+    <div class="sb-progress-track"><div class="sb-progress-fill" id="progress-bar-fill"></div></div>
+  </div>
+
+  <div class="sb-top-controls">
+    <div class="sb-ctrl-right" style="display:flex;gap:5px">
+      <button class="sb-ctrl-btn" onclick="expandAllGroups()" title="Expand all sections">⊞ All</button>
+      <button class="sb-ctrl-btn" onclick="collapseAllGroups()" title="Collapse all sections">⊟ All</button>
+    </div>
+    <button class="sb-collapse-btn" onclick="toggleSidebar()" title="Collapse/expand sidebar">
+      <span id="sb-collapse-icon">◀</span>
+    </button>
+  </div>
+
+  <div class="sb-search">
+    <svg class="sb-si" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input id="srch" placeholder="Search topics… (Ctrl+K)" autocomplete="off"/>
+  </div>
+
+  <!-- ── Group 1: Math Foundations ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="math">
+      <span>🔢 Mathematical Foundations</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="linalg" onclick="nav('linalg','Math','Linear Algebra')"><span class="n">01</span>Linear Algebra<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="prob" onclick="nav('prob','Math','Probability Theory')"><span class="n">02</span>Probability Theory<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="stats" onclick="nav('stats','Math','Statistics &amp; Inference')"><span class="n">03</span>Statistics &amp; Inference<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="calc" onclick="nav('calc','Math','Calculus &amp; Optimization')"><span class="n">04</span>Calculus &amp; Optimization<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 2: ML Thinking ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="mlthink">
+      <span>🧭 ML Thinking &amp; Evaluation</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="mlconcepts" onclick="nav('mlconcepts','ML Thinking','ML Paradigms')"><span class="n">05</span>ML Paradigms<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="biasvar" onclick="nav('biasvar','ML Thinking','Bias-Variance Tradeoff')"><span class="n">06</span>Bias-Variance Tradeoff<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="crossval" onclick="nav('crossval','ML Thinking','Cross-Validation')"><span class="n">07</span>Cross-Validation<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="metrics" onclick="nav('metrics','ML Thinking','Evaluation Metrics')"><span class="n">08</span>Evaluation Metrics<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="confusion" onclick="nav('confusion','ML Thinking','Confusion Matrix &amp; ROC')"><span class="n">09</span>Confusion Matrix &amp; ROC<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="calibration" onclick="nav('calibration','ML Thinking','Calibration &amp; Explainability')"><span class="n">10</span>Calibration &amp; Explainability<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 3: Classical ML ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="classical">
+      <span>🌳 Classical ML Algorithms</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="linlog" onclick="nav('linlog','Classical ML','Linear &amp; Logistic Regression')"><span class="n">11</span>Linear &amp; Logistic Regression<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="knn" onclick="nav('knn','Classical ML','k-Nearest Neighbors')"><span class="n">12</span>k-Nearest Neighbors<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="naivebayes" onclick="nav('naivebayes','Classical ML','Naive Bayes')"><span class="n">13</span>Naive Bayes<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="svm" onclick="nav('svm','Classical ML','Support Vector Machines')"><span class="n">14</span>Support Vector Machines<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="dtree" onclick="nav('dtree','Classical ML','Decision Trees')"><span class="n">15</span>Decision Trees<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="rf" onclick="nav('rf','Classical ML','Random Forest')"><span class="n">16</span>Random Forest<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="boosting" onclick="nav('boosting','Classical ML','Gradient Boosting')"><span class="n">17</span>Gradient Boosting<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="xgb" onclick="nav('xgb','Classical ML','XGBoost Deep Dive')"><span class="n">18</span>XGBoost Deep Dive<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="clustering" onclick="nav('clustering','Classical ML','Clustering')"><span class="n">19</span>Clustering<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="dimred" onclick="nav('dimred','Classical ML','Dimensionality Reduction')"><span class="n">20</span>Dimensionality Reduction<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 4: Data & Model Engineering ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="dataeng">
+      <span>⚙️ Data &amp; Model Engineering</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="featureeng" onclick="nav('featureeng','Data Engineering','Feature Engineering')"><span class="n">21</span>Feature Engineering<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="imbalanced" onclick="nav('imbalanced','Data Engineering','Imbalanced Datasets')"><span class="n">22</span>Imbalanced Datasets<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="reg" onclick="nav('reg','Data Engineering','Regularization')"><span class="n">23</span>Regularization<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="hyperparam" onclick="nav('hyperparam','Data Engineering','Hyperparameter Tuning')"><span class="n">24</span>Hyperparameter Tuning<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="ensemble" onclick="nav('ensemble','Data Engineering','Ensemble Methods')"><span class="n">25</span>Ensemble Methods<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 5: Neural Network Foundations ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="nn">
+      <span>🧠 Neural Network Foundations</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="nn_basics" onclick="nav('nn_basics','Neural Networks','Perceptron &amp; MLP')"><span class="n">26</span>Perceptron &amp; MLP<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="activations" onclick="nav('activations','Neural Networks','Activation Functions')"><span class="n">27</span>Activation Functions<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="loss" onclick="nav('loss','Neural Networks','Loss Functions')"><span class="n">28</span>Loss Functions<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="backprop" onclick="nav('backprop','Neural Networks','Backpropagation &amp; Training Loop')"><span class="n">29</span>Backpropagation &amp; Training Loop<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="optim" onclick="nav('optim','Neural Networks','Optimizers')"><span class="n">30</span>Optimizers<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="weightinit" onclick="nav('weightinit','Neural Networks','Weight Initialization')"><span class="n">31</span>Weight Initialization<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 6: Deep Learning Architectures ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="dl">
+      <span>🤖 Deep Learning Architectures</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="cnn" onclick="nav('cnn','Deep Learning','CNNs')"><span class="n">32</span>CNNs<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="rnn" onclick="nav('rnn','Deep Learning','RNNs &amp; LSTMs')"><span class="n">33</span>RNNs &amp; LSTMs<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="attention" onclick="nav('attention','Deep Learning','Attention &amp; Architecture')"><span class="n">34</span>Attention &amp; Architecture<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="transformers" onclick="nav('transformers','Deep Learning','Transformers')"><span class="n">35</span>Transformers<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="transfer" onclick="nav('transfer','Deep Learning','Transfer &amp; Distillation')"><span class="n">36</span>Transfer &amp; Distillation<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 7: NLP & Language Models ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="nlp">
+      <span>💬 NLP &amp; Language Models</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="tokenization" onclick="nav('tokenization','NLP','Tokenization &amp; Embeddings')"><span class="n">37</span>Tokenization &amp; Embeddings<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="bert" onclick="nav('bert','NLP','BERT &amp; Encoder Models')"><span class="n">38</span>BERT &amp; Encoder Models<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="llm" onclick="nav('llm','NLP','LLMs, SLMs &amp; RLHF')"><span class="n">39</span>LLMs, SLMs &amp; RLHF<span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 8: LLM Era (NEW) ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="llmera">
+      <span>✨ LLM Era</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="rag" onclick="nav('rag','LLM Era','RAG &amp; Retrieval')"><span class="n">48</span>RAG &amp; Retrieval<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="vectordb" onclick="nav('vectordb','LLM Era','Vector Databases')"><span class="n">49</span>Vector Databases<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="agents" onclick="nav('agents','LLM Era','Agentic AI')"><span class="n">50</span>Agentic AI<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="multimodal" onclick="nav('multimodal','LLM Era','Multimodal Models')"><span class="n">54</span>Multimodal Models<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 9: Specialized Domains ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="domains">
+      <span>📡 Specialized Domains</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="timeseries" onclick="nav('timeseries','Domains','Time Series Modeling')"><span class="n">40</span>Time Series Modeling<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="creditrisk" onclick="nav('creditrisk','Domains','Credit Risk &amp; Scorecards')"><span class="n">41</span>Credit Risk &amp; Scorecards<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="gnns" onclick="nav('gnns','Domains','Graph Neural Networks')"><span class="n">46</span>Graph Neural Networks<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="responsibleai" onclick="nav('responsibleai','Domains','Responsible AI &amp; Fairness')"><span class="n">51</span>Responsible AI &amp; Fairness<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="causal" onclick="nav('causal','Domains','Causal Inference &amp; A/B Testing')"><span class="n">52</span>Causal Inference &amp; A/B Testing<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="dataeng" onclick="nav('dataeng','Domains','Data Engineering for ML')"><span class="n">53</span>Data Engineering for ML<span class="sb-new">NEW</span><span class="read-dot"></span></div>
+  </div>
+
+  <!-- ── Group 10: Production & System Design ── -->
+  <div class="sb-grp">
+    <div class="sb-gl" onclick="toggleGroup(this)" data-grp-id="prod">
+      <span>🚀 Production &amp; System Design</span><span class="grp-arrow">▾</span>
+    </div>
+    <div class="sb-item" data-topic-id="mlops" onclick="nav('mlops','Production','MLOps &amp; Deployment')"><span class="n">42</span>MLOps &amp; Deployment<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="systemdesign" onclick="nav('systemdesign','Production','ML System Design')"><span class="n">43</span>ML System Design<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="coding" onclick="nav('coding','Production','Python, SQL &amp; DSA')"><span class="n">44</span>Python, SQL &amp; DSA<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="compare" onclick="nav('compare','Reference','Model Cheatsheet')"><span class="n">45</span>Model Cheatsheet<span class="read-dot"></span></div>
+    <div class="sb-item" data-topic-id="frameworks" onclick="nav('frameworks','Reference','TF, Keras &amp; PyTorch')"><span class="n">47</span>TF, Keras &amp; PyTorch<span class="read-dot"></span></div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT AREA
+══════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Sticky topbar -->
+  <div class="topbar">
+    <div class="tb-left">
+      <span class="tb-crumb" id="tb-crumb">Start Here</span>
+      <span class="tb-sep">›</span>
+      <span class="tb-title" id="tb-title">Home</span>
+    </div>
+    <div class="tb-right">
+      <button class="tb-read-btn" id="tb-read-btn">○ Mark read</button>
+      <button class="tb-home-btn" id="tb-home-btn" onclick="nav('home','Start Here','Home')" title="Go to Home" style="display:none">
+        <span class="icon">🏠</span><span>Home</span>
+      </button>
+      <button class="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">
+        <span class="icon" id="theme-icon">🌙</span>
+        <span class="lbl" id="theme-lbl">Dark</span>
+      </button>
+      <span class="tb-tag">57 Topics</span>
+    </div>
+  </div>
+
+  <!-- All topic sections are injected here dynamically -->
+  <div id="topic-container"></div>
+
+</main>
+
+<!-- Mobile sidebar overlay + toggle -->
+<div class="mob-overlay" onclick="toggleMobileSidebar()"></div>
+<button class="mob-tog" onclick="toggleMobileSidebar()" aria-label="Open menu">☰</button>
+
+<script src="assets/nav.js"></script>
+</body>
+</html>

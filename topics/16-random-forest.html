@@ -1,0 +1,24 @@
+<section class="section" id="sec-rf">
+<div class="sec-title">Random Forest</div>
+<div class="sec-desc">Bootstrap aggregating applied to trees — reduces variance by averaging many diverse, decorrelated trees. The standard production workhorse for tabular data before XGBoost dethroned it.</div>
+<div class="card"><div class="card-title">Two Sources of Randomness (the key to diversity)</div>
+<div class="g2" style="margin-top:8px">
+<div><strong style="color:var(--text);font-size:13px">Bootstrap Sampling</strong>
+<div class="card-body" style="margin-top:4px">Each tree trains on a bootstrap sample (~63.2% of data, with replacement). The ~36.8% left out = Out-of-Bag (OOB) data — a free validation set! OOB error ≈ k-fold CV error without the extra computation.</div></div>
+<div><strong style="color:var(--text);font-size:13px">Feature Subsampling at each Split</strong>
+<div class="card-body" style="margin-top:4px">At each node, consider only a random subset of √d features (classification) or d/3 (regression). Forces trees to be diverse — strong features don't always dominate. Decorrelated trees means their errors don't correlate → averaging reduces variance more.</div></div>
+</div></div>
+<div class="g2">
+<div class="card cb"><div class="card-title">Key Hyperparameters</div>
+<table class="tbl"><tr><th>Parameter</th><th>Effect</th><th>Default</th></tr>
+<tr><td>n_estimators</td><td>More trees → better, diminishing returns</td><td>100</td></tr>
+<tr><td>max_features</td><td>Diversity of trees</td><td>√d (clf), d/3 (reg)</td></tr>
+<tr><td>max_depth</td><td>None = grow fully (diversity from sampling)</td><td>None</td></tr>
+<tr><td>min_samples_leaf</td><td>Smoothing/regularization</td><td>1</td></tr>
+<tr><td>bootstrap</td><td>Use OOB samples</td><td>True</td></tr></table></div>
+<div class="card cg"><div class="card-title">Feature Importance — and its Biases</div>
+<ul class="bul"><li><strong>Impurity-based (MDI):</strong> mean impurity decrease across all trees. Fast but biased toward high-cardinality features and correlated features split importance between them.</li><li><strong>Permutation importance:</strong> shuffle feature, measure OOB score drop. Model-agnostic, unbiased — but slower and correlated features still share importance.</li><li><strong>SHAP:</strong> theoretically principled. Best overall — use TreeSHAP for speed.</li></ul></div>
+</div>
+<div class="box story"><div class="bl">📖 The Polling Analogy</div><p>Single tree = asking one opinionated, overconfident friend for a stock tip. Random Forest = polling 500 people with deliberately limited information (each saw different data and different features). Individual experts are imperfect but diverse — the collective vote is remarkably accurate. The diversity is the point.</p></div>
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Random Forest reduces variance via bagging — averaging over 500 independently-built trees. The feature subsampling decorrelates the trees, making the variance reduction much stronger than if trees were correlated. OOB error gives a free, reliable generalization estimate. For feature importance, I prefer permutation importance over impurity-based — it's unbiased toward high-cardinality features. For most tabular problems, start with RF then try XGBoost."</p></div>
+</section>
