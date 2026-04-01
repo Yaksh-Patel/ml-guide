@@ -12,8 +12,6 @@
 
 A single-file-per-topic HTML guide covering the full ML/DS interview and job-readiness stack — from linear algebra fundamentals to production LLM deployment. Every topic is self-contained: formula, intuition, animation, code (where relevant), and an ideal interview answer.
 
-Sample update
-
 No framework, no build step, no install. Open `index.html` via a local server and everything works.
 
 ---
