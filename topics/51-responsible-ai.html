@@ -1,0 +1,246 @@
+<section class="section" id="sec-responsibleai">
+<div class="sec-title">Responsible AI &amp; Fairness</div>
+<div class="sec-desc">ML models embedded in hiring, lending, healthcare, and criminal justice make decisions that affect people's lives. Responsible AI covers the technical, ethical, and governance practices for building systems that are fair, accountable, transparent, and safe. This is increasingly a mandatory competency — regulators, employers, and customers now demand it.</div>
+
+<!-- Why it matters -->
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Responsible AI Is Not Optional</div>
+<ul class="bul">
+  <li><strong>Regulatory pressure:</strong> EU AI Act (2024), US Executive Order on AI, NYC Local Law 144 (automated employment decisions) all mandate bias audits and transparency</li>
+  <li><strong>Business risk:</strong> ProPublica's COMPAS analysis, Amazon's hiring tool, Apple Card credit discrimination — all caused major reputational damage</li>
+  <li><strong>Technical debt:</strong> unfair models are often <em>less accurate</em> on underrepresented groups — fixing fairness frequently improves overall model quality</li>
+  <li><strong>Trust:</strong> users and regulators require explainability; a black-box that cannot be audited cannot be deployed in regulated industries</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Taxonomy of Harm</div>
+<table class="tbl">
+<tr><th>Harm Type</th><th>Description</th><th>Example</th></tr>
+<tr><td><strong>Allocative</strong></td><td>Unfair distribution of resources/opportunities</td><td>Loan model approves men at higher rate than equally qualified women</td></tr>
+<tr><td><strong>Representational</strong></td><td>Stereotyping or misrepresentation of groups</td><td>Image captioning model labels kitchen images "woman cooking" more than "man cooking"</td></tr>
+<tr><td><strong>Quality of service</strong></td><td>Worse performance for some groups</td><td>Speech recognition 30% less accurate on Black American English</td></tr>
+<tr><td><strong>Denigration</strong></td><td>Offensive or degrading outputs targeted at groups</td><td>Language model generates harmful stereotypes when prompted about certain nationalities</td></tr>
+<tr><td><strong>Erasure</strong></td><td>Underrepresentation in model outputs</td><td>Image generation model produces mostly white faces for "professional" prompt</td></tr>
+</table></div>
+</div>
+
+<!-- Bias sources -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Sources of Bias</div>
+
+<div class="card cg"><div class="card-title">Where Bias Enters the ML Pipeline</div>
+<div class="g3" style="margin-top:10px">
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Data Bias</div>
+<ul class="bul">
+  <li><strong>Historical bias:</strong> training data reflects past discrimination (e.g. historical hiring data where women were underrepresented in tech)</li>
+  <li><strong>Representation bias:</strong> training set doesn't represent the deployment population (e.g. facial recognition trained mostly on light-skinned faces)</li>
+  <li><strong>Measurement bias:</strong> proxy features encode protected attributes (e.g. zip code encodes race; arrest records encode policing bias)</li>
+  <li><strong>Label bias:</strong> human annotators apply different standards to different groups</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">Model Bias</div>
+<ul class="bul">
+  <li><strong>Aggregation bias:</strong> single model trained on heterogeneous groups doesn't work well for any subgroup</li>
+  <li><strong>Evaluation bias:</strong> benchmarks don't represent the deployment distribution; good benchmark score ≠ fair in production</li>
+  <li><strong>Algorithmic amplification:</strong> small disparities in data get amplified by models optimising for aggregate accuracy</li>
+  <li><strong>Feedback loops:</strong> model predictions change future data (e.g. police model predicts crime → more policing → more arrests → model reinforced)</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Deployment Bias</div>
+<ul class="bul">
+  <li><strong>Population shift:</strong> model trained on one population deployed on another</li>
+  <li><strong>Automation bias:</strong> humans over-rely on model recommendations even when wrong</li>
+  <li><strong>Use case mismatch:</strong> model designed for one purpose repurposed for higher-stakes decisions</li>
+  <li><strong>Missing context:</strong> model score used without the uncertainty/confidence information</li>
+</ul></div>
+</div></div>
+
+<!-- Fairness definitions -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Fairness Definitions &amp; Metrics</div>
+
+<div class="card cp"><div class="card-title">The Impossibility Theorem — You Cannot Satisfy All Fairness Criteria Simultaneously</div>
+<div class="card-body">Chouldechova (2017) and Kleinberg et al. (2016) proved that calibration, equal FPR, and equal FNR cannot all hold simultaneously when base rates differ across groups. Every fairness metric is a tradeoff — choosing one often violates another.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Let } G \in \{0,1\} &= \text{protected attribute (e.g. sex, race)} \\
+\hat{Y} &= \text{model prediction}, \quad Y = \text{true label} \\
+\text{If } P(Y=1|G=0) &\neq P(Y=1|G=1) \text{ (different base rates),} \\
+\text{then: Calibration} &+ \text{Equal FPR} + \text{Equal FNR cannot all hold}
+\end{aligned}$$</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">Practical implication</div><p>You must choose which fairness criterion matters most for your use case — there is no universally "fair" model. This is a values and policy decision, not a purely technical one. Document the choice and justify it.</p></div>
+</div>
+
+<div class="card"><div class="card-title">Fairness Metrics — Definitions &amp; When to Use</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Definition</th><th>Formula</th><th>Use when</th></tr>
+<tr><td><strong>Demographic Parity</strong></td><td>Positive prediction rates equal across groups</td><td>$P(\hat{Y}=1|G=0) = P(\hat{Y}=1|G=1)$</td><td>Resource allocation; anti-discrimination compliance</td></tr>
+<tr><td><strong>Equal Opportunity</strong></td><td>Equal TPR (recall) across groups</td><td>$P(\hat{Y}=1|Y=1,G=0) = P(\hat{Y}=1|Y=1,G=1)$</td><td>When missing qualified candidates is the key harm (hiring, loans)</td></tr>
+<tr><td><strong>Equalised Odds</strong></td><td>Equal TPR AND equal FPR across groups</td><td>Above + $P(\hat{Y}=1|Y=0,G=0) = P(\hat{Y}=1|Y=0,G=1)$</td><td>When both false positives and false negatives matter equally</td></tr>
+<tr><td><strong>Calibration</strong></td><td>Predicted probability matches true probability for each group</td><td>$P(Y=1|\hat{p},G=0) = P(Y=1|\hat{p},G=1) = \hat{p}$</td><td>Risk scoring (criminal justice, credit); individual fairness</td></tr>
+<tr><td><strong>Individual Fairness</strong></td><td>Similar individuals receive similar predictions</td><td>$d(x_i,x_j) \small \Rightarrow d(\hat{y}_i,\hat{y}_j)$</td><td>When group membership shouldn't matter for similar profiles</td></tr>
+<tr><td><strong>Counterfactual Fairness</strong></td><td>Prediction unchanged if protected attribute were different, all else equal</td><td>$P(\hat{Y}|G=0, X) = P(\hat{Y}|G=1, X)$</td><td>Causal fairness; high-stakes individual decisions</td></tr>
+</table></div>
+
+<div class="card cc"><div class="card-title">Practical Fairness Metrics — What to Actually Measure</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Formula</th><th>Interpretation</th><th>Acceptable range</th></tr>
+<tr><td><strong>Disparate Impact Ratio</strong></td><td>$\frac{P(\hat{Y}=1|G=\text{minority})}{P(\hat{Y}=1|G=\text{majority})}$</td><td>Ratio of positive rates; &lt;0.8 = illegal disparate impact (US 4/5ths rule)</td><td>≥ 0.8 (US EEOC standard)</td></tr>
+<tr><td><strong>TPR gap</strong></td><td>$|\text{TPR}_{G=0} - \text{TPR}_{G=1}|$</td><td>Difference in recall between groups; high = one group misses out more</td><td>&lt; 5–10%</td></tr>
+<tr><td><strong>FPR gap</strong></td><td>$|\text{FPR}_{G=0} - \text{FPR}_{G=1}|$</td><td>Difference in false positive rates; high = one group penalised more</td><td>&lt; 5–10%</td></tr>
+<tr><td><strong>AUC by subgroup</strong></td><td>$\text{AUC}_{G=0}$ vs $\text{AUC}_{G=1}$</td><td>Large gap = model is systematically less accurate for one group</td><td>Gap &lt; 2–3%</td></tr>
+<tr><td><strong>Calibration by subgroup</strong></td><td>Expected Calibration Error (ECE) per group</td><td>Large gap = model overconfident/underconfident for one group</td><td>ECE gap &lt; 0.03</td></tr>
+</table></div>
+
+<!-- Bias detection -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 3 — Bias Detection &amp; Auditing</div>
+
+<div class="card cr"><div class="card-title">Bias Detection Toolkit</div>
+<div class="g2">
+<div>
+<strong style="font-size:12px;color:var(--text)">Key libraries</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Library</th><th>What it does</th></tr>
+<tr><td><strong>Fairlearn</strong></td><td>Microsoft; fairness metrics + mitigation; dashboard</td></tr>
+<tr><td><strong>AIF360</strong></td><td>IBM; 70+ fairness metrics; pre/in/post-processing mitigations</td></tr>
+<tr><td><strong>Aequitas</strong></td><td>Chicago Policy Lab; bias audit toolkit; report generation</td></tr>
+<tr><td><strong>SHAP</strong></td><td>Feature importance by subgroup; reveals proxy features</td></tr>
+<tr><td><strong>What-If Tool</strong></td><td>Google; interactive counterfactual exploration</td></tr>
+</table>
+</div>
+<div>
+<pre class="formula">from fairlearn.metrics import (
+    MetricFrame,
+    demographic_parity_difference,
+    equalized_odds_difference
+)
+
+# Compute metrics broken down by sensitive feature
+mf = MetricFrame(
+    metrics={
+        "accuracy": accuracy_score,
+        "fpr": false_positive_rate,
+        "tpr": true_positive_rate,
+    },
+    y_true=y_test,
+    y_pred=y_pred,
+    sensitive_features=X_test["sex"]
+)
+print(mf.by_group)
+print("DPD:", demographic_parity_difference(
+    y_test, y_pred,
+    sensitive_features=X_test["sex"]
+))</pre>
+</div>
+</div>
+<div class="box story" style="margin-top:10px"><div class="bl">Audit checklist</div><p>(1) Identify protected attributes and their proxies. (2) Compute disparate impact ratio — flag &lt;0.8. (3) Compute TPR/FPR gap by subgroup — flag &gt;10%. (4) Check AUC by subgroup — flag gap &gt;3%. (5) Check calibration by subgroup. (6) Inspect SHAP values for protected attribute or proxy features appearing as top predictors.</p></div>
+</div>
+
+<!-- Mitigation -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 4 — Bias Mitigation Techniques</div>
+
+<div class="card cg"><div class="card-title">Three Stages of Mitigation</div>
+<div class="g3" style="margin-top:10px">
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Pre-processing (Data)</div>
+<ul class="bul">
+  <li><strong>Reweighting:</strong> assign higher sample weights to underrepresented groups so model treats them equally</li>
+  <li><strong>Resampling:</strong> oversample minority group, undersample majority to balance training distribution</li>
+  <li><strong>Data augmentation:</strong> generate synthetic examples for underrepresented subgroups</li>
+  <li><strong>Disparate impact remover:</strong> transform features to remove correlation with protected attribute while preserving rank ordering (AIF360)</li>
+  <li><strong>Remove proxy features:</strong> drop features that are highly correlated with protected attribute (zip code, school name)</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">In-processing (Model)</div>
+<ul class="bul">
+  <li><strong>Adversarial debiasing:</strong> train predictor + adversary; adversary tries to predict protected attribute from predictions; predictor trained to fool adversary</li>
+  <li><strong>Constrained optimisation:</strong> add fairness constraint to loss function; optimise accuracy subject to demographic parity ≤ ε (Fairlearn ExponentiatedGradient)</li>
+  <li><strong>Meta-fair classifier:</strong> optimise directly for a fairness metric instead of accuracy</li>
+  <li><strong>Prejudice remover:</strong> add fairness-aware regularisation term to penalise dependence on protected attribute</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Post-processing (Output)</div>
+<ul class="bul">
+  <li><strong>Threshold optimisation:</strong> set different classification thresholds per group to equalise TPR or FPR (Fairlearn ThresholdOptimizer)</li>
+  <li><strong>Reject option classification:</strong> near-threshold predictions go to a human reviewer rather than being decided by the model</li>
+  <li><strong>Calibration per group:</strong> apply Platt scaling separately for each subgroup so scores are calibrated within each group</li>
+  <li><strong>Output re-ranking:</strong> re-rank model outputs to ensure diversity across protected attributes (search/recommendation)</li>
+</ul></div>
+</div>
+<div class="box info" style="margin-top:10px"><div class="bl">Which mitigation to choose</div><p>Post-processing (threshold optimisation) is the easiest to apply without retraining — start here. Pre-processing (reweighting) is the most model-agnostic. In-processing gives the best accuracy-fairness tradeoff but requires modifying training. Always measure the accuracy cost of mitigation — there is always a tradeoff.</p></div>
+</div>
+
+<!-- Explainability -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Explainability &amp; Transparency</div>
+
+<div class="card"><div class="card-title">Explainability Methods — When to Use Which</div>
+<table class="tbl">
+<tr><th>Method</th><th>Scope</th><th>How it works</th><th>Best for</th></tr>
+<tr><td><strong>SHAP</strong></td><td>Global + local</td><td>Shapley values from game theory — each feature's marginal contribution averaged over all orderings</td><td>Tabular models; feature importance audit; regulators</td></tr>
+<tr><td><strong>LIME</strong></td><td>Local</td><td>Fits a linear model on perturbed samples around the instance; local approximation</td><td>Text and image models; quick per-instance explanation</td></tr>
+<tr><td><strong>Integrated Gradients</strong></td><td>Local</td><td>Attributes prediction to input features by integrating gradients from baseline to input</td><td>Deep learning; image/text; more principled than LIME</td></tr>
+<tr><td><strong>Counterfactual explanations</strong></td><td>Local</td><td>"What's the smallest change to this input that flips the prediction?"</td><td>Individual recourse — "what would you need to do to get approved?"</td></tr>
+<tr><td><strong>Partial Dependence Plots</strong></td><td>Global</td><td>Average model output as a single feature varies, all others held constant</td><td>Understanding feature effects; non-linear relationships</td></tr>
+<tr><td><strong>Attention visualisation</strong></td><td>Local</td><td>Which tokens the transformer attended to most for a given prediction</td><td>NLP models — intuitive but not formally an explanation</td></tr>
+</table></div>
+
+<!-- Model cards & governance -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent,#5b7df8);margin:28px 0 12px;padding:0">Part 6 — Model Cards, Governance &amp; Regulatory Landscape</div>
+
+<div class="card cp"><div class="card-title">Model Cards — Standardised Transparency Documentation</div>
+<div class="card-body">Proposed by Mitchell et al. (Google, 2019). A model card is a short document accompanying a model that communicates intended use, performance characteristics by subgroup, and known limitations.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Required sections</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Model details:</strong> architecture, training data, parameters, version</li>
+  <li><strong>Intended use:</strong> primary use cases, out-of-scope uses</li>
+  <li><strong>Performance metrics:</strong> accuracy, AUC, F1 — overall AND per subgroup</li>
+  <li><strong>Evaluation data:</strong> what dataset was used for evaluation; how representative is it</li>
+  <li><strong>Ethical considerations:</strong> known biases, fairness analysis results, mitigation applied</li>
+  <li><strong>Limitations:</strong> what populations or scenarios the model works poorly on</li>
+  <li><strong>Caveats &amp; recommendations:</strong> how the model should and shouldn't be used</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Who requires model cards</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>HuggingFace:</strong> model cards on Model Hub (best practice, increasingly expected)</li>
+  <li><strong>Google Cloud AI:</strong> required for models deployed via Vertex AI Model Registry</li>
+  <li><strong>EU AI Act:</strong> technical documentation requirement for high-risk AI systems</li>
+  <li><strong>US NIST AI RMF:</strong> recommends model cards as part of AI Risk Management Framework</li>
+  <li><strong>Financial regulators (OCC, CFPB):</strong> model risk management guidance requires documentation of model limitations and validation</li>
+</ul>
+</div>
+</div></div>
+
+<div class="card ca"><div class="card-title">Regulatory Landscape — What You Need to Know</div>
+<table class="tbl">
+<tr><th>Regulation</th><th>Jurisdiction</th><th>Key ML requirements</th></tr>
+<tr><td><strong>EU AI Act (2024)</strong></td><td>European Union</td><td>Risk-tiered: high-risk AI (hiring, credit, healthcare) must be audited, documented, human-overseen. Banned uses include social scoring and real-time biometric surveillance. Providers must register systems and provide model cards.</td></tr>
+<tr><td><strong>US Executive Order on AI</strong></td><td>United States</td><td>Agencies must evaluate AI tools for civil-rights impacts; high-risk AI in government must be audited. NIST AI RMF as the standard framework.</td></tr>
+<tr><td><strong>NYC Local Law 144</strong></td><td>New York City</td><td>Employers using AI for hiring decisions must conduct annual bias audits and disclose results publicly. First US law specifically targeting automated employment decisions.</td></tr>
+<tr><td><strong>ECOA / Fair Lending</strong></td><td>United States</td><td>Credit models must comply with Equal Credit Opportunity Act — adverse action notices, no disparate impact on protected classes. CFPB requires explainability for adverse decisions.</td></tr>
+<tr><td><strong>GDPR Article 22</strong></td><td>European Union</td><td>Right to explanation for fully automated decisions. Users can request human review of AI decisions.</td></tr>
+</table></div>
+
+<!-- Common mistakes -->
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>"We didn't include protected attributes so the model is fair"</strong> — proxy variables (zip code, name, browsing history) encode protected attributes. Omitting the feature does not remove the bias</li>
+  <li><strong>"High overall accuracy = fair"</strong> — a model can have 95% accuracy overall while performing at 70% for a minority group. Always disaggregate metrics by subgroup</li>
+  <li><strong>"Fairness and accuracy are always in tension"</strong> — often untrue. Bias frequently causes <em>worse</em> performance on underrepresented groups. Fixing data representation often improves both</li>
+  <li><strong>"One fairness metric is enough"</strong> — each metric encodes a different moral intuition. Report multiple; justify which matters most for your use case</li>
+  <li><strong>"Post-deployment, fairness is someone else's problem"</strong> — distribution shift can introduce new biases over time. Monitor fairness metrics in production alongside accuracy metrics</li>
+  <li><strong>"Explainability = fairness"</strong> — SHAP can explain a biased model clearly. Transparency and fairness are related but distinct properties</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google:</strong> Responsible AI Practices team; model cards published for all major model releases; Fairness Indicators tool in TensorFlow Model Analysis</li>
+  <li><strong>Microsoft:</strong> Responsible AI Standard (internal policy); Fairlearn open-sourced; Azure ML has Fairness Dashboard built-in</li>
+  <li><strong>LinkedIn:</strong> Fairness-aware ranking for job recommendations; demographic parity monitored in real-time on recruiter tools (after FTC settlement)</li>
+  <li><strong>Stripe / Affirm / Upstart:</strong> fair lending compliance teams run disparate impact audits on every credit model before production; adverse action notices generated with SHAP explanations</li>
+  <li><strong>Healthcare AI (Epic, Google Health):</strong> subgroup performance reporting mandatory before clinical deployment; FDA guidance on AI/ML-based software as medical device (SaMD) requires bias evaluation</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What is algorithmic fairness?</strong> "Algorithmic fairness is the study of whether ML model decisions are equitable across demographic groups. There are multiple mathematical definitions — demographic parity (equal positive rates), equal opportunity (equal TPR), equalised odds (equal TPR and FPR), and calibration (probabilities match outcomes per group). Critically, these definitions are mutually exclusive when base rates differ — a fundamental theorem in fairness — so choosing which metric to optimise is a values and policy decision, not a technical one."</p>
+<p style="margin-top:8px"><strong>How do you audit a model for bias?</strong> "I'd (1) identify protected attributes and their proxies — zip code encoding race, names encoding gender. (2) Compute disparate impact ratio — US EEOC flags anything below 0.8. (3) Compute TPR and FPR gaps by subgroup using Fairlearn's MetricFrame. (4) Check AUC and calibration per group. (5) Inspect SHAP values for protected attribute proxies appearing as top features. Then mitigate — usually starting with threshold optimisation (easiest, no retraining) or sample reweighting (next simplest)."</p>
+<p style="margin-top:8px"><strong>Fairness-accuracy tradeoff?</strong> "Often overstated. In many cases, bias in training data causes the model to perform worse on underrepresented groups — fixing bias via reweighting or better data collection improves both fairness AND accuracy for those groups. The tradeoff is real but smaller than assumed, and the framing 'accuracy or fairness' is frequently a false dilemma."</p>
+<p style="margin-top:8px"><strong>Common follow-up — 'What's disparate impact?'</strong> "Disparate impact is when a facially neutral policy disproportionately disadvantages a protected group, regardless of intent. In ML: the disparate impact ratio is the positive prediction rate for the minority group divided by the rate for the majority group. Below 0.8 triggers the US 4/5ths rule — presumptive evidence of illegal discrimination under Title VII and ECOA."</p>
+</div>
+
+</section>

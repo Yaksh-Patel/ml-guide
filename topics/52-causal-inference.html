@@ -1,0 +1,319 @@
+<section class="section" id="sec-causal">
+<div class="sec-title">Causal Inference &amp; A/B Testing</div>
+<div class="sec-desc">Correlation is not causation — and most business decisions require knowing causes, not correlations. This topic covers the statistical foundations of A/B testing, power analysis, the potential outcomes framework, observational causal methods (DiD, IV, matching), uplift modelling, and the DoWhy causal ML library. Senior DS roles in product and growth companies treat this as a core competency.</div>
+
+<!-- Causation vs correlation -->
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Causation Matters in ML</div>
+<ul class="bul">
+  <li><strong>Correlation-based models fail under intervention:</strong> a model predicting retention based on login frequency will break if you force users to log in more — the feature changes but not through the causal pathway</li>
+  <li><strong>Simpson's paradox:</strong> a drug appears to help in aggregate data but harms every subgroup — direction of effect reverses when confounders are controlled</li>
+  <li><strong>Feedback loops:</strong> model predictions change user behaviour, which changes the training data — correlation breaks down</li>
+  <li><strong>Policy decisions require causes:</strong> "should we increase X?" requires knowing whether X causes Y, not just that they correlate</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">The Potential Outcomes Framework (Rubin Causal Model)</div>
+<div class="formula math-formula">$$\begin{aligned}
+Y_i(1) &= \text{outcome for unit } i \text{ if treated} \\
+Y_i(0) &= \text{outcome for unit } i \text{ if not treated} \\
+\text{ITE}_i &= Y_i(1) - Y_i(0) \quad \text{(Individual Treatment Effect — never observable)} \\
+\text{ATE} &= \mathbb{E}[Y(1) - Y(0)] \quad \text{(Average Treatment Effect)} \\
+\text{ATT} &= \mathbb{E}[Y(1) - Y(0) | T=1] \quad \text{(Effect on the Treated)}
+\end{aligned}$$</div>
+<div class="box warn" style="margin-top:8px"><div class="bl">Fundamental problem of causal inference</div><p>We can never observe both $Y_i(1)$ and $Y_i(0)$ for the same unit at the same time. We observe either the treated or the control outcome — never both. All causal methods are strategies for estimating the counterfactual we cannot observe.</p></div>
+</div>
+</div>
+
+<!-- A/B testing -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — A/B Testing: The Gold Standard</div>
+
+<div class="card ca"><div class="card-title">Why Randomised Experiments Are the Gold Standard</div>
+<div class="card-body">Random assignment ensures treatment and control groups are identical in expectation on all covariates — observed and unobserved. This eliminates confounding: any difference in outcomes is caused by the treatment.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">A/B test statistical setup</strong>
+<div class="formula math-formula">$$\begin{aligned}
+H_0&: \mu_{\text{control}} = \mu_{\text{treatment}} \quad (\text{no effect}) \\
+H_1&: \mu_{\text{control}} \neq \mu_{\text{treatment}} \quad (\text{two-tailed}) \\
+\text{Test stat}&: t = \frac{\bar{x}_T - \bar{x}_C}{\sqrt{s^2_T/n_T + s^2_C/n_C}} \\
+p\text{-value}&: P(\text{data this extreme} | H_0 \text{ true}) \\
+\text{Reject } H_0&\text{ if } p < \alpha \quad (\alpha = 0.05 \text{ typical})
+\end{aligned}$$</div>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Key concepts</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Type I error (α):</strong> false positive — reject H₀ when it's true. α = 0.05 → 5% chance of false positive</li>
+  <li><strong>Type II error (β):</strong> false negative — fail to reject H₀ when it's false</li>
+  <li><strong>Statistical power (1-β):</strong> probability of detecting a true effect. Target ≥ 0.80</li>
+  <li><strong>Minimum Detectable Effect (MDE):</strong> smallest effect size worth detecting; drives sample size</li>
+  <li><strong>Two-tailed vs one-tailed:</strong> almost always use two-tailed — you can't know in advance which direction the effect will be</li>
+</ul>
+</div>
+</div></div>
+
+<div class="card cp"><div class="card-title">Power Analysis &amp; Sample Size Calculation</div>
+<div class="formula math-formula">$$n \approx \frac{2(z_{\alpha/2} + z_\beta)^2 \sigma^2}{\delta^2}$$</div>
+<div class="card-body" style="margin-top:8px">where $\delta$ = MDE (minimum detectable effect), $\sigma^2$ = variance of metric, $z_{\alpha/2}$ = 1.96 for α=0.05, $z_\beta$ = 0.84 for 80% power.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">from scipy import stats
+import numpy as np
+
+def sample_size_per_group(
+    baseline_rate=0.10,   # control conversion rate
+    mde=0.02,             # min detectable effect (absolute)
+    alpha=0.05,           # significance level
+    power=0.80            # 1 - beta
+):
+    effect = mde
+    pooled_p = baseline_rate + effect / 2
+    pooled_var = 2 * pooled_p * (1 - pooled_p)
+    z_alpha = stats.norm.ppf(1 - alpha / 2)
+    z_beta  = stats.norm.ppf(power)
+    n = (z_alpha + z_beta)**2 * pooled_var / effect**2
+    return int(np.ceil(n))
+
+# 10% baseline, want to detect +2pp lift, 80% power
+n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
+# n ≈ 3,842 per group (7,684 total)</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">What drives sample size</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Factor</th><th>Effect on n</th></tr>
+<tr><td>Smaller MDE</td><td>n grows as 1/δ² — halving MDE quadruples n</td></tr>
+<tr><td>Higher variance metric</td><td>n grows linearly — use lower-variance metrics</td></tr>
+<tr><td>Lower α (0.05→0.01)</td><td>n increases ~50%</td></tr>
+<tr><td>Higher power (0.80→0.95)</td><td>n increases ~40%</td></tr>
+</table>
+<div class="box tip" style="margin-top:8px"><div class="bl">Practical tip</div><p>Run your power analysis before launching the experiment — never stop early because it "looks significant." Peeking inflates Type I error. Pre-register the sample size and run to completion.</p></div>
+</div>
+</div></div>
+
+<div class="card"><div class="card-title">Common A/B Testing Pitfalls</div>
+<table class="tbl">
+<tr><th>Pitfall</th><th>What happens</th><th>Fix</th></tr>
+<tr><td><strong>Peeking / stopping early</strong></td><td>Checking results repeatedly inflates α — "significant" result is actually false positive</td><td>Pre-register n; use sequential testing (mSPRT) if early stopping is needed</td></tr>
+<tr><td><strong>Multiple testing</strong></td><td>Testing 20 metrics with α=0.05 → expect 1 false positive by chance</td><td>Bonferroni correction: use α/k; or FDR control (Benjamini-Hochberg)</td></tr>
+<tr><td><strong>Network effects / SUTVA violation</strong></td><td>Treatment of one user affects control user (social product, marketplace)</td><td>Cluster randomisation — randomise by cluster (city, friend group), not by user</td></tr>
+<tr><td><strong>Novelty effect</strong></td><td>New feature gets more engagement just because it's new; effect decays</td><td>Run longer (4+ weeks); check if effect is stable over time</td></tr>
+<tr><td><strong>Sample ratio mismatch</strong></td><td>50/50 split shows 52/48 in data — logging bug or selection bias</td><td>Always check actual split ratio; abort if SRM &gt; 0.1%</td></tr>
+<tr><td><strong>Simpson's paradox</strong></td><td>Aggregate shows positive effect but every segment shows negative</td><td>Always stratify analysis by key dimensions (platform, cohort, geography)</td></tr>
+</table></div>
+
+<!-- Variance reduction -->
+<div class="card cc"><div class="card-title">Variance Reduction — Getting Significant Results Faster</div>
+<table class="tbl">
+<tr><th>Technique</th><th>How</th><th>Typical variance reduction</th></tr>
+<tr><td><strong>CUPED</strong> (Controlled-experiment Using Pre-Experiment Data)</td><td>Regress out variance explained by pre-experiment metric: $Y^* = Y - \theta(X - \bar{X})$ where X = pre-experiment covariate</td><td>30–80% variance reduction; equivalent to 1.5–5× sample size</td></tr>
+<tr><td><strong>Stratified sampling</strong></td><td>Ensure balanced treatment/control within each stratum (platform, country)</td><td>10–30% variance reduction</td></tr>
+<tr><td><strong>Delta method</strong></td><td>Correct variance estimation for ratio metrics (revenue per user = revenue / users)</td><td>Avoids underestimating SE for ratio metrics</td></tr>
+<tr><td><strong>Switchback / time-series design</strong></td><td>Alternate treatment and control in time periods for marketplace experiments</td><td>Controls for temporal confounding</td></tr>
+</table>
+<div class="box info" style="margin-top:8px"><div class="bl">CUPED — the most impactful technique</div><p>CUPED uses the same metric measured before the experiment as a covariate to remove noise. If last week's revenue predicts this week's, regressing it out dramatically reduces variance. Used by Netflix, Airbnb, Booking.com as standard practice. Requires no change to randomisation — pure post-hoc analysis step.</p></div>
+</div>
+
+<!-- Observational methods -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Observational Causal Inference (When You Can't Randomise)</div>
+
+<div class="card cp"><div class="card-title">Difference-in-Differences (DiD)</div>
+<div class="formula math-formula">$$\begin{aligned}
+\hat{\tau}_{\text{DiD}} &= (\bar{Y}_{T,\text{post}} - \bar{Y}_{T,\text{pre}}) - (\bar{Y}_{C,\text{post}} - \bar{Y}_{C,\text{pre}}) \\
+&= \text{change in treated} - \text{change in control} \\
+\text{Parallel trends assumption}&: \text{treated and control would have evolved similarly absent treatment}
+\end{aligned}$$</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Classic example</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Card &amp; Krueger (1994): New Jersey raised minimum wage (treated); Pennsylvania did not (control)</li>
+  <li>Employment changed differently in NJ vs PA — the difference of differences is the causal effect</li>
+  <li>Key assumption: <strong>parallel trends</strong> — NJ and PA employment would have moved together absent the policy change</li>
+</ul>
+</div>
+<div>
+<pre class="formula">import statsmodels.formula.api as smf
+
+# DiD regression formulation:
+# Y = β0 + β1·post + β2·treated + β3·(post × treated) + ε
+# β3 = DiD estimate (causal effect)
+
+result = smf.ols(
+    "outcome ~ post + treated + post:treated",
+    data=df
+).fit()
+
+did_estimate = result.params["post:treated"]
+print(f"DiD estimate: {did_estimate:.3f}")
+print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
+</div>
+</div></div>
+
+<div class="card"><div class="card-title">Other Observational Causal Methods</div>
+<table class="tbl">
+<tr><th>Method</th><th>Key idea</th><th>Assumption</th><th>When to use</th></tr>
+<tr><td><strong>Propensity Score Matching (PSM)</strong></td><td>Match treated and control units with similar probability of being treated; compare outcomes</td><td>No unmeasured confounders (conditional ignorability)</td><td>Observational study with rich covariates; reduce selection bias</td></tr>
+<tr><td><strong>Inverse Propensity Weighting (IPW)</strong></td><td>Reweight observations by 1/P(treatment) — up-weights rare assignments</td><td>No unmeasured confounders; positivity</td><td>Average treatment effect estimation; works with continuous treatment</td></tr>
+<tr><td><strong>Instrumental Variables (IV)</strong></td><td>Use an instrument Z that affects treatment but not outcome directly (except through treatment)</td><td>Exclusion restriction: Z affects Y only through T</td><td>When confounders are unmeasured; classic: distance to hospital as IV for healthcare</td></tr>
+<tr><td><strong>Regression Discontinuity (RDD)</strong></td><td>Compare units just above vs just below a threshold; near-threshold units are comparable</td><td>No sorting around threshold; continuity of potential outcomes</td><td>Threshold-based policies: scholarship cutoffs, age eligibility</td></tr>
+<tr><td><strong>Synthetic Control</strong></td><td>Construct a weighted combination of control units that matches treated unit pre-treatment</td><td>Parallel trends (weaker form); convex hull assumption</td><td>Single treated unit (one country, one city)</td></tr>
+</table></div>
+
+<!-- Uplift modelling -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 3 — Uplift Modelling (Heterogeneous Treatment Effects)</div>
+
+<div class="card cg"><div class="card-title">Uplift Modelling — Targeting Who Responds to Treatment</div>
+<div class="card-body">Average treatment effect tells you the mean effect. Uplift modelling estimates the <em>individual treatment effect</em> — who benefits most, who is unaffected, and who is harmed by the intervention.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">The four customer segments</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Segment</th><th>Without treatment</th><th>With treatment</th><th>Target?</th></tr>
+<tr><td><strong>Persuadables</strong></td><td>Won't convert</td><td>Will convert</td><td>✅ YES — highest ROI</td></tr>
+<tr><td><strong>Sure things</strong></td><td>Will convert anyway</td><td>Will convert</td><td>❌ Wasted spend</td></tr>
+<tr><td><strong>Lost causes</strong></td><td>Won't convert</td><td>Won't convert</td><td>❌ Wasted spend</td></tr>
+<tr><td><strong>Do-not-disturb</strong></td><td>Will convert</td><td>Won't convert (harmed)</td><td>🚫 AVOID</td></tr>
+</table>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Methods</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Two-model (T-learner):</strong> train separate models for treatment and control; uplift = model_T(x) - model_C(x). Simple but high variance</li>
+  <li><strong>S-learner:</strong> single model with treatment indicator as feature; uplift = model(x, T=1) - model(x, T=0)</li>
+  <li><strong>X-learner:</strong> cross-fitting that handles unequal treatment/control sizes; lower variance than T-learner</li>
+  <li><strong>Causal forests (Wager &amp; Athey):</strong> random forest variant that directly targets HTE estimation; gold standard in industry</li>
+  <li><strong>Meta-learners (econML):</strong> plug-in estimation; works with any base learner</li>
+</ul>
+</div>
+</div>
+<pre class="formula" style="margin-top:10px">from econml.dml import CausalForestDML
+from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
+
+# Causal Forest: Y = outcome, T = treatment (binary), X = features, W = confounders
+model = CausalForestDML(
+    model_y=GradientBoostingRegressor(),
+    model_t=GradientBoostingClassifier(),
+    n_estimators=200, min_samples_leaf=5
+)
+model.fit(Y, T, X=X, W=W)
+
+# Estimate individual treatment effects
+ite = model.effect(X_test)       # shape: (n_samples,)
+ate = model.ate(X_test)          # scalar: average treatment effect
+print(f"ATE: {ate:.4f}")
+# Target top quartile of ITE for marketing campaign</pre>
+
+<div class="card" style="margin-top:13px"><div class="card-title">Uplift Evaluation — Qini Curve &amp; AUUC</div>
+<div class="g2">
+<div>
+<ul class="bul">
+  <li><strong>Qini curve:</strong> rank individuals by predicted uplift (high to low); plot cumulative actual uplift vs proportion treated. Better model = curve above random diagonal</li>
+  <li><strong>AUUC</strong> (Area Under Uplift Curve): scalar summary; higher = better model at targeting persuadables</li>
+  <li><strong>Uplift at decile:</strong> compare mean(Y|T=1) - mean(Y|T=0) within each decile of predicted uplift — should be monotonically decreasing</li>
+</ul>
+</div>
+<div>
+<pre class="formula">from sklift.metrics import qini_auc_score, uplift_curve
+
+# Compute AUUC
+auuc = qini_auc_score(
+    y_true=y_test,
+    uplift=ite,          # predicted treatment effect
+    treatment=t_test     # actual treatment assignment
+)
+print(f"AUUC: {auuc:.4f}")</pre>
+</div>
+</div></div>
+
+<!-- DoWhy -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — DoWhy &amp; Causal Graphs</div>
+
+<div class="card cr"><div class="card-title">DoWhy — Microsoft's Causal Inference Library</div>
+<div class="card-body">DoWhy implements Pearl's causal framework: specify a causal graph (DAG), identify whether the causal effect is estimable from data, estimate it, and test robustness of the estimate.</div>
+<pre class="formula">import dowhy
+from dowhy import CausalModel
+
+model = CausalModel(
+    data=df,
+    treatment="ad_exposure",
+    outcome="purchase",
+    # Specify causal graph as GML or dot notation
+    # Confounders: age, income affect both ad targeting AND purchase
+    common_causes=["age", "income", "browsing_history"],
+    instruments=["random_ad_slot"]  # instrumental variable
+)
+
+# Step 1: Identify — can we estimate the effect from observables?
+identified_estimand = model.identify_effect(
+    proceed_when_unidentifiable=True
+)
+
+# Step 2: Estimate using the identified strategy
+estimate = model.estimate_effect(
+    identified_estimand,
+    method_name="backdoor.linear_regression"
+    # also: "iv.instrumental_variable", "backdoor.propensity_score_matching"
+)
+print(f"Causal effect: {estimate.value:.4f}")
+
+# Step 3: Refute — test sensitivity to assumptions
+refute = model.refute_estimate(
+    identified_estimand, estimate,
+    method_name="random_common_cause"  # add random confounder; effect should not change
+)
+print(refute)</pre>
+
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Causal graph concepts</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>DAG</strong> (Directed Acyclic Graph): nodes = variables, edges = direct causal relationships</li>
+  <li><strong>Confounder:</strong> common cause of treatment and outcome — must be controlled</li>
+  <li><strong>Collider:</strong> common effect of treatment and outcome — must NOT be controlled (conditioning opens a spurious path)</li>
+  <li><strong>Backdoor criterion:</strong> a set of variables that blocks all backdoor paths from treatment to outcome and is not a descendant of treatment</li>
+  <li><strong>Front-door criterion:</strong> estimate causal effect via mediators when confounders are unobserved</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">DoWhy refutation tests</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Test</th><th>What it checks</th></tr>
+<tr><td>Random common cause</td><td>Add random confounder — estimate should barely change</td></tr>
+<tr><td>Placebo treatment</td><td>Replace treatment with random variable — effect should be ~0</td></tr>
+<tr><td>Data subset</td><td>Estimate on random subsample — effect should be stable</td></tr>
+<tr><td>Sensitivity (Rosenbaum bounds)</td><td>How strong would unmeasured confounder need to be to explain away the effect?</td></tr>
+</table>
+</div>
+</div></div>
+
+<!-- Common mistakes -->
+<div class="card ca"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Stopping the A/B test early because it looks significant</strong> — peeking inflates α. A test that hits p&lt;0.05 at peek #5 has true α ≈ 0.19. Always pre-specify sample size and run to completion, or use sequential testing methods</li>
+  <li><strong>Confusing statistical significance with practical significance</strong> — a 0.001% conversion rate lift can be statistically significant at n=10M but completely meaningless for the business. Always compute effect size and confidence intervals alongside p-values</li>
+  <li><strong>Ignoring SUTVA violations in networked products</strong> — in social networks, marketplaces, or multiplayer games, treating one user affects others. Cluster randomisation or switchback designs are required</li>
+  <li><strong>Controlling for colliders</strong> — adding a variable that is caused by both treatment and outcome opens a spurious backdoor path and introduces bias. Use a DAG to identify which variables to control and which to avoid</li>
+  <li><strong>Confounding observational uplift estimates</strong> — self-selection means treated and untreated users differ systematically. Always use propensity score weighting or matching before computing uplift</li>
+  <li><strong>Using A/B test results for causal claims without randomisation</strong> — quasi-experiments (DiD, RDD) require strong assumptions. Be explicit about what must be true for the estimate to be causal</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Netflix:</strong> CUPED variance reduction as standard practice on all A/B tests; causal forests for personalised recommendation treatment effects</li>
+  <li><strong>Airbnb:</strong> DiD for evaluating policy changes (e.g. host cancellation policy) where randomisation is infeasible; SUTVA-aware cluster experiments for marketplace interventions</li>
+  <li><strong>Booking.com:</strong> runs 1,000+ concurrent A/B tests; CUPED + sequential testing to manage multiple comparisons and early stopping</li>
+  <li><strong>Uber:</strong> switchback experiments for surge pricing (A/B by time period, not user, to avoid SUTVA violations in a marketplace)</li>
+  <li><strong>Meta:</strong> uplift modelling for ad targeting — targeting persuadable users rather than "sure things" to reduce wasteful ad spend</li>
+  <li><strong>Retail (Walmart, Target):</strong> synthetic control for evaluating store-level interventions (remodels, new product placement) where no randomisation is possible</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What's the difference between correlation and causation?</strong> "Correlation measures how two variables move together. Causation tells you that changing X produces a change in Y. Correlation can arise from confounding (a third variable causes both), reverse causation (Y causes X), or coincidence. The only way to establish causation is through randomisation (A/B test) or a valid natural experiment that mimics randomisation (DiD, IV, RDD)."</p>
+<p style="margin-top:8px"><strong>How do you design an A/B test?</strong> "Five steps: (1) Define the primary metric and MDE — the smallest lift worth detecting. (2) Run a power analysis to compute required n per group. (3) Randomise users (or clusters for networked products). (4) Run to the pre-specified sample size — no peeking, no early stopping. (5) Analyse: check sample ratio mismatch first, then run two-sided t-test, report effect size and 95% CI not just p-value."</p>
+<p style="margin-top:8px"><strong>What is CUPED?</strong> "CUPED reduces the variance of A/B test estimates by regressing out variance explained by a pre-experiment covariate (usually the same metric from the week before the experiment). The adjusted metric Y* = Y - θ(X - X̄) has lower variance but the same expectation. This is equivalent to running a larger experiment — 50% variance reduction halves the required sample size."</p>
+<p style="margin-top:8px"><strong>When can't you run an A/B test?</strong> "When randomisation is infeasible — policy changes affecting everyone, historical analysis, marketplace interventions. Then I'd use: DiD if there's a control group and parallel trends holds, RDD if there's a threshold with arbitrary assignment near it, IV if there's a valid instrument, or synthetic control for a single treated unit. Each requires explicit assumptions that must be stated and tested."</p>
+</div>
+
+</section>
