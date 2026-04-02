@@ -81,5 +81,27 @@ for epoch in range(epochs):
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # gradient clip
         optimizer.step()</code></pre></div></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For DS coding interviews: pandas over loops (always vectorize — 100× faster), use sklearn Pipelines (prevents leakage, clean code), and know your window functions in SQL (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER). For DSA, practice LeetCode Medium in Python: sliding window, two pointers, and hashmap problems cover 80% of what DS interviews ask. Most important: communicate your approach before coding — interviewers care more about your reasoning than perfect syntax."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using Python loops instead of vectorized pandas/numpy</strong> — iterating over DataFrame rows with for loops is 100–1000× slower than vectorized operations. Use df.apply() sparingly; prefer df['col'].map(), vectorized arithmetic, and numpy broadcasting. Profile with %timeit before optimising</li>
+  <li><strong>Writing SQL without window functions for ranking problems</strong> — most SQL interview questions about "top N per group" or "previous value" are solved cleanly with window functions (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER). Writing subqueries or joins for these signals unfamiliarity with modern SQL</li>
+  <li><strong>Not using sklearn Pipelines</strong> — fitting a scaler on the full dataset then running CV manually leads to leakage. Pipeline(steps=[('scaler', ...), ('model', ...)]) automatically refits preprocessors on each training fold. It also makes code cleaner and serialises the full preprocessing + model as one artifact</li>
+  <li><strong>Reinventing NumPy with loops in ML code</strong> — matrix operations, broadcasting, and vectorised comparisons are the core of efficient ML code. A for-loop computing pairwise distances is O(n²) Python overhead; np.einsum or scipy.spatial.distance.cdist achieves the same in C, 100× faster</li>
+  <li><strong>Ignoring time complexity in DS interviews</strong> — data science coding interviews increasingly test algorithmic thinking. Know: dict/set lookups are O(1); list.append is O(1) amortised; sorting is O(n log n). Two-pointer and sliding window reduce O(n²) brute-force solutions to O(n)</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Airbnb / Lyft (data science coding):</strong> SQL interview questions heavily test window functions — "find the second-highest revenue day per market" requires RANK() OVER (PARTITION BY market ORDER BY revenue DESC); candidates who write subquery equivalents are marked down for readability</li>
+  <li><strong>Meta (DS interviews):</strong> Python coding round tests pandas manipulation (groupby, merge, pivot), statistical reasoning (A/B test analysis), and occasionally LeetCode Medium-level algorithms (sliding window, hashmaps). The pandas portion is where most DS candidates lose points</li>
+  <li><strong>Google (SQL in DS interviews):</strong> BigQuery SQL is the standard; complex CTEs, window functions, and ARRAY_AGG / UNNEST for nested structures are tested. Candidates expected to write production-quality SQL, not just basic SELECT/WHERE</li>
+  <li><strong>Production ML engineering:</strong> pandas for data processing, SQLAlchemy/DuckDB for feature queries, sklearn Pipelines for clean experiment code — the ability to write clean, efficient, non-leaky Python is a core DS production skill</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "For DS coding: pandas over loops always (vectorise — 100× faster), sklearn Pipelines prevent leakage (preprocessors refit on each CV fold automatically), and window functions in SQL (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER PARTITION BY) are essential for ranking and time-series queries. For DSA: sliding window, two pointers, and hashmaps cover 80% of DS interview algorithm questions. Most importantly: communicate your approach before writing code — interviewers care about reasoning and trade-offs, not just correct syntax."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll iterate over the rows to compute this." — Row-level Python loops on DataFrames are an immediate red flag in DS interviews. Vectorised pandas or numpy is always the expected answer for bulk data operations.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you efficiently compute a 7-day rolling average in pandas?" — Answer: df['col'].rolling(window=7, min_periods=1).mean() — O(n) vectorised C implementation. Not a for loop. For time-indexed DataFrames, use .rolling('7D') for calendar-based windows that handle irregular timestamps correctly.</p>
+</div>
 </section>

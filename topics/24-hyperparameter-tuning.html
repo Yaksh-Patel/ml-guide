@@ -20,5 +20,27 @@
 <div class="card-body" style="margin-top:6px"><strong>Hyperopt:</strong> One of the earliest Bayesian optimisation libraries. Uses TPE by default and integrates with MLflow. <code>fmin(objective, space, algo=tpe.suggest, max_evals=100)</code>. Optuna is generally preferred today for its cleaner API and pruning support, but Hyperopt remains widely used in legacy codebases.</div></div>
 <div class="card"><div class="card-title">Best Practices</div>
 <ul class="bul"><li><strong>Search order:</strong> learning_rate and n_estimators first (most impactful), then regularization params, then minor ones</li><li><strong>Early stopping in each trial:</strong> don't waste budget on clearly bad configs</li><li><strong>Log scale for learning rate:</strong> sample from [1e-4, 1e-1] in log space, not linearly</li><li><strong>Nested CV for unbiased evaluation:</strong> inner loop for tuning, outer loop for evaluation</li><li><strong>Budget allocation:</strong> 50% Bayesian, 50% manual exploration around best found region</li></ul></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My tuning strategy: (1) fix n_estimators large + early stopping so I only need to tune other params; (2) use Optuna with TPE sampler for Bayesian optimization; (3) start broad — large range, few trials; (4) refine — narrow range around best config, more trials. For XGBoost, learning_rate and max_depth give the most bang per trial. For neural networks: learning_rate is #1, then architecture, then regularization."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Grid searching on a linear scale</strong> — learning rate of 0.001 vs 0.01 is a 10× difference; 0.1 vs 0.2 is only 2×. Always use log-scale sampling for any hyperparameter spanning orders of magnitude: learning_rate, λ, C, gamma</li>
+  <li><strong>Using the test set for hyperparameter selection</strong> — tuning hyperparameters on the test set inflates reported performance and invalidates the generalisation estimate. Always tune on a held-out validation set or via CV; test set is touched exactly once</li>
+  <li><strong>Running too few Bayesian optimization trials</strong> — Bayesian optimization needs ~20 "warm-up" trials before the surrogate model is reliable. Running only 10 total trials gives results no better than random. Minimum 50–100 trials for meaningful Bayesian optimization</li>
+  <li><strong>Not setting early stopping inside each trial</strong> — each trial of a gradient boosting model should use early stopping so bad configs terminate early. Without this, every trial wastes the full n_estimators budget regardless of whether the config is promising</li>
+  <li><strong>Ignoring interaction effects between hyperparameters</strong> — learning_rate and n_estimators are strongly coupled (lower LR needs more trees). Grid search over them independently misses the interaction. Bayesian optimization handles this naturally</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Vizier / Vertex AI Hyperparameter Tuning):</strong> Bayesian optimization at scale — internally used to tune all major Google ML models; exposed as Vertex AI Hyperparameter Tuning with Gaussian Process or NSGA-II (multi-objective) backends</li>
+  <li><strong>Meta (Ax / BoTorch):</strong> open-sourced their Bayesian optimization platform (Ax + BoTorch); used internally for model tuning and A/B test design; state-of-the-art Gaussian process surrogates with GPU acceleration</li>
+  <li><strong>Kaggle top solutions:</strong> Optuna with TPE sampler is the de facto standard for competition hyperparameter tuning; pruning (MedianPruner) kills bad trials early, dramatically increasing search efficiency</li>
+  <li><strong>MLOps pipelines (Airflow + MLflow):</strong> hyperparameter tuning integrated into CI/CD — each model retraining run triggers a tuning stage that searches within pre-defined bounds, logs results to MLflow, and promotes the best config</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "My tuning strategy: (1) fix n_estimators large + early stopping — tree count is handled automatically. (2) Optuna with TPE sampler for Bayesian optimization — more efficient than grid search, handles parameter interactions. (3) Start broad (wide ranges, 50 trials), then refine around the best region (narrow ranges, 50 more trials). (4) Always log-scale for learning_rate, λ, gamma. For XGBoost, learning_rate + max_depth give the most signal per trial. For neural nets, learning_rate is #1, then batch size, then architecture."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I grid searched over [0.1, 0.01, 0.001] for learning rate." — This is 3 values with 10× spacing on log scale. Bayesian optimization explores continuously and adapts to promising regions. Grid search on 3 values is barely better than guessing.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does Bayesian optimization work?" — Answer: maintains a surrogate model (usually Gaussian Process) of the objective function over the hyperparameter space. After each trial, updates the surrogate with the new result. Uses an acquisition function (Expected Improvement, UCB) to select the next point that balances exploration (uncertain regions) vs exploitation (near the current best). Each trial is informed by all previous results — far more efficient than random or grid search.</p>
+</div>
 </section>

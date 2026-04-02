@@ -25,5 +25,28 @@
 <tr><td>SHAP</td><td>Shapley values</td><td>Theoretically sound; local + global; best overall</td></tr>
 <tr><td>Coefficient magnitude</td><td>Linear/logistic regression</td><td>Only valid after feature scaling; interpretable</td></tr>
 <tr><td>Gradient-based</td><td>Integrated gradients (NNs)</td><td>Principled; works for images/text</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Calibration matters especially in credit risk and medical applications where the predicted probability IS the output (e.g., P(default) determines the interest rate). XGBoost is poorly calibrated out-of-the-box — I always apply Platt scaling or isotonic regression post-hoc. For explainability, SHAP is my default — it's the only method with theoretical guarantees (efficiency, dummy, symmetry, linearity properties). I use TreeSHAP for tree models (fast and exact) and SHAP KernelExplainer for everything else."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Assuming tree models are well-calibrated</strong> — Random Forests and XGBoost tend to produce probabilities pushed toward 0 and 1 (overconfident). Always check a reliability diagram; apply CalibratedClassifierCV with isotonic regression post-hoc</li>
+  <li><strong>Using LIME for global explanations</strong> — LIME is a local explainer; each explanation is only valid near one prediction. For global feature importance, use SHAP's mean absolute SHAP value summary. Using LIME globally misleads</li>
+  <li><strong>Confusing feature importance with causation</strong> — SHAP tells you which features the model relies on, not which features causally drive the outcome. A correlated proxy feature (e.g., zip code as proxy for income) can have high SHAP but removing it may not change the real-world outcome</li>
+  <li><strong>Platt scaling vs isotonic regression choice</strong> — Platt scaling assumes a sigmoid relationship between scores and probabilities (works well for SVMs, naive Bayes). Isotonic regression is non-parametric and more flexible but needs more calibration data (&gt;1000 examples). For small calibration sets, use Platt</li>
+  <li><strong>Ignoring calibration drift in production</strong> — a model can maintain good AUC-ROC after concept drift while its calibration degrades severely. Monitor Expected Calibration Error (ECE) in production alongside discrimination metrics</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Lending Club / credit firms:</strong> predicted P(default) directly determines the interest rate offered; miscalibrated probabilities translate to mispriced loans and direct financial loss — calibration is validated monthly on recent cohorts</li>
+  <li><strong>Google (ads bidding):</strong> calibrated CTR predictions feed directly into the auction price calculation; a 2× miscalibration in predicted CTR causes advertisers to overbid or underbid by 2×, breaking auction theory</li>
+  <li><strong>FICO (credit scores):</strong> SHAP used to generate adverse action notices — legally required explanation of why a loan was denied, formatted as "top 4 reasons" for each applicant</li>
+  <li><strong>Healthcare AI (FDA-regulated):</strong> SHAP + calibration plots required in regulatory submissions; model must be demonstrated to be reliable across demographic subgroups with calibration tested separately per group</li>
+  <li><strong>Airbnb (trust &amp; safety):</strong> LIME used for debugging individual suspicious-listing predictions; SHAP used for global model monitoring — a SHAP value shift signals data or concept drift before metrics visibly degrade</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Calibration matters whenever the probability itself is the output — credit risk pricing, medical diagnosis, insurance underwriting. XGBoost is poorly calibrated out-of-the-box; I apply CalibratedClassifierCV with isotonic regression post-hoc (or Platt scaling if calibration data is small). For explainability, SHAP is my default — the only method with solid game-theoretic guarantees. TreeSHAP runs in O(n·d·T) — fast enough for production. Key distinction: SHAP explains what the model relies on; it does not establish causation."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used LIME for global feature importance." — LIME is strictly local. Aggregate SHAP values (mean |SHAP|) for global importance. Mixing these up signals a gap in XAI understanding.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is Expected Calibration Error (ECE)?" — Answer: divide predictions into bins by predicted probability. For each bin, compute |mean predicted probability − actual positive rate|. ECE is the weighted average of these gaps. A perfectly calibrated model has ECE=0: if you say 70% confident, you should be right 70% of the time.</p>
+</div>
 </section>

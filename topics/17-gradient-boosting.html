@@ -32,5 +32,40 @@ F(x) = F_0 + \eta \cdot \sum_m h_m(x)
 <tr><td>gamma</td><td>Min gain to create a split</td><td>0–5</td></tr>
 <tr><td>lambda / alpha</td><td>L2 / L1 on leaf weights</td><td>1, 0</td></tr></table></div>
 <div class="box story"><div class="bl">📖 The Consulting Analogy</div><p>XGBoost hires 500 consultants sequentially. Consultant 1 gives a report. Consultant 2 reads report 1 and specifically studies its mistakes, then corrects them. Consultant 3 corrects what 1 and 2 missed together. Each expert focuses only on the residual errors of all predecessors. By the end, the team has collectively covered every blind spot. Too many rounds? The last consultants start memorizing trivia (overfitting) — early stopping saves you.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Gradient boosting reduces bias via sequential error correction — each tree fits the negative gradient of the loss. Unlike bagging (reduces variance), boosting reduces bias. The learning rate η is a shrinkage factor that prevents overfitting. I always use early stopping with a validation set (eval_metric + early_stopping_rounds in XGBoost). For most tabular problems, LightGBM is my first choice — faster, matches XGBoost performance, and handles large datasets better."</p></div>
+
+<div class="card"><div class="card-title">Worked Numerical Example — 3 Boosting Rounds (Squared Loss)</div>
+<div class="card-body">Labels: y = [3, 5, 2, 8]. Initial prediction F₀ = mean(y) = 4.5. η = 0.5.</div>
+<table class="tbl"><tr><th>Round</th><th>Residuals r = y − F</th><th>Tree predicts h(x)</th><th>Update F += η·h</th><th>New F</th></tr>
+<tr><td>0 (init)</td><td>—</td><td>—</td><td>—</td><td>[4.5, 4.5, 4.5, 4.5]</td></tr>
+<tr><td>1</td><td>[−1.5, +0.5, −2.5, +3.5]</td><td>[−1.5, +0.5, −2.5, +3.5]</td><td>+0.5×h₁</td><td>[3.75, 4.75, 3.25, 6.25]</td></tr>
+<tr><td>2</td><td>[−0.75, +0.25, −1.25, +1.75]</td><td>[−0.75, +0.25, −1.25, +1.75]</td><td>+0.5×h₂</td><td>[3.38, 4.88, 2.63, 7.13]</td></tr>
+<tr><td>3</td><td>[−0.38, +0.12, −0.63, +0.87]</td><td>[−0.38, +0.12, −0.63, +0.87]</td><td>+0.5×h₃</td><td>[3.19, 4.94, 2.31, 7.56]</td></tr>
+</table>
+<div class="card-body" style="margin-top:8px">Each round, residuals shrink by factor η. After many rounds, F(x) converges to y. Learning rate η &lt; 1 prevents overshoot — you take a fraction of each correction, allowing later trees to fine-tune rather than overcorrect.</div>
+</div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Not using early stopping</strong> — setting n_estimators=1000 and hoping for the best. Always pair with eval_set + early_stopping_rounds; let the data decide when to stop</li>
+  <li><strong>Tuning n_estimators via grid search</strong> — it's redundant with early stopping and expensive. Fix n_estimators large, tune other params, let early stopping find the right tree count</li>
+  <li><strong>Confusing boosting and bagging</strong> — boosting is sequential (reduces bias), bagging is parallel (reduces variance). Gradient boosting of deep trees reduces both</li>
+  <li><strong>Leaking the validation set into early stopping</strong> — if the eval_set is used to select any preprocessing parameters (e.g., imputation, scaling) it's leaked. Put all preprocessing inside a Pipeline</li>
+  <li><strong>Assuming LightGBM always wins</strong> — on small datasets (&lt;10k rows) XGBoost is often comparable; CatBoost is better when raw categoricals dominate</li>
+  <li><strong>Ignoring scale_pos_weight for imbalance</strong> — set scale_pos_weight = n_negative / n_positive in XGBoost for imbalanced classification; it scales the gradient of positive examples</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Meta (Ads ranking):</strong> LightGBM for click-through rate prediction on hundreds of sparse categorical features; inference latency under 10ms per request at billions of daily calls</li>
+  <li><strong>Stripe (Fraud detection):</strong> XGBoost trained on transaction graph features; early stopping with PR-AUC on a held-out time slice to prevent temporal leakage</li>
+  <li><strong>Booking.com:</strong> gradient boosting for price ranking and conversion prediction; heavily regularized (lambda, subsample) to prevent overfitting on sparse user history</li>
+  <li><strong>Kaggle competitions:</strong> XGBoost / LightGBM win the vast majority of structured-data competitions — the de facto first choice before neural nets</li>
+  <li><strong>Credit scoring industry:</strong> XGBoost with monotone constraints (feature must have monotone effect on score) for regulatory compliance — ensures income always positively correlates with creditworthiness</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Gradient boosting fits trees sequentially, each one targeting the negative gradient (pseudo-residuals) of the loss. Unlike Random Forest which reduces variance via bagging, boosting primarily reduces bias. The learning rate η shrinks each tree's contribution — small η needs more trees but generalises better. I always use early stopping: set n_estimators=5000 and let the eval metric on a hold-out determine the optimal round. LightGBM is my default — leaf-wise growth and GOSS make it 10–20× faster than XGBoost on large data with comparable accuracy."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I tune n_estimators in a grid search." — This signals you don't know early stopping. Always say early stopping instead.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost differ from vanilla gradient boosting?" — Answer: second-order Taylor approximation of the loss (uses curvature, not just gradient), built-in L1/L2 regularization on leaf weights, and column/row subsampling per tree. These together make it more regularized and faster to converge than sklearn GradientBoostingClassifier.</p>
+</div>
 </section>

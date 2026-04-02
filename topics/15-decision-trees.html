@@ -31,5 +31,27 @@ IG = H(\text{parent}) - \sum_i w_i \cdot H(\text{child}_i) \\
 <tr><td>max_features</td><td>Features to consider per split</td><td>√d or log₂(d)</td></tr>
 <tr><td>ccp_alpha</td><td>Cost-complexity pruning strength</td><td>Find via CV</td></tr></table></div>
 <div class="box story"><div class="bl">📖 20 Questions Analogy</div><p>A decision tree plays 20 Questions: "Is income &gt; 50K?" → "Is credit score &gt; 700?" → "Has ever defaulted?" Each question splits the universe into purer subsets. Best questions are the ones that most cleanly separate the classes — those are the high information gain splits.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Decision trees are the most interpretable non-linear model — I can show a risk committee the actual decision logic. But a single tree has unacceptably high variance. My rule: depth-3 trees for regulatory interpretability requirements; deeper trees as base learners inside Random Forest or XGBoost where the ensemble fixes the variance problem. I always visualize the tree for stakeholders — it builds trust in the model."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using a single deep tree in production</strong> — a fully grown tree memorizes training data and generalizes poorly. Single trees are only used when strict interpretability is required (depth ≤ 3); otherwise, use an ensemble</li>
+  <li><strong>Gini vs Entropy debate</strong> — in practice, they almost always produce the same trees. Do not waste interview time defending one over the other; mention sklearn uses Gini by default and results are empirically equivalent</li>
+  <li><strong>Not pruning before deploying an interpretable tree</strong> — an unpruned depth-15 tree is not interpretable. Depth 3–4 gives &lt;16 leaves — a human can actually read it. Use ccp_alpha with CV to find the optimal pruned size</li>
+  <li><strong>Assuming feature importance from a single tree is reliable</strong> — a single tree's feature importance is noisy (different random splits → different importances). Aggregate over a Random Forest for stability</li>
+  <li><strong>Decision trees for regression extrapolation</strong> — trees predict the mean of training leaf members; they cannot predict beyond the training range. For extrapolation, linear models are required</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Banking / credit (Basel III compliance):</strong> depth-3 or depth-4 decision trees as the required interpretable component of credit decision systems; regulators demand the ability to explain any individual decision</li>
+  <li><strong>Healthcare diagnostics:</strong> decision trees for clinical decision support — the tree structure maps directly to a clinical protocol that nurses and doctors can follow without a computer</li>
+  <li><strong>XGBoost / LightGBM internals:</strong> every boosted model is a collection of shallow decision trees (depth 3–6); understanding tree splitting is prerequisite to understanding any tree-based ensemble</li>
+  <li><strong>A/B test segmentation:</strong> decision trees used to find subgroups where a treatment effect is strongest (heterogeneous treatment effects) — called "uplift trees" in growth and marketing</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Decision trees are the most interpretable non-linear model — I can show a risk committee the literal decision logic. But a single unconstrained tree has unacceptably high variance (small data perturbations change the entire structure). My rule: depth-3 trees for regulatory interpretability; deeper trees only as base learners inside an ensemble (Random Forest, XGBoost) where averaging/boosting controls the variance. Split criterion is usually Gini — empirically equivalent to entropy but faster to compute."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll grow the tree until leaves are pure, then prune." — This is expensive and often leads to over-pruning. Prefer setting max_depth and min_samples_leaf directly, or use cost-complexity pruning (ccp_alpha) tuned via CV.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does a decision tree have high variance?" — Answer: greedy recursive splitting is unstable — a slightly different training set can produce a completely different top split, leading to an entirely different tree. Ensembles (bagging, boosting) address this by averaging over many such trees.</p>
+</div>
 </section>

@@ -66,5 +66,27 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 <tr><td>Context window</td><td>Effective ~200 tokens</td><td>Scales to 100K+ with tricks</td></tr>
 <tr><td>Memory</td><td>O(sequence length)</td><td>O(n²) attention matrix</td></tr>
 <tr><td>Streaming / online inference</td><td>Natural (stateful)</td><td>Requires full context or KV cache</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"The Transformer's key insight: replace sequential processing with parallel attention over all positions. Two architectural choices enabled this: (1) residual connections around every sub-layer prevent vanishing gradients in deep stacks; (2) layer normalization (not BatchNorm) because sequence batches have variable length. The real paradigm shift: pre-train on massive unsupervised data → fine-tune on task-specific data. This is the backbone of all modern AI."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Confusing encoder-only, decoder-only, and encoder-decoder</strong> — encoder-only (BERT): bidirectional, good for classification/NER/embeddings, can't generate. Decoder-only (GPT): causal, generative, the dominant paradigm for LLMs. Encoder-decoder (T5, BART): best for seq2seq tasks (translation, summarization) where input and output are both structured sequences</li>
+  <li><strong>Using BatchNorm in transformers</strong> — BatchNorm computes statistics over the batch dimension; for variable-length sequences this is unstable. Transformers use Layer Norm (statistics over the feature dimension within each token) — batch-size independent and stable with variable-length inputs</li>
+  <li><strong>"Pre-LN vs Post-LN doesn't matter"</strong> — it does. Original Transformer: Post-LN (norm after residual add) — training unstable without warmup. Modern transformers (GPT, LLaMA): Pre-LN (norm before sublayer) — more stable training, no warmup required, enables training without careful LR tuning</li>
+  <li><strong>Treating the KV cache as automatic</strong> — KV cache must be explicitly managed at inference time. Many serving bugs come from incorrect cache invalidation (stale cache from previous request) or running out of KV cache memory at long contexts. Monitor KV cache utilization in production</li>
+  <li><strong>Ignoring positional encoding differences</strong> — learned absolute PE (BERT/GPT-2): fixed context length, doesn't generalise beyond training length. RoPE (LLaMA, GPT-NeoX): rotary, relative, extrapolates better. ALiBi: linear bias on attention logits, zero parameters, excellent length generalisation. Choice matters for long-context tasks</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (BERT → production NLP):</strong> BERT fine-tuned for query understanding in Google Search — the Transformer's ability to model bidirectional context transformed relevance ranking quality in 2019; still a component in the search stack</li>
+  <li><strong>OpenAI (GPT-4):</strong> decoder-only transformer at scale; sparse mixture-of-experts (MoE) architecture — only a subset of FFN experts activated per token, enabling 8× parameter count at ~2× FLOPs; production serving via continuous batching</li>
+  <li><strong>Meta (LLaMA 3):</strong> decoder-only with RoPE positional encoding, GQA, SwiGLU activation, Pre-LN — these four architectural choices are now the standard recipe for open-source LLMs; trains on 15T tokens</li>
+  <li><strong>Microsoft (GitHub Copilot):</strong> fine-tuned GPT decoder for code completion; prefix-suffix-middle (PSM) training objective — model trained to fill in the middle of code given both prefix and suffix context</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "The transformer's key insight: replace sequential recurrence with parallel attention over all positions — O(n²) computation but fully parallelisable on GPUs. The architectural choices: residual connections for gradient flow through depth; Layer Norm (not BatchNorm) for sequence-length-independent stability; Pre-LN (before sublayer) in modern models for stable training without warmup. The paradigm shift: pretrain on massive unsupervised data via next-token prediction → fine-tune on task-specific data. This self-supervised pretraining is why transformers dominate — they leverage internet-scale data with no labels."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use BERT for text generation." — BERT is encoder-only with bidirectional attention; it cannot autoregressively generate text. BERT: classification, NER, embeddings. GPT-style decoders: generation. T5/BART: seq2seq tasks with a structured output sequence.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why do modern LLMs use Pre-LN instead of the original Post-LN?" — Answer: Post-LN (original Transformer) applies LayerNorm after the residual addition: output = LayerNorm(x + F(x)). This means the residual path accumulates unnormalised values — gradients through early layers can explode or vanish, requiring careful warmup. Pre-LN: output = x + F(LayerNorm(x)) — the normalised input to each sublayer keeps gradients stable regardless of depth, enabling training without warmup and at higher learning rates.</p>
+</div>
 </section>

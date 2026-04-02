@@ -31,5 +31,27 @@ Target: predict "cat" from all other tokens
 <tr><td>Question Answering</td><td>Each token → linear → start/end scores</td><td>Span extraction labels</td></tr>
 <tr><td>Semantic similarity</td><td>Siamese BERT; cosine of [CLS] embeddings</td><td>Contrastive / triplet loss</td></tr>
 <tr><td>Sentence embedding</td><td>Mean pooling of token embeddings</td><td>NLI, STS tasks</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"BERT's key insight: bidirectionality matters for understanding. GPT predicts left-to-right (causal masking), which is great for generation but suboptimal for classification because you can't attend to future tokens. BERT masks 15% randomly and predicts them — the entire context (both directions) is available. For credit risk modeling with financial text (earnings calls, credit bureau comments), I'd use FinBERT or fine-tune RoBERTa-large with a classification head on labeled data."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using BERT for text generation</strong> — BERT is encoder-only with bidirectional attention; it has no autoregressive decoding mechanism. For generation, use GPT-style decoder-only models. BERT is for: classification, NER, extractive QA, and embeddings</li>
+  <li><strong>Fine-tuning all BERT layers at a high learning rate</strong> — BERT's pretrained representations are fragile; a high global learning rate overwrites them. Use differential learning rates: lower LR (1e-5) for early layers, higher (3e-5) for upper layers, highest for the new task head (1e-4)</li>
+  <li><strong>"[CLS] token is always the best sentence representation"</strong> — for tasks fine-tuned with a [CLS] classification head, yes. For semantic similarity without fine-tuning, mean pooling of all token hidden states (ignoring [PAD] tokens) consistently outperforms raw [CLS]</li>
+  <li><strong>Using base BERT for domain-specific text</strong> — BERT-base trained on Wikipedia/BookCorpus performs poorly on domain-specific vocabulary (medical, legal, financial). Use BioBERT, FinBERT, LegalBERT or fine-tune on domain text before task fine-tuning (domain-adaptive pretraining)</li>
+  <li><strong>Ignoring the input length limit</strong> — BERT has a 512 token maximum. Documents longer than 512 tokens must be chunked (sliding window) or summarised before input. Truncating to 512 silently drops information — always check document lengths before deploying</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Search, 2019):</strong> BERT deployed in Google Search for query understanding — the most impactful change to Google Search in 5 years at announcement; used to understand long-tail, conversational, and preposition-heavy queries where word order matters</li>
+  <li><strong>LinkedIn (content relevance):</strong> RoBERTa fine-tuned for feed post relevance scoring; used to rank which posts appear in each user's feed based on semantic relevance to their professional interests</li>
+  <li><strong>Amazon (product search):</strong> bi-encoder with BERT backbone for product retrieval; query and product title encoded separately, similarity at serving time — BERT's contextual representations outperform TF-IDF for long-tail product queries</li>
+  <li><strong>Healthcare NLP (ClinicalBERT):</strong> BERT fine-tuned on clinical notes for entity extraction (medications, diagnoses, procedures) and de-identification — contextual embeddings handle medical abbreviations and domain jargon far better than rule-based NER</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "BERT's key insight: bidirectionality matters for understanding. GPT predicts left-to-right — optimal for generation but suboptimal for classification because future context is unavailable. BERT masks 15% of tokens randomly and predicts them using both left and right context — full bidirectionality. For classification tasks, I add a linear head on [CLS] and fine-tune the full model with differential learning rates (lower LR for early layers, higher for task head). For domain-specific text, domain-adaptive pretraining (continue MLM on domain corpus) before task fine-tuning is a reliable boost."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I use BERT base on our 512-character financial documents." — First check token length; 512 characters ≠ 512 tokens. Financial jargon often tokenises to 1.5–2× more tokens than general English. Documents may silently truncate. Always tokenise and check the actual length distribution of your corpus.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between BERT and RoBERTa?" — Answer: RoBERTa is BERT trained better: 10× more data, no NSP objective (NSP was found to hurt), dynamic masking (different masks each epoch vs static), larger batches, longer training. RoBERTa consistently outperforms BERT on GLUE benchmarks. Choose RoBERTa over BERT-base as the default pretrained checkpoint; use domain-specific BERT variants when domain vocabulary is very different from Wikipedia.</p>
+</div>
 </section>

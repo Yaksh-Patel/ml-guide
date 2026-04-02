@@ -31,5 +31,29 @@
 <ul class="bul"><li>Linear: βᵢ = change in ŷ per unit increase in xᵢ (holding others fixed)</li><li>Logistic: βᵢ = change in log-odds per unit increase in xᵢ</li><li>Odds ratio: exp(βᵢ) — multiply odds by this per unit increase</li><li>Standardize features first to compare coefficient magnitudes</li></ul></div>
 </div>
 <div class="box story"><div class="bl">📖 Straight Road Analogy</div><p>Linear regression drives on a perfectly straight road. Real data has curves, hills, roundabouts. These models draw a straight line through a spiral staircase. Works brilliantly when the relationship is truly linear — but that's rarer than you think.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Logistic regression is my mandatory baseline for every classification problem. Coefficients are interpretable, training is fast, and it's well-calibrated out-of-the-box. I validate assumptions: check VIF for multicollinearity, plot residuals for linearity, and use Platt scaling or isotonic regression if I need better calibration. If XGBoost doesn't beat logistic regression by at least 1% AUC on my validation set, I ship logistic regression — it's simpler and easier to maintain."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Not checking assumptions before shipping</strong> — linearity, independence, homoscedasticity, no multicollinearity. Violating them doesn't crash the model but makes coefficients uninterpretable and CIs invalid. Always plot residuals vs fitted values</li>
+  <li><strong>Confusing coefficient magnitude with importance</strong> — a large β doesn't mean an important feature if the feature scale is tiny. Standardize features (z-score) before comparing coefficient magnitudes</li>
+  <li><strong>Multicollinearity blindspot</strong> — correlated features (e.g., height_cm and height_ft) make individual coefficients unstable and sign-flip unpredictably. Check VIF; drop or combine correlated features</li>
+  <li><strong>Treating logistic regression probability as calibrated without checking</strong> — logistic regression is generally well-calibrated but not perfectly. Always check a calibration plot (reliability diagram) before using the probability output directly</li>
+  <li><strong>Using accuracy to evaluate logistic regression on imbalanced data</strong> — use AUC-ROC or PR-AUC; accuracy is misleading when one class dominates</li>
+  <li><strong>Forgetting the sklearn C parameter direction</strong> — in sklearn LogisticRegression, C = 1/λ (inverse regularization strength). Smaller C = more regularization. This is opposite to intuition and a frequent bug</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Ads CTR):</strong> logistic regression with billions of sparse one-hot features was the dominant CTR model for years before deep learning; still used as the calibration layer on top of complex models</li>
+  <li><strong>Credit scoring industry:</strong> logistic regression with Weight of Evidence (WoE) encoding is the regulatory gold standard — coefficients are interpretable, scorecards are auditable, and monotone constraints ensure compliance</li>
+  <li><strong>Netflix A/B testing:</strong> linear regression for continuous metric lift estimation in experiments; fast, interpretable, valid under the central limit theorem at Netflix's traffic scale</li>
+  <li><strong>Airbnb pricing:</strong> linear regression as the baseline for price recommendation; non-linearities handled by feature engineering (log-transforms, interaction terms) rather than model complexity</li>
+  <li><strong>Healthcare / clinical trials:</strong> logistic regression is the standard for binary outcome studies (disease yes/no); odds ratios from the model are directly reported in medical literature</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Logistic regression is my mandatory baseline for every classification task — fast, interpretable, and well-calibrated. I validate assumptions first: check VIF for multicollinearity, plot residuals for linearity. I always standardize features before fitting so I can compare coefficient magnitudes. In sklearn, remember C = 1/λ — smaller C means stronger L2 regularization. If XGBoost doesn't beat logistic regression by at least 1% AUC on validation, I ship logistic regression — simpler and easier to maintain in production."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The model with the highest coefficient is the most important feature." — Coefficients are scale-dependent. Always standardize first, or use permutation importance / SHAP for fair comparison.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is logistic regression called 'regression' if it's a classifier?" — Answer: it models the log-odds as a linear regression (linear combination of features), then applies the sigmoid to map to probability. The regression is on the log-odds scale; classification is a downstream thresholding decision.</p>
+</div>
 </section>

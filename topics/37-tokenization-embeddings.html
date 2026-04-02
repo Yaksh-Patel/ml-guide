@@ -27,5 +27,27 @@ Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
 <tr><td>Mean pooling (BERT)</td><td>Average of all token hidden states</td><td>Sentence similarity without fine-tuning</td></tr>
 <tr><td>Sentence-BERT (SBERT)</td><td>Siamese BERT fine-tuned for semantic similarity</td><td>Semantic search, clustering</td></tr>
 <tr><td>OpenAI text-embedding-3</td><td>Proprietary fine-tuned embeddings</td><td>RAG, search, classification</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"BPE tokenization elegantly handles OOV words — a word like 'ChatGPT' gets tokenized as ['Chat', 'G', 'PT'] and the model can still work with it. The key limitation of Word2Vec is polysemy — 'bank' gets one embedding regardless of whether it's financial or river. BERT's contextual embeddings fix this but require a full forward pass per sentence. For semantic search in production, I use SBERT with FAISS for approximate nearest-neighbor retrieval — fast and accurate at scale."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using [CLS] token as a sentence embedding without fine-tuning</strong> — BERT's [CLS] token is only meaningful as a sentence representation after task-specific fine-tuning (it was trained on NSP, not semantic similarity). For off-the-shelf sentence embeddings, use mean pooling of all token hidden states or SBERT — empirically much better than raw [CLS]</li>
+  <li><strong>Comparing embeddings from different models</strong> — embedding spaces are model-specific and not comparable. Cosine similarity between a BERT embedding and an OpenAI embedding is meaningless. Always embed queries and documents with the same model</li>
+  <li><strong>Ignoring tokenization boundary effects</strong> — BPE tokenises "unhappiness" as ["un", "happiness"] but "unhappy" as ["unhappy"] — subtle changes in word form can produce very different token sequences. For tasks sensitive to character-level patterns (NER, dates, numbers), verify tokenization before assuming the model handles them well</li>
+  <li><strong>"More dimensions = better embedding"</strong> — larger embedding dimensions capture more information but increase storage and retrieval cost. Matryoshka Representation Learning (MRL, used in OpenAI text-embedding-3) trains embeddings that can be truncated to any dimension while retaining quality — you can use 256-dim instead of 3072-dim at modest quality cost</li>
+  <li><strong>Not normalising embeddings before cosine similarity</strong> — cosine similarity = dot product of unit-normalised vectors. If vectors are not L2-normalised, dot product and cosine similarity diverge. Always normalise embeddings before using them in ANN indexes or cosine comparisons</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>OpenAI (text-embedding-3):</strong> MRL-trained embeddings usable at any dimension from 256 to 3072; the standard embedding model for RAG and semantic search in the OpenAI ecosystem; internally fine-tuned on massive retrieval datasets</li>
+  <li><strong>Google (Universal Sentence Encoder / Gecko):</strong> dual-encoder architecture trained on massive web data for semantic similarity; the embedding backbone behind Google's passage retrieval in Search and Bard/Gemini RAG</li>
+  <li><strong>Spotify (podcast search):</strong> SBERT fine-tuned on podcast transcripts for semantic search; user query embedded at search time, episode embeddings pre-computed and indexed with FAISS — retrieval under 5ms at scale</li>
+  <li><strong>Airbnb (listing search):</strong> dual-encoder model trained on (query, clicked listing) pairs; listing embeddings computed offline and indexed; query embedding computed at search time and used for ANN retrieval — production semantic search system serving millions of queries/day</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "BPE tokenization handles OOV gracefully — 'ChatGPT' tokenises as ['Chat','G','PT'] and the model works with it. Word2Vec's limitation is polysemy — 'bank' gets one static embedding regardless of context. BERT's contextual embeddings fix this but are expensive to compute. For semantic search in production: SBERT (or BGE-M3 for multilingual) + FAISS for ANN retrieval — pre-compute document embeddings offline, embed queries at inference time, retrieve top-k in &lt;10ms. Always L2-normalise embeddings before cosine comparison."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used the [CLS] token embedding from BERT for sentence similarity." — [CLS] without fine-tuning is a poor sentence representation. SBERT's mean-pooled embeddings consistently outperform raw [CLS] for semantic similarity — a well-known empirical finding.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does BPE tokenization work?" — Answer: start with character vocabulary. Repeatedly find the most frequent adjacent byte pair and merge it into a new token. Repeat for V iterations (V = vocabulary size target). Result: common words become single tokens; rare words are split into frequent subword pieces. This gives good coverage without OOV and keeps vocabulary size manageable (~50K tokens for most LLMs).</p>
+</div>
 </section>

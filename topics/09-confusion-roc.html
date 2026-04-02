@@ -30,5 +30,27 @@ F_1                &= 2 \cdot TP \;/\; (2 \cdot TP + FP + FN)
 <div class="card-body">Maximum separation between CDF of positive scores and CDF of negative scores. Identifies the score threshold that best separates the classes.</div>
 <ul class="bul" style="margin-top:8px"><li>Range: 0–100. KS = 0: no separation. KS = 100: perfect.</li><li>Used in credit scoring to find the optimal approval cutoff score</li><li>Weak point: only captures max at one threshold; ignores rest of the curve</li></ul>
 <div class="box story"><div class="bl">📖 Rice Pile Analogy</div><p>KS finds the score where the red pile (defaulters) and blue pile (good customers) diverge most. A lender picks exactly that score as the loan approval cutoff.</p></div></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"With 99% negatives and 1% positives (fraud), AUC-ROC can be 0.97 for a mediocre model because all the easy TN predictions inflate it. PR-AUC will be much lower and more honest. For credit risk I report all three: AUC-ROC for model ranking quality, KS for the optimal decision threshold, and PR-AUC for a fair view of how well we actually find the rare defaulters."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Reporting AUC-ROC without context on class balance</strong> — AUC-ROC of 0.95 on a 1% positive rate dataset tells you very little about minority class recall. Always pair with PR-AUC and report the positive rate</li>
+  <li><strong>Treating 0.5 as the classification threshold</strong> — sklearn's default threshold of 0.5 is almost never optimal. Tune the threshold on a validation set to maximize your business metric (e.g., precision at 80% recall); never ship with the default</li>
+  <li><strong>Confusing precision and recall direction</strong> — precision = of what we predicted positive, how many were correct? Recall = of all actual positives, how many did we catch? Common interview confusion: "we want to minimize false negatives" = maximize recall, not precision</li>
+  <li><strong>Using micro-averaged F1 on imbalanced multiclass</strong> — micro-average is dominated by the large majority class. Use macro-average (equal weight per class) or weighted-average (weight by support) depending on whether rare classes matter equally</li>
+  <li><strong>Comparing AUC-ROC across very different datasets</strong> — AUC-ROC is dataset-specific. A 0.85 model on a hard problem may outperform a 0.95 model on an easy one. Always compare relative to a sensible baseline on the same data</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>PayPal / Stripe (fraud):</strong> operate at a fixed recall threshold (catch ≥90% of fraud) and maximise precision within that constraint — the confusion matrix is monitored daily; threshold is adjusted monthly as fraud patterns drift</li>
+  <li><strong>Google (medical AI):</strong> dermatology cancer detection reported at both AUC-ROC and sensitivity@specificity=90% — the fixed-operating-point metric is more clinically meaningful than aggregate AUC</li>
+  <li><strong>Amazon (content moderation):</strong> PR curve used to select operating point: high-precision mode for auto-removal, lower-precision mode for flagging for human review — two thresholds, one model</li>
+  <li><strong>Credit bureaus (FICO, Experian):</strong> KS statistic is the regulatory standard for scorecard quality; models must achieve KS ≥ 30 to be approved for production lending decisions</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "With 99% negatives, AUC-ROC can be 0.97 for a mediocre model — the TN pool inflates specificity. PR-AUC is more honest: it ignores true negatives entirely. For credit risk I report three metrics: AUC-ROC for overall ranking quality, KS for the single best threshold, and PR-AUC for honest minority-class performance. I never use the default 0.5 threshold — I tune it on a validation set to match the business operating point (e.g., recall=90% then maximise precision)."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I optimized F1 score." — F1 weights precision and recall equally, which implies equal cost to false positives and false negatives. That's almost never the business reality. Say instead: "I chose the threshold that maximized precision at our minimum acceptable recall of X%."</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Walk me through the ROC curve construction." — Answer: for each possible threshold from 1→0, compute TPR (recall = TP/P) and FPR (= FP/N). Plot TPR vs FPR. The area under this curve is AUC-ROC. Random classifier = diagonal line (AUC=0.5). Perfect classifier = top-left corner (AUC=1.0). The curve shows the tradeoff between catching positives and tolerating false alarms across all thresholds.</p>
+</div>
 </section>

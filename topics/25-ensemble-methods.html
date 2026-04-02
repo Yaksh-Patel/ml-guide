@@ -25,5 +25,27 @@
 <div><strong style="font-size:13px;color:var(--text)">Blending vs Stacking</strong>
 <ul class="bul" style="margin-top:6px"><li>Blending: simpler — hold out a fixed 20% for meta-model training</li><li>Stacking: use k-fold CV out-of-fold predictions — more data for meta-model, less leakage risk</li><li>Blending faster to implement; stacking more robust</li></ul></div>
 </div></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For Kaggle: stack XGBoost + LightGBM + neural network + Random Forest, then use a linear meta-model (elastic net). Diversity is more important than individual model quality. For production: stacking is expensive to maintain — I usually soft-vote 2–3 models instead. The biggest stacking mistake is training the meta-model on in-sample predictions — this guarantees leakage. Always use out-of-fold CV predictions."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Training the meta-model on in-sample predictions</strong> — the #1 stacking mistake. Base models fitted on the full training set and used to generate training features for the meta-model create massive leakage: meta-model learns to trust overfit base model predictions. Always use out-of-fold (OOF) predictions for stacking</li>
+  <li><strong>Stacking similar models</strong> — stacking XGBoost + another XGBoost with slightly different hyperparameters provides almost no diversity. Ensemble diversity = reduced correlation between model errors. Mix model types: tree ensemble + linear model + neural network</li>
+  <li><strong>"More models = better ensemble"</strong> — diminishing returns set in quickly. After 5–7 diverse models, adding more rarely helps and increases inference cost. The correlation between base model errors matters more than count</li>
+  <li><strong>Using a complex meta-model</strong> — meta-models should be simple (linear regression, logistic regression, ridge). A complex meta-model on OOF predictions will overfit to the small number of base models. Ridge regression is the standard meta-learner</li>
+  <li><strong>Not computing OOF predictions correctly for test set</strong> — for each CV fold, train base models on train fold, predict on val fold (these become OOF train features). For test features: average base model predictions across all k folds' versions of the model</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Kaggle top-10 solutions:</strong> virtually all winning structured-data solutions use stacking — typically LightGBM + XGBoost + CatBoost + neural network base models with a ridge meta-learner; the ensemble typically adds 0.2–0.5% AUC over the best single model</li>
+  <li><strong>Netflix Prize (2009):</strong> the winning solution was an ensemble of 107 distinct algorithms — stacking introduced the concept of learned meta-models in the competition ML community</li>
+  <li><strong>Production ML at scale:</strong> full stacking is often impractical at serving time; soft voting (averaging 2–3 models) is the production-friendly alternative — simple to deploy, easy to debug, meaningful accuracy gain</li>
+  <li><strong>Weather forecasting (ECMWF):</strong> ensemble forecasting is the standard in meteorology — running 50 perturbed model instances and averaging produces better probabilistic forecasts than any single deterministic model; the ML concept is borrowed from this tradition</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "For competitions: stack XGBoost + LightGBM + CatBoost + neural network, meta-model is ridge regression on OOF predictions — diversity across model types is the key. For production: soft voting of 2–3 models is the pragmatic choice — easy to deploy, easy to roll back. The cardinal stacking rule: meta-model must train on out-of-fold predictions, never on in-sample predictions — the leakage otherwise is severe and makes the ensemble look far better than it is on the training set."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I averaged predictions from two XGBoost models with different seeds." — Two nearly-identical models have highly correlated errors; averaging barely helps. Diversity (different model families) is what drives ensemble gains.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does ensembling reduce variance?" — Answer: if base model errors are uncorrelated with variance σ², averaging k models reduces variance to σ²/k. In practice, errors are partially correlated, so the reduction is (1 + (k−1)ρ)·σ²/k where ρ is the average pairwise error correlation. Minimizing ρ (diversity) is equivalent to maximizing variance reduction — this is why diverse model types are critical.</p>
+</div>
 </section>

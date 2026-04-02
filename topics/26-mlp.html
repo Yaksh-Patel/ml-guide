@@ -89,5 +89,27 @@ h^2 = activation(W^2h^1 + b^2) \\
 \end{aligned}$$</div>
 <div class="card-body" style="margin-top:8px">Without activation functions, stacking linear layers collapses to a single linear layer: W₃(W₂(W₁x)) = Wx. The non-linearity is what enables learning non-linear decision boundaries.</div></div>
 <div class="box story"><div class="bl">📖 The Brilliant Intern</div><p>A neural network is a brilliant intern. 10M training examples + 6 months = outperforms everyone. 200 examples on day one = memorizes them exactly, fails on anything new. And it can never explain its decisions. "I just... feel it's a cat."</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Universal approximation theorem: a single hidden layer with enough neurons can approximate any continuous function on a compact domain. But 'enough neurons' can be exponential — depth is more efficient than width. Each layer learns increasingly abstract representations: pixels → edges → shapes → objects. For tabular data with &lt;100K rows, XGBoost almost always beats an MLP. Neural networks shine when data is unstructured (images, text) or when scale is massive."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using MLPs for small tabular datasets (&lt;100K rows)</strong> — XGBoost and Random Forest almost always outperform MLPs on structured tabular data at this scale. Neural networks need large data to overcome their optimization difficulty. Always benchmark against tree models first</li>
+  <li><strong>Not normalizing inputs</strong> — unnormalized inputs cause gradient imbalance across layers; some neurons receive huge gradients, others tiny ones. Always StandardScale or MinMaxScale inputs before any neural network</li>
+  <li><strong>"More layers = better"</strong> — depth enables abstraction but creates optimization difficulties (vanishing gradients, slower training). Start shallow (2–3 hidden layers), add depth only when clearly bottlenecked. BatchNorm + residual connections enable training of very deep networks</li>
+  <li><strong>Using sigmoid activations in hidden layers</strong> — sigmoid saturates (output near 0 or 1, gradient ≈ 0) causing vanishing gradients. Only use sigmoid at the output layer for binary classification. Hidden layers: ReLU or GELU</li>
+  <li><strong>Training without a validation loss curve</strong> — the validation loss curve is the primary diagnostic tool for neural networks. Always plot it: diverging train/val loss = overfitting; both high = underfitting; val loss oscillating = learning rate too high</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (wide &amp; deep / DCN for recommendations):</strong> MLP component handles dense feature interactions in production recommender systems; the "deep" side of wide&amp;deep learns combinatorial feature interactions automatically</li>
+  <li><strong>Stripe (fraud — tabular neural nets):</strong> TabNet or standard MLP on engineered tabular features; competitive with XGBoost when features are continuous and dense, with the added benefit of integrated feature attention</li>
+  <li><strong>Booking.com:</strong> MLPs for price and availability prediction on tabular features; carefully validated against LightGBM; neural nets adopted only where they demonstrably win on validation metrics</li>
+  <li><strong>Physics / scientific ML:</strong> physics-informed neural networks (PINNs) use MLPs to approximate differential equation solutions — one of the few domains where neural nets dominate even small-data settings due to continuous function approximation needs</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Universal approximation theorem: a single hidden layer with enough neurons can approximate any continuous function. But width scales poorly — depth is more efficient. Each layer learns increasingly abstract representations: pixels → edges → shapes → objects. For tabular data &lt;100K rows, XGBoost almost always wins. MLPs shine on unstructured data (images, text) and at massive scale. Standard recipe: ReLU/GELU activations + BatchNorm + dropout + AdamW + cosine LR schedule."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use a neural network for this tabular dataset." — Without benchmarking against XGBoost first, this signals unfamiliarity with where neural nets actually win. On tabular data, always establish tree model baselines before reaching for neural nets.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does depth help more than width?" — Answer: a deep network can represent exponentially more functions with the same parameter count as a shallow wide network. Each layer composes functions learned by previous layers — depth enables hierarchical feature reuse. Width at a single layer grows the function class linearly; depth grows it exponentially.</p>
+</div>
 </section>

@@ -242,8 +242,26 @@
   <li><strong>Offline store</strong> (S3/DeltaLake) for training; <strong>online store</strong> (Redis) for &lt;5ms serving latency</li>
 </ul></div>
 
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Training-serving skew</strong> — the most common MLOps failure. Features computed differently between the training pipeline (batch, pandas) and the inference API (real-time, SQL/Redis) cause silent degradation. The fix: a shared feature store (Feast, Tecton) guarantees identical feature logic at training and serving time</li>
+  <li><strong>"Deploy once, forget"</strong> — models decay silently. Concept drift (the real-world relationship changes), data drift (input distribution shifts), and label shift (outcome rate changes) all degrade performance without any code change. Production models need ongoing monitoring with automated alerts</li>
+  <li><strong>Using training metrics to evaluate production models</strong> — PR-AUC on the training set is not the same as PR-AUC in production. Monitor actual business outcomes (fraud rate caught, churn predictions vs actual churn) with delayed labels. Training metrics are proxies; business outcomes are the ground truth</li>
+  <li><strong>No model versioning or rollback plan</strong> — every model deployment must have a rollback path. Store the previous model artifact and traffic-routing config. Shadow deployments (run new model in parallel with no user impact) and canary releases (1% traffic) are standard before full rollout</li>
+  <li><strong>Ignoring data pipeline reliability</strong> — 80% of production ML incidents are data pipeline failures, not model failures. Feature pipelines must have SLAs, monitoring, and alerting — missing features should trigger fallback values, not NaN inputs that silently degrade the model</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Uber (Michelangelo):</strong> internal ML platform managing the full lifecycle — feature store, training, serving, monitoring; feature store is the centrepiece: pre-computed features served from Redis at &lt;5ms for real-time inference, removing training-serving skew at scale</li>
+  <li><strong>Airbnb (Bighead):</strong> ML platform with automatic feature lineage tracking — every feature in a model traces back to raw data sources; enables automated drift detection and root-cause analysis when a feature distribution shifts</li>
+  <li><strong>LinkedIn (Pro-ML):</strong> manages 300+ production models; automated champion-challenger framework — new model variants run in shadow mode collecting offline metrics, then graduate to A/B tests, then full rollout if business metrics improve</li>
+  <li><strong>Netflix (Metaflow + Meson):</strong> Metaflow (open-sourced) orchestrates training pipelines with automatic versioning; Meson handles scheduling; every model training run is reproducible from pinned data snapshots and code versions</li>
+</ul></div>
+
 <div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "The most common MLOps failures: (1) training-serving skew — feature computation differs between training pipeline and inference API; (2) no monitoring — model silently degrades for months; (3) no rollback mechanism — a bad deployment can't be reverted quickly. My production checklist: containerise with Docker, track experiments with MLflow, monitor with PSI on feature distributions + business KPIs, canary deploy all changes, and always keep the previous model artifact for hot rollback."</p>
-<p><strong>Common mistake:</strong> Treating MLOps as just "deploying the model." The hard part is the full loop: drift detection → retraining trigger → CI/CD pipeline → evaluation gate → canary deploy → monitor again. Each step needs automation.</p>
-<p><strong>Expect this follow-up:</strong> "How would you serve a 70B parameter LLM at low latency?" — Tensor parallelism across multiple A100s, vLLM PagedAttention for KV cache efficiency, INT4 quantisation, speculative decoding with a 3B draft model. Expect 200–500ms P50 latency at reasonable cost.</p></div>
+<p><strong>What to say:</strong> "The most common MLOps failures: training-serving skew (features computed differently between training and inference — a feature store fixes this); no monitoring (model silently degrades for months); no rollback (a bad deployment can't be reverted quickly). My production checklist: Docker containers for reproducibility, MLflow for experiment tracking, feature store for training-serving consistency, PSI monitoring on feature distributions + business KPI dashboards, canary deploy at 1% traffic before full rollout, previous model artifact always on standby for hot rollback."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "MLOps is just deploying the model." — The hard part is the full closed loop: monitoring → drift detection → automated retraining trigger → CI/CD pipeline → evaluation gate → canary deploy → monitor again. Each step requires automation and SLAs.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you serve a 70B LLM in production at low latency?" — Tensor parallelism across 4–8 A100s (model sharded across GPUs); vLLM with PagedAttention for efficient KV cache management (no fragmentation waste); INT4/AWQ quantisation to cut memory 4×; speculative decoding with a 3B draft model to reduce autoregressive decode steps by 2–4×. Expect P50 latency 200–500ms at reasonable cost on 4×A100 for 70B.</p>
+</div>
 </section>

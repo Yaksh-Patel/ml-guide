@@ -26,5 +26,27 @@
 <tr><td>t-SNE</td><td>2D/3D visualization only</td><td>Slow; no out-of-sample extension; non-deterministic</td></tr>
 <tr><td>UMAP</td><td>Visualization + feature engineering; large datasets</td><td>Less interpretable than PCA</td></tr>
 <tr><td>Autoencoder</td><td>Non-linear compression; anomaly detection</td><td>Needs data, compute, tuning</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I use PCA as a preprocessing step when features are highly correlated (reduces multicollinearity for linear models) or when I need to reduce compute. For visualization, UMAP is now my default over t-SNE — it's faster, preserves global structure, and can handle larger datasets. A critical gotcha: always fit PCA on training data only, then transform both train and test — otherwise you leak test information into the representation."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Fitting PCA on the full dataset before train/test split</strong> — PCA fitted on test data leaks test distribution into the components. Always fit PCA on training data only, then transform both train and test with the same components</li>
+  <li><strong>Using t-SNE for anything other than visualization</strong> — t-SNE distances in 2D have no meaning: distances between clusters are arbitrary, angles are meaningless, and the same data with different perplexity produces very different layouts. Never use t-SNE embeddings as features for downstream models</li>
+  <li><strong>Choosing n_components arbitrarily</strong> — for PCA, plot explained variance ratio vs component count; choose the "elbow" or the point where cumulative variance ≥ 95%. Never pick a round number (e.g., 10) without justification</li>
+  <li><strong>Applying PCA to categorical/binary features</strong> — PCA is designed for continuous features and assumes linear relationships. Use MCA (Multiple Correspondence Analysis) for categorical data, or encode then normalise before PCA</li>
+  <li><strong>Assuming dimensionality reduction always improves model performance</strong> — PCA discards variance, which can include signal. Always compare model performance with and without PCA on a validation set; it's a preprocessing choice, not a guaranteed improvement</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Spotify (music embeddings):</strong> PCA on audio feature vectors (tempo, energy, valence, danceability) to compress 20+ features into 5–6 principal components for clustering and recommendation retrieval</li>
+  <li><strong>Netflix (content understanding):</strong> Truncated SVD (LSA) on movie-tag co-occurrence matrices; PCA on user-rating matrices for collaborative filtering — standard dimensionality reduction in classic recommender systems</li>
+  <li><strong>10x Genomics / biotech:</strong> PCA then UMAP on single-cell RNA-seq data (20,000+ gene dimensions → 2D); standard pipeline for visualizing cell type clusters in computational biology</li>
+  <li><strong>Finance (risk management):</strong> PCA on correlated asset return matrices to extract independent risk factors; the first few principal components often correspond to market, sector, and style factors</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "I use PCA when features are highly correlated — it removes multicollinearity and reduces compute for downstream linear models. I fit PCA on training data only, choose n_components where cumulative explained variance ≥ 95%, and whittle down from there if compute is constrained. For visualization of high-dimensional embeddings, UMAP is now my default over t-SNE: faster, preserves global structure, and supports out-of-sample projection. Key gotcha: t-SNE output is not a feature space — distances are meaningless after projection."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I applied PCA to get 50 components." — Without justifying component count via explained variance, this signals cargo-cult ML. Always justify n_components with a scree plot or explicit variance threshold.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What does each principal component represent?" — Answer: each PC is a linear combination of original features (a direction in feature space) chosen to maximise variance in that direction, subject to orthogonality to previous PCs. PC1 = direction of greatest variance, PC2 = next greatest orthogonal direction, etc. The loadings (feature weights in each PC) show which original features contribute most to each component.</p>
+</div>
 </section>

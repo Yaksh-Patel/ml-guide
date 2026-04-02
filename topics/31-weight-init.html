@@ -28,5 +28,27 @@ W \sim Uniform(-\sqrt{6/n_{in}}, \sqrt{6/n_{in}})
 <tr><td>LSTM-specific</td><td>Forget gate bias = 1 (start remembering)</td><td>LSTMs — prevents forgetting at start</td></tr>
 <tr><td>Pretrained weights</td><td>Transfer from ImageNet / language model</td><td>Transfer learning — best when available</td></tr>
 <tr><td>Sparse init</td><td>Most weights = 0, few random nonzero</td><td>Very deep networks</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"He initialization for ReLU networks is my default — it ensures variance is preserved layer by layer, preventing activations from shrinking or exploding before training starts. The key insight: ReLU zeroes ~50% of inputs on average, so we need to scale up the initialization by 2 to compensate. With BatchNorm, initialization matters less because batch normalization re-centers and rescales activations at each layer — but it's still best practice to start with the right init."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Initialising all weights to zero</strong> — symmetry breaking failure: all neurons in a layer receive identical gradients and learn identical features forever. Random initialisation (even small random values) breaks symmetry so each neuron learns a different feature</li>
+  <li><strong>Using Xavier init with ReLU activations</strong> — Xavier/Glorot assumes symmetric activations (like tanh). ReLU kills ~50% of activations, halving the effective variance. Use He (Kaiming) initialisation for ReLU networks: std = √(2/fan_in) compensates for the 50% kill rate</li>
+  <li><strong>"BatchNorm makes initialisation irrelevant"</strong> — BatchNorm makes training more robust to bad initialisation, but poor init can still cause NaN loss or slow convergence in the first few steps before BatchNorm stabilises. Best practice: correct init + BatchNorm together</li>
+  <li><strong>Not setting LSTM forget gate bias to 1</strong> — at initialisation, the forget gate defaults to ~0.5 (sigmoid of ~0), meaning the LSTM immediately starts forgetting past context. Setting forget gate bias=1 initialises the gate to ~0.73, helping the model retain context by default and learn to forget selectively</li>
+  <li><strong>Reinitialising pretrained weights</strong> — when fine-tuning, only initialise the new task-specific head; never reinitialise the pretrained backbone. Even a "frozen" pretrained model used as a fixed feature extractor performs better than a randomly reinitialised one</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Meta (PyTorch default):</strong> Kaiming uniform (He) is the PyTorch default for Linear and Conv2d layers — chosen as the safest general-purpose init for ReLU networks; Xavier is available for tanh/sigmoid networks via torch.nn.init.xavier_uniform_</li>
+  <li><strong>Google (Transformer init):</strong> small truncated normal initialisation (std=0.02) for all transformer weights — small values prevent large attention logits at initialisation, which would cause softmax to saturate before any gradient flows</li>
+  <li><strong>OpenAI (GPT residual scaling):</strong> residual projection weights scaled by 1/√(2N) where N is the number of residual layers — prevents residual stream variance from growing with depth at initialisation; used in GPT-2 and successors</li>
+  <li><strong>Hugging Face (fine-tuning):</strong> pretrained transformer weights loaded as-is; only the classification head (or LoRA adapter weights) is randomly initialised — critical to never accidentally reinitialise the pretrained backbone</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "He (Kaiming) initialisation for ReLU networks is my default — std = √(2/fan_in) compensates for ReLU killing ~50% of activations, ensuring variance is preserved through initialisation. Xavier/Glorot for tanh/sigmoid networks. For transformers, small truncated normal (std=0.02) prevents attention logit saturation at the start. With BatchNorm, initialisation matters less because activations are re-normalised, but correct init still speeds early convergence."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I initialised all weights to zero to start from a neutral state." — This causes complete symmetry: every neuron receives the same gradient and learns the same feature forever. Random initialisation is not about starting at a "good" point — it's about breaking symmetry so neurons can specialise.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why do we care about variance preservation in initialisation?" — Answer: if variance grows through layers, activations explode; if it shrinks, activations vanish to zero and gradients disappear. He and Xavier init are designed so that the variance of activations equals the variance of inputs at each layer in expectation — keeping signals in a sensible range throughout the forward and backward passes.</p>
+</div>
 </section>

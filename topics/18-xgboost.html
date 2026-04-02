@@ -31,5 +31,29 @@ G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
 <div class="card cg"><div class="card-title">System Optimizations</div>
 <ul class="bul"><li><strong>Column blocks:</strong> pre-sorted feature values stored in compressed blocks for parallel access</li><li><strong>Cache-aware access:</strong> allocates internal buffers to reduce cache misses</li><li><strong>Out-of-core computation:</strong> processes data larger than RAM in blocks</li><li><strong>Approximate algorithm:</strong> sketch/histogram for continuous features — faster split finding</li></ul></div>
 </div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"XGBoost's edge over vanilla gradient boosting: (1) second-order Taylor expansion gives better gradient estimates and allows analytical optimal leaf weights; (2) built-in regularization (γ penalizes tree complexity, λ regularizes weights) prevents overfitting without needing post-hoc pruning; (3) approximate split finding via weighted quantile sketch scales to large datasets. My tuning strategy: fix learning_rate=0.05, n_estimators=5000 with early stopping, then tune max_depth, min_child_weight, subsample, colsample_bytree via Bayesian optimization."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Tuning n_estimators in a grid search</strong> — always use early stopping instead. Set n_estimators=5000, pass an eval_set, and let XGBoost stop when validation metric stops improving. Grid-searching n_estimators is slow and redundant</li>
+  <li><strong>Not setting a random seed</strong> — XGBoost uses randomness (column/row subsampling). Always set seed/random_state for reproducibility in experiments and reproducible model artifacts</li>
+  <li><strong>Ignoring scale_pos_weight for imbalanced problems</strong> — set scale_pos_weight = neg_count / pos_count to upweight the minority class gradient. Forgetting this leads to low recall on the positive class</li>
+  <li><strong>Treating XGBoost and LightGBM as identical</strong> — LightGBM uses leaf-wise growth (can go deeper per step, faster, more accurate on large data); XGBoost uses level-wise (more regularized by default). For &gt;100K rows, try LightGBM first</li>
+  <li><strong>Not using monotone constraints for regulated models</strong> — for credit scoring, income must always positively correlate with approval probability. Set monotone_constraints=(1,-1,...) to enforce this; XGBoost guarantees monotonicity in the specified features</li>
+  <li><strong>Forgetting to handle missing values correctly</strong> — XGBoost learns a default direction for missing values during training (one of its strengths). Do not impute missing values before XGBoost — let it learn the optimal direction from data</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Kaggle (structured data):</strong> XGBoost / LightGBM win the vast majority of tabular data competitions; the standard stack is LightGBM + XGBoost + CatBoost averaged for ensembling</li>
+  <li><strong>Meta (ads click prediction):</strong> gradient boosting on sparse categorical features (user demographics, ad metadata) for CTR estimation; served billions of times daily with &lt;10ms latency</li>
+  <li><strong>Airbnb (price prediction &amp; fraud):</strong> XGBoost with monotone constraints for price suggestions (price should monotonically increase with guest count); LightGBM for fraud where speed matters</li>
+  <li><strong>JPMorgan / Goldman (credit risk):</strong> XGBoost with monotone constraints and SHAP-based adverse action reasons for regulatory compliance; model retraining triggered monthly with data drift checks</li>
+  <li><strong>Instacart (delivery time prediction):</strong> LightGBM on order-level features for delivery ETA; re-trained daily on rolling window of recent orders to adapt to traffic and demand patterns</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "XGBoost's edges over vanilla gradient boosting: second-order Taylor expansion (uses curvature, not just gradient — better leaf weight estimates), built-in L1/L2 regularization on leaf weights (γ penalizes tree count, λ regularizes weights), and approximate split finding via weighted quantile sketch. My tuning strategy: fix learning_rate=0.05, n_estimators=5000 with early stopping on eval_set, then tune max_depth, min_child_weight, subsample, colsample_bytree via Bayesian optimization (Optuna). For &gt;500K rows I switch to LightGBM — 10–20× faster with similar accuracy."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I grid-searched n_estimators." — This shows unfamiliarity with early stopping, which is the correct approach. Always say: early stopping with eval_set determines tree count automatically.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost handle missing values?" — Answer: during training, XGBoost tries both directions (left and right child) for missing values at each split and picks whichever gives better gain. This learned default direction is stored in the model and applied at inference — no imputation needed.</p>
+</div>
 </section>

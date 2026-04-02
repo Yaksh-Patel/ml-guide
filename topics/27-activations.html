@@ -47,5 +47,27 @@
 <div class="card ca"><div class="card-title">Dying ReLU Problem &amp; Fixes</div>
 <div class="card-body">If a neuron receives consistently negative input, its output is always 0 and its gradient is always 0 — it can never recover. "Dead neurons" contribute nothing to the network.</div>
 <ul class="bul" style="margin-top:8px"><li><strong>Leaky ReLU:</strong> α=0.01 for negative inputs — always has a non-zero gradient</li><li><strong>ELU:</strong> smooth negative saturation — better gradient properties</li><li><strong>Careful initialization + BatchNorm:</strong> prevents weights from going too negative initially</li><li><strong>Lower learning rate:</strong> reduces risk of neurons being pushed into dead zone early</li></ul></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"ReLU is my default for hidden layers — gradient=1 for positive inputs prevents vanishing gradients, and it's computationally cheap. For Transformer architectures I use GELU (smoother, was shown to work better empirically in BERT/GPT). Output layer: sigmoid for binary, softmax for multi-class, linear for regression. BatchNorm + ReLU (or GELU) is the standard block in modern deep learning."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using sigmoid/tanh in hidden layers of deep networks</strong> — both saturate (gradient ≈ 0 at extremes), causing vanishing gradients in deep networks. Hidden layers: ReLU or GELU. Sigmoid belongs only at the output for binary classification; tanh can work in LSTMs (bounded activations help gating)</li>
+  <li><strong>"ReLU is always safe"</strong> — ReLU can cause dead neurons if learning rate is too high or weights are initialised poorly. A neuron that receives only negative pre-activations outputs 0 forever. Use He initialisation + BatchNorm to mitigate; use Leaky ReLU if dead neurons are observed (monitor fraction of zero-activation units)</li>
+  <li><strong>Using softmax where sigmoid is needed</strong> — softmax forces outputs to sum to 1 (mutual exclusion); correct for single-label multi-class. For multi-label classification (an image can have both "cat" AND "outdoors"), use independent sigmoid per class — softmax would incorrectly distribute probability mass</li>
+  <li><strong>Applying ReLU after the final layer</strong> — ReLU clips negatives to zero; for regression output you need the full real line (linear activation). For probability output you need [0,1] (sigmoid) or sum-to-1 (softmax). Never apply ReLU to the output layer</li>
+  <li><strong>Ignoring GELU for transformers</strong> — GELU (used in GPT, BERT) is smooth and probabilistically motivated: x·Φ(x) weights the input by the probability it is above 0 under a standard normal. Empirically outperforms ReLU on transformers; don't default to ReLU for attention-based architectures</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>OpenAI / Anthropic (LLMs):</strong> SwiGLU activation (a gated variant of GLU) used in LLaMA, PaLM, and Claude — replaces FFN's ReLU/GELU with a learned gating mechanism: SwiGLU(x,W,V) = Swish(xW) ⊗ (xV); consistently outperforms GELU in large-scale language model training</li>
+  <li><strong>Google (BERT, T5):</strong> GELU throughout all hidden layers; empirically determined to outperform ReLU on NLP tasks in the original BERT ablation study — now the standard for transformer encoder architectures</li>
+  <li><strong>ResNet / EfficientNet (computer vision):</strong> ReLU remains dominant in CNN architectures; Swish/SiLU used in EfficientNet and MobileNetV3 — smooth activations improve gradient flow in very deep convolutional networks</li>
+  <li><strong>LSTMs / GRUs (sequence models):</strong> tanh for cell state (bounded: prevents exploding hidden states), sigmoid for gates (naturally outputs [0,1] gating values) — this specific combination is deliberate and important for LSTM stability</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "ReLU is my default for hidden layers — gradient=1 for positive inputs prevents vanishing gradients, and it's computationally cheap. For transformer architectures I use GELU (smoother gradient flow, empirically better in BERT/GPT ablations). For very large LLMs, SwiGLU has become standard (LLaMA, PaLM). Output activations are task-determined: sigmoid for binary classification, softmax for single-label multi-class, independent sigmoids for multi-label, linear for regression. Never ReLU at the output."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used softmax for multi-label classification." — Softmax forces outputs to sum to 1, implying mutual exclusion. Multi-label needs independent sigmoid per class — each output is an independent binary decision.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the dying ReLU problem and how do you fix it?" — Answer: a ReLU neuron dies when its pre-activation is always negative, making output=0 and gradient=0 — the neuron can never recover. Causes: high learning rate pushing weights negative, bad initialisation. Fixes: He initialisation (prevents initial negative activations), BatchNorm (keeps pre-activations centred), Leaky ReLU (α=0.01 preserves a small gradient even for negative inputs), or monitoring and resetting dead neurons.</p>
+</div>
 </section>

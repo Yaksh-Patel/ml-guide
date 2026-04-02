@@ -20,5 +20,28 @@
 <ul class="bul"><li><strong>Impurity-based (MDI):</strong> mean impurity decrease across all trees. Fast but biased toward high-cardinality features and correlated features split importance between them.</li><li><strong>Permutation importance:</strong> shuffle feature, measure OOB score drop. Model-agnostic, unbiased — but slower and correlated features still share importance.</li><li><strong>SHAP:</strong> theoretically principled. Best overall — use TreeSHAP for speed.</li></ul></div>
 </div>
 <div class="box story"><div class="bl">📖 The Polling Analogy</div><p>Single tree = asking one opinionated, overconfident friend for a stock tip. Random Forest = polling 500 people with deliberately limited information (each saw different data and different features). Individual experts are imperfect but diverse — the collective vote is remarkably accurate. The diversity is the point.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Random Forest reduces variance via bagging — averaging over 500 independently-built trees. The feature subsampling decorrelates the trees, making the variance reduction much stronger than if trees were correlated. OOB error gives a free, reliable generalization estimate. For feature importance, I prefer permutation importance over impurity-based — it's unbiased toward high-cardinality features. For most tabular problems, start with RF then try XGBoost."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Tuning max_depth aggressively for Random Forest</strong> — unlike a single tree, Random Forest benefits from deep (even fully grown) trees because the ensemble variance reduction compensates. Default max_depth=None is often optimal; tune n_estimators and max_features first</li>
+  <li><strong>Using impurity-based importance for correlated features</strong> — if two features are correlated, MDI importance splits arbitrarily between them. Use permutation importance or SHAP when features are correlated</li>
+  <li><strong>Treating OOB error as identical to k-fold CV</strong> — OOB approximates 63.2%-trained models (bootstrap sees ~63.2% of data). It's a decent free estimate but slightly pessimistic vs true k-fold; for small datasets, run proper CV</li>
+  <li><strong>Assuming more trees = overfitting</strong> — Random Forest does not overfit as n_estimators increases (unlike boosting). After a point, additional trees just cost time with negligible accuracy gain. 200–500 trees is usually sufficient</li>
+  <li><strong>Using Random Forest for time series without careful CV</strong> — standard OOB / k-fold shuffles the timeline. Always use a time-based train/test split (no future leakage) for temporal data</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Microsoft (Azure ML):</strong> Random Forest as the default baseline in AutoML pipelines — runs in parallel, robust to hyperparameter choices, and gives reliable feature importances for initial feature selection</li>
+  <li><strong>Kaggle (pre-2014):</strong> Random Forest dominated structured-data competitions before XGBoost was released; still a reliable second model in ensembles</li>
+  <li><strong>Healthcare (clinical risk models):</strong> used for patient readmission risk prediction where interpretability requirements are moderate and SHAP + permutation importance provide sufficient explanations for clinical staff</li>
+  <li><strong>Bioinformatics:</strong> genomics feature selection via Random Forest importance — handle tens of thousands of genetic features (SNPs), where correlated feature groups are identified by clustering importance scores</li>
+  <li><strong>Fraud detection:</strong> Random Forest as the reliable, low-maintenance baseline before deploying XGBoost/LightGBM — faster to train, easier to debug, and provides OOB estimate without separate validation set</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Random Forest reduces variance via bagging — averaging over many independently-built trees. Two randomness sources are critical: bootstrap sampling (each tree sees ~63% of data) and feature subsampling at each split (√d features for classification). The feature subsampling decorrelates trees, making variance reduction much stronger than if trees were correlated. OOB error gives a free, reliable generalization estimate without a separate validation set. For feature importance, I default to permutation importance over impurity-based MDI — unbiased toward high-cardinality features."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I set max_depth=5 in Random Forest to prevent overfitting." — RF doesn't overfit via depth the way single trees do. Reducing max_depth hurts accuracy without meaningful variance reduction benefit. Let trees grow deep.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you choose Random Forest over XGBoost?" — Answer: when you want a robust out-of-the-box model with minimal tuning, when OOB error is convenient, when training must run fully in parallel, or as a fast ensemble base. XGBoost usually wins accuracy contests but requires careful hyperparameter tuning and early stopping setup.</p>
+</div>
 </section>

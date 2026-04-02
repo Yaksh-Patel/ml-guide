@@ -64,5 +64,26 @@ V^T\text{: right singular vectors } (n \times n)
 <tr><td>Pseudo-inverse A⁺</td><td>OLS solution: β = (XᵀX)⁻¹Xᵀy</td></tr>
 <tr><td>Rank</td><td>Multicollinearity detection</td></tr></table></div>
 </div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Linear algebra underpins virtually everything. Neural network forward passes are matrix multiplications. Attention is scaled dot-product between Q and K matrices. PCA eigendecomposes the covariance matrix. If your gradient has the wrong shape, you made a linear algebra error."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Matrix multiplication order confusion</strong> — AB ≠ BA in general (matrix multiplication is not commutative). A common bug: applying a weight matrix W to a batch of vectors where the dimensions are transposed. Always track shapes explicitly: (batch × d_in) @ (d_in × d_out) = (batch × d_out)</li>
+  <li><strong>Confusing eigenvalues and singular values</strong> — eigendecomposition only applies to square matrices; SVD applies to any matrix. PCA uses eigendecomposition of the covariance matrix (square) OR equivalently SVD of the data matrix (any shape). SVD is numerically more stable for PCA on wide feature matrices</li>
+  <li><strong>"Rank tells you nothing useful"</strong> — a rank-deficient (X^T X) matrix means you can't invert it for OLS — the system is underdetermined (more features than independent equations). In practice, multicollinear features produce near-zero eigenvalues in the covariance matrix, signalling rank deficiency even before full rank failure</li>
+  <li><strong>Ignoring broadcasting rules in numpy/PyTorch</strong> — tensor operations broadcast dimensions from right-to-left. A (3, 1) tensor added to a (1, 4) tensor produces (3, 4), not an error. Misunderstanding broadcasting causes silent shape bugs — intermediate results have unexpected dimensions</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (TPU matrix units):</strong> TPU hardware is fundamentally a matrix multiply unit (MXU) — the entire chip is optimised for large dense matrix multiplications; transformer training is essentially a sequence of matrix multiplies that maps perfectly to TPU architecture</li>
+  <li><strong>Recommender systems (matrix factorisation):</strong> user-item interaction matrix factorised via SVD or ALS into user and item embedding matrices; the dot product of user and item embeddings approximates the original rating — SVD is the mathematical core of collaborative filtering</li>
+  <li><strong>Computer graphics / robotics:</strong> 3D transformations (rotation, scaling, translation) are matrix operations; rotation matrices form a group (SO(3)); deep learning for 3D (PointNet, NeRF) heavily uses these linear algebra structures</li>
+  <li><strong>Numerical stability in LLMs:</strong> attention logits scale with d_k; scaling by 1/√d_k is a direct application of variance analysis — without it, large d_k causes dot products with high variance, pushing softmax to saturation (near-zero gradients)</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Linear algebra underpins virtually everything in ML. Neural network forward passes are sequences of matrix multiplications. Attention is scaled dot-product (QK^T/√d_k) between query and key matrices. PCA eigendecomposes the covariance matrix to find orthogonal directions of maximum variance. SVD factorises any matrix — the mathematical core of collaborative filtering and LSA. The most common debugging skill: tracking tensor shapes — if your gradient has the wrong shape, you made a linear algebra error."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "AB = BA." — Matrix multiplication is generally not commutative. The order of operations in a neural network forward pass matters; transposing weight matrices at the wrong point produces a shape that looks correct but computes something entirely different.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is SVD preferred over eigendecomposition for PCA in practice?" — Answer: eigendecomposition of X^TX requires explicitly computing the covariance matrix (numerically expensive and can amplify floating-point errors for wide matrices). SVD of X directly gives the principal components without forming X^TX — more numerically stable, especially when n &lt; d (more features than samples). scipy.linalg.svd with full_matrices=False is the standard implementation.</p>
+</div>
 </section>

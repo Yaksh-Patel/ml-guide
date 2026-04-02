@@ -34,5 +34,27 @@
 <tr><td>Linear relationship between 2 vars</td><td>Pearson correlation</td><td>Normality, linearity</td></tr>
 <tr><td>Rank-based correlation</td><td>Spearman</td><td>Monotonic relationship</td></tr>
 <tr><td>Paired samples</td><td>Paired t-test / Wilcoxon</td><td>Before/after same subjects</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I always pair p-values with effect sizes and confidence intervals. For A/B tests I pre-register sample size (power analysis) before peeking — peeking inflates Type I error. At massive scale, almost everything becomes 'significant' — the real question is whether the effect size matters for the business. For skewed metrics like revenue, I prefer Mann-Whitney U or bootstrap CIs over parametric tests."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Peeking at results before the experiment ends</strong> — checking significance mid-experiment and stopping early when p &lt; 0.05 inflates Type I error severely. With α=0.05 and 5 peeks, the true false positive rate approaches 19%. Pre-register sample size via power analysis; commit to it before any data is collected</li>
+  <li><strong>"p &lt; 0.05 means the effect is real and important"</strong> — statistical significance ≠ practical significance. At n=1,000,000, a 0.001% conversion rate lift will be highly significant (p &lt; 0.001) but economically meaningless. Always report Cohen's d or relative lift alongside p-values</li>
+  <li><strong>Multiple comparisons without correction</strong> — testing 20 metrics at α=0.05 gives an expected 1 false positive just by chance. Apply Bonferroni correction (α/n tests) or Benjamini-Hochberg (controls false discovery rate) when testing multiple hypotheses simultaneously. This is especially critical in A/B tests monitoring many metrics</li>
+  <li><strong>Assuming normality without checking</strong> — t-tests assume normally distributed residuals (or large n by CLT). Revenue, session time, and purchase counts are typically right-skewed. For n &lt; 30 with skewed data, use bootstrapped confidence intervals or Mann-Whitney U instead of a t-test</li>
+  <li><strong>Confusing correlation and causation in observational data</strong> — Pearson/Spearman correlation measures association; it says nothing about direction or causality. Ice cream sales and drowning rates are correlated (both increase in summer). Causal inference requires randomisation (RCT) or quasi-experimental methods (DiD, IV, RDD)</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Airbnb / Booking.com (A/B testing):</strong> sequential testing (always-valid p-values using e-values or mixture sequential probability ratio tests) — allows peeking without inflating Type I error; replaces fixed-horizon tests for faster iteration. Power analysis determines minimum detectable effect (MDE) before each experiment</li>
+  <li><strong>Netflix (experimentation platform):</strong> delta method for ratio metrics (e.g., revenue per user when both numerator and denominator vary); bootstrapped CIs for non-normal metrics (session time, engagement rates); CUPED (controlled-experiment using pre-experiment data) to reduce variance and increase power without more traffic</li>
+  <li><strong>Google (Statsig / experiment infrastructure):</strong> ANOVA and regression-adjusted analysis for multivariate experiments; Bonferroni correction as default when testing multiple metrics simultaneously; holdout groups maintained permanently to measure cumulative experiment effects</li>
+  <li><strong>Stripe (metric selection):</strong> pre-specified primary metric with pre-registered sample size; secondary metrics monitored with FDR control; guardrail metrics (latency, error rate) that must not degrade — the full statistical framework defined before any data collection begins</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "I always pair p-values with effect sizes and confidence intervals — statistical significance without practical significance is noise. For A/B tests: power analysis to pre-register sample size before peeking (peeking inflates Type I error); at massive scale, everything is 'significant' — the real question is whether the lift is worth the cost. For non-normal metrics (revenue, session time), I prefer bootstrapped CIs or Mann-Whitney U over t-tests. Multiple comparisons: Bonferroni for few tests, Benjamini-Hochberg for many."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The A/B test was significant at p=0.03 so we shipped." — Without pre-registration, sample size calculation, and multiple comparison correction, p=0.03 may be a false positive. Interviewers at product companies will probe whether you understand the full rigour of experiment design, not just significance testing.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you determine sample size for an A/B test?" — Answer: power analysis requires four inputs: baseline metric value, minimum detectable effect (MDE — the smallest lift worth detecting), significance level α (usually 0.05), and desired power 1−β (usually 0.80). n ≈ 2 × (z_α/2 + z_β)² × σ² / δ² where δ is the MDE and σ² is metric variance. Tools: statsmodels.stats.power, or the formula directly. Always compute this before starting the experiment, not after.</p>
+</div>
 </section>

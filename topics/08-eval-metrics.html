@@ -30,5 +30,27 @@ F_\beta          &= (1+\beta^2) \cdot P \cdot R \;/\; (\beta^2 \cdot P + R)
 <tr><td>Search ranking</td><td>NDCG, MAP, MRR</td><td>Order matters; top results most important</td></tr>
 <tr><td>Revenue forecasting</td><td>MAPE, RMSE</td><td>Interpretable, same scale as revenue</td></tr>
 <tr><td>Balanced classification</td><td>AUC-ROC, F1</td><td>Balanced classes, need overall quality</td></tr></table></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I always ask: what is the business cost of false positives vs false negatives? For credit risk, a false negative (missing a default) is far worse — I optimize recall. For spam filtering, false positives (blocking real email) destroy trust — I optimize precision. Accuracy is a trap metric for imbalanced datasets. I use PR-AUC for imbalanced, AUC-ROC for balanced, and always validate the chosen metric with the business stakeholder."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Optimizing accuracy on imbalanced data</strong> — predicting the majority class always achieves (1 − minority rate) accuracy. A fraud model with 99.9% accuracy that catches 0 frauds is useless. Default to PR-AUC or F1 for imbalanced problems</li>
+  <li><strong>Not pre-registering the metric before training</strong> — choosing the metric that makes your model look best after seeing results is p-hacking for ML. Agree the primary metric with stakeholders before any training begins</li>
+  <li><strong>Confusing RMSE and MAE intuitions</strong> — RMSE penalises large errors more heavily (squared); MAE treats all errors equally. Use RMSE when large errors are especially costly (e.g., revenue); MAE when all errors are treated equally or the data has outliers</li>
+  <li><strong>"My AUC-ROC is 0.95, model is great"</strong> — AUC-ROC can be very high with extreme class imbalance even if the minority class recall is poor. Always pair AUC-ROC with PR-AUC and a confusion matrix at your chosen operating threshold</li>
+  <li><strong>Reporting a single F1 score without the threshold</strong> — F1 depends on the classification threshold. Report F1 at the business-chosen threshold, not the sklearn default of 0.5. Consider F-beta (β &gt; 1 weights recall more heavily) for high-recall requirements</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Airbnb (search ranking):</strong> NDCG as the primary offline ranking metric; complemented by online A/B test on booking conversion rate — offline metric must correlate with the online business metric to be trusted</li>
+  <li><strong>Stripe (fraud):</strong> precision@fixed-recall as the primary metric — business sets a minimum recall (e.g., catch 90% of fraud), then maximise precision (minimise false positives that block good transactions)</li>
+  <li><strong>Netflix (recommendations):</strong> moved from RMSE (star rating prediction) to ranking metrics (NDCG, recall@k) after discovering RMSE improvements didn't translate to better user engagement — lesson in metric alignment</li>
+  <li><strong>Google (search quality):</strong> human rater-based quality metrics (NDCG over human relevance labels) as ground truth; model AUC-ROC used as a proxy during development, human eval as the final gate</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Metric selection is a business decision before it's a technical one. I always ask: what is the cost of false positives vs false negatives? Credit risk: false negative (missed default) is catastrophic — maximise recall. Spam: false positive (blocking real email) destroys trust — maximise precision. For imbalanced problems, PR-AUC not AUC-ROC — PR-AUC is honest about minority class performance. I agree the primary metric with stakeholders before any training and never change it after seeing results."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use accuracy." — Unless you can demonstrate class balance and that all errors have equal cost, accuracy signals a lack of ML maturity. Almost always start with AUC-ROC or PR-AUC.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is AUC-ROC optimistic on imbalanced data?" — Answer: AUC-ROC includes True Negatives in the denominator (specificity = TN/(TN+FP)). When negatives dominate, the model can have poor recall while still scoring well on specificity, inflating AUC-ROC. PR-AUC uses only positives and predicted positives — it's blind to the large TN pool and gives a truthful picture of minority-class detection.</p>
+</div>
 </section>

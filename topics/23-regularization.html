@@ -28,5 +28,27 @@ z_i &= \text{activation} \times \frac{\text{Bernoulli}(1-p)}{1-p} \quad \text{(i
 <tr><td>Label smoothing</td><td>Soft targets (0.9 instead of 1.0)</td><td>Classification NNs</td></tr>
 <tr><td>max_depth / min_samples_leaf</td><td>Structural constraints on tree</td><td>Decision trees, XGBoost</td></tr></table></div>
 <div class="box story"><div class="bl">📖 The Strict Editor</div><p>Regularization is an editor charging you for every word: L1 cuts entire sentences (zeros features). L2 makes every sentence shorter. Dropout randomly silences 50% of your team during rehearsal — they learn to compensate for absent colleagues, making each individual more capable.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I think of regularization as a prior belief that simpler models generalize better. L1 when I suspect many features are irrelevant (feature selection baked in). L2 when most features matter but I want to prevent extreme weights. For deep learning: dropout + weight decay (AdamW) + early stopping + data augmentation. The strength λ is always tuned via cross-validation — too much and you underfit, too little and you overfit."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Confusing L1 and L2 effects on sparsity</strong> — L1 (Lasso) creates sparse solutions because its gradient is constant (±1), so small weights get driven exactly to zero. L2 (Ridge) has a gradient proportional to the weight, so it shrinks weights but rarely zeros them out</li>
+  <li><strong>Applying the same λ to all features without scaling</strong> — regularization penalizes large weights, but "large" depends on feature scale. Always StandardScale features before applying L1/L2; otherwise high-scale features are penalized more than low-scale features of equal importance</li>
+  <li><strong>"Dropout replaces all other regularization"</strong> — dropout is effective for fully connected layers but insufficient alone. Modern best practice: dropout + weight decay (AdamW) + batch normalization + data augmentation — layers of complementary regularization</li>
+  <li><strong>Choosing λ by intuition</strong> — regularization strength is a critical hyperparameter. Always tune via cross-validation over a log-scale grid (e.g., [0.0001, 0.001, 0.01, 0.1, 1, 10]); intuition about the right λ is consistently wrong</li>
+  <li><strong>Using L1 when features are correlated</strong> — among a group of correlated features, L1 arbitrarily picks one and zeros the rest. If all correlated features are meaningful, use L2 or Elastic Net (L1+L2) instead</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (neural machine translation):</strong> dropout (rate=0.1–0.3) on all transformer layers + weight decay; label smoothing as an additional regularizer that prevents overconfident softmax outputs — now standard in all transformer training</li>
+  <li><strong>Netflix / Spotify (collaborative filtering):</strong> L2 regularization on user and item embedding matrices prevents extreme embedding magnitudes for users/items with few interactions (cold start regularization)</li>
+  <li><strong>Genomics / bioinformatics:</strong> Elastic Net regression for gene expression prediction — L1 for feature selection (most of 20,000 genes are irrelevant), L2 for stability among correlated gene groups</li>
+  <li><strong>Credit scoring:</strong> L2 (Ridge) regularization on logistic regression scorecard prevents individual feature coefficients from becoming extreme; regulatory requirement that no single feature can dominate the prediction</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Regularization encodes the prior belief that simpler models generalise better. L1 (Lasso) for feature selection — penalizes with constant gradient, drives small weights to exactly zero, producing sparse solutions. L2 (Ridge) when most features matter — shrinks proportionally, stable with correlated features. For deep learning: dropout + weight decay (AdamW) + data augmentation + early stopping — each addresses a different failure mode. λ is always tuned via CV over a log-scale grid; never guessed."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I set dropout=0.5 based on the original paper." — 0.5 was optimal for large fully-connected layers in 2012 AlexNet. Modern transformer layers typically use 0.1. Always tune dropout rate; it's dataset and architecture dependent.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does L1 produce sparse solutions but L2 doesn't?" — Answer: the L1 penalty has a constant subgradient of ±1 regardless of weight magnitude. Even a tiny weight gets pushed by the full ±λ gradient — it reaches zero and stays there (no gradient to push it off zero). L2's gradient is proportional to the weight: as weight → 0, the gradient → 0, so the update force vanishes before reaching zero. L1 has a "sharp corner" at zero in the penalty geometry; L2 has a smooth bowl.</p>
+</div>
 </section>

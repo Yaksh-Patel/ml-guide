@@ -109,5 +109,27 @@ y = F(x, \{W_i\}) + x \quad \text{(shortcut connection)} \\
 F(x) \text{ learns the residual (correction), not the full mapping}
 \end{aligned}$$</div>
 <div class="card-body" style="margin-top:8px">If the optimal function is close to the identity (a good starting point), residual learning is easier than learning the full mapping from scratch. The skip connection also provides a gradient highway: ∂L/∂x = ∂L/∂y · (∂F/∂x + 1). The "+1" means early layers always receive some gradient, even if F's gradient vanishes.</div></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"CNNs exploit two inductive biases: locality (nearby pixels are correlated — a 3×3 kernel captures this) and translation equivariance (a cat in the top-left vs bottom-right uses the same weights). ResNets solved the depth problem with skip connections — the gradient highway via the identity shortcut. For production vision models I start with EfficientNet-B3 with ImageNet pretrained weights and fine-tune — rarely need to train from scratch."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Training CNNs from scratch when pretrained weights exist</strong> — ImageNet-pretrained weights (via torchvision or timm) almost always outperform random initialisation even for non-natural-image domains (medical imaging, satellite imagery). Fine-tuning is 10–100× cheaper than training from scratch and typically achieves better accuracy</li>
+  <li><strong>Using large kernels when small ones work</strong> — two stacked 3×3 convolutions have the same receptive field as one 5×5 but fewer parameters (18 vs 25 per channel) and an extra non-linearity. VGG introduced this principle; always prefer 3×3 stacks over large single kernels</li>
+  <li><strong>Not using global average pooling before the classifier</strong> — fully connected layers after the feature map are location-sensitive and have massive parameter counts. Global average pooling (GAP) spatially averages each feature map to a single value — removes spatial sensitivity, drastically reduces parameters, and acts as a strong regularizer</li>
+  <li><strong>Ignoring batch size effect on BatchNorm</strong> — BatchNorm computes statistics over the batch; very small batches (≤4) give noisy statistics. Use Group Norm or Layer Norm for small-batch training (detection, segmentation with high-resolution inputs)</li>
+  <li><strong>Max pooling vs average pooling confusion</strong> — max pooling retains the most active feature in a region (good for detection — "is the feature present anywhere?"). Average pooling retains the mean activation (good for classification — "how active is this feature on average?"). Use max pooling in intermediate CNN layers, global average pooling before the final classifier</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (EfficientNet / EfficientDet):</strong> compound scaling — simultaneously scale depth, width, and resolution using a fixed ratio; NAS-found architecture; the dominant CNN family for accuracy/efficiency tradeoff in production vision systems</li>
+  <li><strong>Meta (DINO / DINOv2):</strong> Vision Transformer trained with self-supervised learning on 142M images; features used as frozen backbone for downstream vision tasks — shows CNNs and ViTs are both viable, domain-dependent</li>
+  <li><strong>Tesla (Autopilot):</strong> custom CNN backbone (HydraNet) processes camera inputs from 8 cameras simultaneously; shared backbone with multiple task heads (detection, segmentation, depth) — multi-task CNN at production automotive scale</li>
+  <li><strong>Medical imaging (FDA-cleared AI):</strong> EfficientNet or ResNet fine-tuned on radiology datasets; transfer learning critical — ImageNet features (edges, textures) generalise surprisingly well to X-rays and CT scans despite domain difference</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "CNNs exploit two inductive biases: locality (nearby pixels correlate — 3×3 kernels capture this cheaply) and translation equivariance (same filter detects a cat anywhere in the image). ResNets solved depth via skip connections — the gradient highway: ∂L/∂x = ∂L/∂y·(∂F/∂x + 1), the +1 ensures gradient always flows even if F's gradient vanishes. For production vision I start with EfficientNet-B3 + ImageNet pretrained weights from timm — fine-tuning takes hours, training from scratch takes days and usually performs worse."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I trained a CNN from scratch on my 10K image dataset." — With ImageNet pretrained weights, you'd achieve better accuracy in a fraction of the time. Training from scratch on small datasets is almost never the right approach.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between a CNN and a Vision Transformer?" — Answer: CNNs have strong locality and translation equivariance as inductive biases baked into the architecture. ViTs have no such bias — they learn spatial relationships purely from data via self-attention. CNNs are more data-efficient (good for small datasets); ViTs scale better with massive data and compute. At scale (&gt;100M images), ViTs dominate; at smaller scale, CNNs remain competitive.</p>
+</div>
 </section>

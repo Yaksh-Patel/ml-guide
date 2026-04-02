@@ -61,5 +61,27 @@
 <ul class="bul"><li><strong>Data leakage from preprocessing:</strong> fit scaler on all data before splitting → test info leaks into training</li><li><strong>Peeking at test set:</strong> using test performance to make modeling decisions inflates estimates</li><li><strong>No stratification:</strong> imbalanced classes can produce folds with 0 positives</li><li><strong>Time series with random split:</strong> future data leaks into training — always use temporal split</li></ul></div>
 </div>
 <div class="box warn"><div class="bl">⚠️ The Golden Rule</div><p>Preprocessing (scaling, imputation, encoding) must be fit ONLY on the training fold, then applied to validation. Use sklearn Pipelines to enforce this automatically. Never fit on the full dataset before splitting.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"I always use stratified k-fold (k=5) for classification with imbalanced classes, and TimeSeriesSplit for temporal data. I wrap all preprocessing in a Pipeline so feature scaling is re-fit on each fold's training data — this prevents leakage. Nested CV when I need to tune hyperparameters and estimate generalization performance simultaneously — but it's expensive."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Fitting preprocessors on full data before CV</strong> — the #1 leakage source. StandardScaler, imputers, encoders must all be inside a Pipeline; fit only on train fold, transform both folds. Even seemingly harmless steps (e.g., removing constant features) can leak if done globally</li>
+  <li><strong>"I used k=10 for more precision"</strong> — higher k increases computation k-fold and adds variance to the CV estimate (each fold has less test data). k=5 is the empirical sweet spot between bias and variance of the CV estimate itself</li>
+  <li><strong>Using random k-fold on imbalanced data</strong> — a fold might have 0 positive examples. Always use StratifiedKFold for classification; it maintains class proportions in each fold</li>
+  <li><strong>Tuning hyperparameters on the test set</strong> — the test set must be touched exactly once, after all modeling decisions are made. Using it for threshold selection, model choice, or feature selection invalidates the estimate. Use a validation set or nested CV</li>
+  <li><strong>Ignoring temporal leakage in time series</strong> — random CV on time series lets future data train the model. Use TimeSeriesSplit (expanding window) or a strict time-based hold-out. Even "random" feature creation can leak future information</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Kaggle competitions:</strong> 5-fold stratified CV is the universal standard; competitors build ensemble stacks using out-of-fold predictions (OOF) from level-1 models as features for level-2 meta-learners — requires rigorous CV discipline to avoid leakage</li>
+  <li><strong>Meta / Google (A/B testing):</strong> CV logic applied to time-series experiment evaluation — holdout periods ("holdback windows") used instead of random folds to prevent temporal leakage in metric estimation</li>
+  <li><strong>Stripe (production ML):</strong> models re-validated monthly with walk-forward CV (train on months 1–N, validate on month N+1, repeat) to detect concept drift before promoting to production</li>
+  <li><strong>Healthcare (FDA submission):</strong> nested CV required by FDA guidance for biomarker validation — outer loop estimates generalisation, inner loop tunes hyperparameters; prevents optimistic bias in reported performance</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "For classification I use stratified 5-fold CV — maintains class proportions per fold and gives a reliable generalisation estimate. All preprocessing (scaling, imputation, encoding) lives inside a sklearn Pipeline, which is refitted on each training fold automatically. For time series, I use TimeSeriesSplit with an expanding window — no future leakage. For hyperparameter tuning + generalisation estimate simultaneously, nested CV: inner loop tunes params, outer loop estimates test performance. Expensive but unbiased."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I scaled all my features, then ran cross-validation." — This is data leakage. Validation fold statistics bled into the scaler. The correct answer is always: Pipeline wraps everything.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between k-fold CV and a simple train/validation/test split?" — Answer: k-fold uses all data for both training and validation (across k iterations), giving a lower-variance generalisation estimate. A single validation split wastes data and its estimate has high variance. Test set is separate in both cases — it's the final unbiased evaluation, not a validation tool.</p>
+</div>
 </section>

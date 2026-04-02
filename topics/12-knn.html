@@ -19,5 +19,27 @@ d_{\text{cosine}}(\mathbf{a},\mathbf{b}) &= 1 - \dfrac{\mathbf{a}\cdot\mathbf{b}
 <div class="card"><div class="card-title">Choosing k</div>
 <ul class="bul"><li><strong>Small k (e.g., k=1):</strong> low bias, high variance — overfits, noisy boundaries</li><li><strong>Large k:</strong> high bias, low variance — over-smooths boundaries</li><li><strong>Rule of thumb:</strong> k = √n as starting point; tune via CV</li><li>Use odd k for binary classification to avoid ties</li></ul></div>
 <div class="box story"><div class="bl">📖 New Neighborhood Analogy</div><p>You move to a new city and want to know if a neighborhood is safe. KNN asks: "What are the 5 closest data points (past reports) to this location? If 4/5 say unsafe, predict unsafe." It's pure pattern matching — no model, just memory. Works great if you have good data; fails if data is sparse or high-dimensional.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"KNN is useful as a baseline and for anomaly detection, but has two fatal flaws at scale: O(n) prediction time and curse of dimensionality. For production with large datasets, I'd use approximate nearest neighbors (Faiss, HNSW) which trade a little accuracy for massive speed gains. Always scale features before KNN — a feature with range [0,1000] will dominate a feature with range [0,1] in Euclidean distance."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Forgetting to scale features</strong> — the #1 KNN mistake. A feature ranging [0,1000] completely drowns one ranging [0,1] in Euclidean distance. Always StandardScaler or MinMaxScaler before KNN</li>
+  <li><strong>Using k=1 in noisy data</strong> — 1-NN is extremely sensitive to outliers and label noise; it perfectly memorises training data (zero training error, poor generalisation). Always tune k via CV</li>
+  <li><strong>Brute-force KNN at scale</strong> — O(n·d) per query. For n &gt; 50k, use KD-tree (works for d &lt; 20) or Ball-tree; for high-dimensional data or n &gt; 1M use approximate nearest neighbors (Faiss, HNSW)</li>
+  <li><strong>"Curse of dimensionality" is just a phrase</strong> — in practice: when d &gt; 20, Euclidean distance concentrates around the same value for all points (ratio of max to min distance → 1). KNN becomes random beyond ~30 dimensions without dimensionality reduction first</li>
+  <li><strong>Using KNN for large-scale production serving</strong> — storing the entire training set (no compression) and O(n) prediction time make raw KNN unviable at scale. Use ANN indexes (Faiss, HNSW, ScaNN) for production</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Spotify / Netflix (recommendation):</strong> not raw KNN but approximate KNN (HNSW via Faiss) over learned item/user embeddings — "nearest neighbors in embedding space" is the core retrieval step in modern recommender systems</li>
+  <li><strong>Google (image search):</strong> ScaNN (Google's ANN library) performs billion-scale nearest neighbor search over image embeddings for reverse image search and visual similarity</li>
+  <li><strong>Fraud detection (anomaly):</strong> 1-NN distance as anomaly score — a point with no close neighbors in training space is a novel/anomalous transaction</li>
+  <li><strong>Drug discovery:</strong> molecular similarity search uses KNN over Morgan fingerprints (chemical feature vectors) to find similar known compounds to a candidate molecule</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "KNN is a powerful concept but not a production algorithm in raw form — O(n) prediction time and full training set storage are non-starters at scale. Its real importance today is as the theoretical basis for approximate nearest neighbor search: embedding everything into a dense vector space and retrieving similar items via ANN (Faiss, HNSW). That pattern powers recommendation retrieval, semantic search, and RAG. For KNN to work at all: always scale features, tune k via CV, and use odd k for binary classification to avoid ties."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "KNN is slow." — The right answer is more nuanced: brute-force KNN is slow, but ANN indexes (HNSW, IVF) achieve sub-millisecond query time even on billions of vectors. KNN's concept is extremely modern and in production everywhere.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you scale KNN to 100 million items?" — Answer: build an HNSW index (e.g., via Faiss or hnswlib); it gives approximate but extremely fast results (sub-millisecond at scale). Trade recall for speed — HNSW at ef=200 gets 99%+ recall at ~1ms latency.</p>
+</div>
 </section>

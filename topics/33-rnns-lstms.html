@@ -90,5 +90,27 @@ h_t = (1-z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
 <div class="card-body" style="margin-top:6px">Used in BERT's architecture conceptually. Requires full sequence — can't stream. More powerful than unidirectional for NLU tasks.</div></div>
 </div>
 <div class="box story"><div class="bl">📖 Goldfish vs Elephant Analogy</div><p>Vanilla RNN is a goldfish — forgets what happened 10 steps ago because the information has to pass through 10 matrix multiplications. LSTM is an elephant with a notebook (cell state) — it decides what to write, what to erase, and what to read. The cell state highway carries memories intact across hundreds of steps.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"RNNs/LSTMs were the dominant sequence architecture before Transformers. The LSTM's cell state solves the vanishing gradient problem for sequences (though not for extremely long contexts). For sequence tasks today, I default to Transformer-based architectures (BERT, GPT) which handle long-range dependencies better via attention. LSTMs are still useful for: streaming/online scenarios where the full sequence isn't available, time series forecasting, and resource-constrained deployment."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>"LSTMs solved the vanishing gradient problem"</strong> — LSTMs greatly mitigate vanishing gradients via the cell state highway (additive gradient flow), but not fully. For sequences &gt;500 steps, LSTMs still struggle. Transformers with attention handle long-range dependencies fundamentally better</li>
+  <li><strong>Using a vanilla RNN instead of LSTM/GRU</strong> — vanilla RNNs suffer severe vanishing gradients on sequences longer than ~10 steps. Always use LSTM or GRU for sequence modelling; vanilla RNNs are only for teaching the concept</li>
+  <li><strong>Not setting forget gate bias = 1</strong> — PyTorch LSTM default forget gate bias is 0 (gate sigmoid(0) ≈ 0.5 — immediately starts forgetting). Setting forget gate bias=1 initialises the gate to ~0.73, encouraging the model to retain context early in training</li>
+  <li><strong>Using bidirectional LSTMs for autoregressive generation</strong> — bidirectional LSTMs see the full sequence in both directions; they cannot generate tokens left-to-right because they require the future to process the past. Use unidirectional LSTMs for generation; bidirectional only for encoding/classification where the full sequence is available</li>
+  <li><strong>Not clipping gradients for RNN training</strong> — RNNs are especially prone to exploding gradients due to repeated matrix multiplication through time. Always apply gradient clipping (clip_grad_norm=1.0 or 5.0) when training RNNs/LSTMs</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (on-device speech — RNN-T):</strong> streaming speech recognition uses RNN Transducer (RNN-T) — unidirectional LSTM encoder processes audio frames as they arrive, enabling real-time transcription without seeing future audio; Transformers can't do this without modification</li>
+  <li><strong>Spotify (music generation — early):</strong> LSTM-based melody generation models before transformers dominated; still used in resource-constrained mobile generation tasks where transformer inference is too slow</li>
+  <li><strong>Financial time series:</strong> stacked LSTMs for stock return prediction and anomaly detection in transaction streams; advantage over Transformers: O(n) inference time vs O(n²) attention — critical for high-frequency streaming data</li>
+  <li><strong>Manufacturing / IoT (edge devices):</strong> GRUs (simpler than LSTMs, fewer parameters) deployed on microcontrollers for real-time sensor anomaly detection — GRU's smaller memory footprint fits in KB-scale device RAM</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "LSTMs solve the vanishing gradient problem of vanilla RNNs via the cell state — an additive gradient highway that carries information across hundreds of steps without multiplicative decay. Three gates: forget (what to erase from cell state), input (what new info to write), output (what to read to hidden state). Today, for most NLP tasks I default to Transformer-based architectures — better long-range dependencies, parallelisable training. LSTMs remain valuable for: streaming/online processing (no future context needed), time series, and resource-constrained edge deployment."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "LSTMs completely solved vanishing gradients." — They greatly mitigate it but don't eliminate it. For very long sequences (&gt;500 steps), LSTMs still degrade. Transformers with attention are architecturally superior for long-range dependencies.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between LSTM and GRU?" — Answer: GRU merges the forget and input gates into a single update gate and combines cell and hidden state. Result: fewer parameters (~75% of LSTM), faster training, often comparable performance. GRU is preferred for smaller datasets or constrained compute; LSTM is preferred for very long sequences where the extra gate expressivity helps.</p>
+</div>
 </section>

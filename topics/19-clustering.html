@@ -27,5 +27,39 @@
 <tr><td>Calinski-Harabasz</td><td>Ratio of between-cluster to within-cluster variance</td><td>Higher is better</td></tr>
 <tr><td>Inertia (K-Means)</td><td>Sum of squared distances to centroids</td><td>Lower is better</td></tr></table></div>
 <div class="box story"><div class="bl">📖 City Neighborhoods Analogy</div><p>K-Means is like drawing equal-radius circles on a city map and calling everything in each circle a "neighborhood" — works if neighborhoods are round. DBSCAN is like a city planner who walks through the streets and groups areas by density — naturally follows the actual urban structure, even if it's irregular.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"For customer segmentation I use K-Means with K-Means++ initialization — fast, interpretable, and actionable. I validate k with silhouette scores and business sense. For anomaly detection I use DBSCAN — noise points are natural anomalies. For hierarchical structure discovery I use Ward-linkage agglomerative clustering. Always scale features before any distance-based clustering — unscaled features distort the distance metric."</p></div>
+
+<div class="card"><div class="card-title">Worked Numerical Example — K-Means (k=2, 2D points)</div>
+<div class="card-body">Points: A=(1,1), B=(1.5,2), C=(3,4), D=(5,7), E=(3.5,5). Initialize centroids: μ₁=(1,1), μ₂=(5,7).</div>
+<table class="tbl"><tr><th>Iteration</th><th>Assign to μ₁</th><th>Assign to μ₂</th><th>New μ₁</th><th>New μ₂</th></tr>
+<tr><td>1</td><td>A(1,1), B(1.5,2), C(3,4)</td><td>D(5,7), E(3.5,5)</td><td>(1.83, 2.33)</td><td>(4.25, 6.0)</td></tr>
+<tr><td>2</td><td>A(1,1), B(1.5,2)</td><td>C(3,4), D(5,7), E(3.5,5)</td><td>(1.25, 1.5)</td><td>(3.83, 5.33)</td></tr>
+<tr><td>3 (converged)</td><td>A(1,1), B(1.5,2)</td><td>C(3,4), D(5,7), E(3.5,5)</td><td>(1.25, 1.5)</td><td>(3.83, 5.33)</td></tr>
+</table>
+<div class="card-body" style="margin-top:8px">Assignments unchanged in iteration 3 → converged. Inertia = sum of squared distances each point to its centroid. Note C moved from cluster 1 to cluster 2 in iteration 2 as centroid estimates improved — this is why multiple restarts matter.</div>
+</div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Forgetting to scale features</strong> — K-Means and DBSCAN are distance-based; a feature with range [0,10000] dominates one with range [0,1]. Always StandardScaler or MinMaxScaler before clustering</li>
+  <li><strong>Using inertia (elbow) as the sole k selector</strong> — inertia always decreases with k. The elbow is often ambiguous. Pair it with silhouette score and domain sense; the "right" k is often a business decision</li>
+  <li><strong>Applying K-Means to non-spherical clusters</strong> — K-Means assumes equal-radius, convex clusters. Use DBSCAN or Gaussian Mixture Models for elongated or irregular shapes</li>
+  <li><strong>DBSCAN with bad ε choice</strong> — ε too large merges all points into one cluster; too small makes everything noise. Use a k-nearest-neighbor distance plot: sort distances to k-th neighbor, find the "elbow" — that's your ε</li>
+  <li><strong>Evaluating clusters with accuracy</strong> — clustering is unsupervised; there are no labels. Use silhouette, Davies-Bouldin, or business-relevant downstream metrics (e.g., churn rate per cluster)</li>
+  <li><strong>Single random init for K-Means</strong> — plain random init is sensitive to bad starting positions. Always use K-Means++ (sklearn default) or set n_init=10+ to run multiple inits</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Spotify:</strong> K-Means on audio feature embeddings (tempo, energy, valence) for playlist clustering; centroids become genre or mood "archetypes" used in Discover Weekly recommendations</li>
+  <li><strong>Airbnb:</strong> K-Means on host/listing features for market segmentation; clusters inform pricing policy and host support prioritisation by segment</li>
+  <li><strong>Uber:</strong> DBSCAN on GPS coordinates to identify ride demand hotspots; noise points (isolated rides) filtered out; density clusters define surge pricing zones</li>
+  <li><strong>Netflix:</strong> hierarchical clustering on viewing behaviour to define viewer persona archetypes used in content commissioning decisions</li>
+  <li><strong>Credit card companies:</strong> K-Means on spending pattern features for customer lifecycle segmentation; each cluster gets a tailored retention or upsell campaign</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "For customer segmentation I default to K-Means with K-Means++ initialization — fast, interpretable, and actionable. I select k by combining the elbow curve, silhouette scores, and business requirements (e.g., 'we have 5 regional sales teams' constrains k). I always StandardScale features first — distance metrics are meaningless on mixed-scale data. For anomaly detection, DBSCAN is superior: noise points are natural anomalies. For unknown cluster shapes, I compare K-Means vs DBSCAN vs Gaussian Mixture Models on silhouette score."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I chose k=3 because the elbow plot showed 3." — Silhouette + business context must support it. Pure elbow selection signals mechanical thinking.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you validate that your clusters are meaningful?" — Answer: silhouette score for internal validity; downstream business metric (e.g., do clusters have different churn rates?) for external validity; stability check by re-running with different seeds and measuring cluster assignment overlap (Adjusted Rand Index).</p>
+</div>
 </section>

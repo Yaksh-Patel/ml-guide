@@ -38,5 +38,27 @@ E[X] = \sum x_i P(x_i) \quad \text{(discrete)} \\
 <ul class="bul"><li><strong>MLE:</strong> θ̂ = argmax P(data|θ). No prior. Logistic regression minimizes CE = maximizes Bernoulli log-likelihood.</li><li><strong>MAP:</strong> θ̂ = argmax P(θ|data). Includes prior.</li></ul>
 <div class="box mem"><div class="bl">💡 Key insight</div><p>Ridge regression (L2) = MAP with Gaussian prior. Lasso (L1) = MAP with Laplace prior. Math and ML are the same thing.</p></div></div>
 </div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Cross-entropy loss comes from maximizing log-likelihood under a Bernoulli/Categorical distribution. KL divergence measures how much one distribution differs from another — used in VAEs, knowledge distillation, and information theory. When I see a loss function, I ask: what probability distribution am I implicitly assuming?"</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Confusing P(A|B) and P(B|A)</strong> — the base rate fallacy. P(disease|positive test) ≠ P(positive test|disease). Bayes' theorem is needed to convert sensitivity/specificity into the probability that matters clinically. A test with 99% sensitivity still has a low positive predictive value if the disease prevalence is 0.1%</li>
+  <li><strong>Independence vs uncorrelated</strong> — if X and Y are independent, they are uncorrelated. But uncorrelated does NOT imply independent (only for jointly Gaussian). Two variables can have zero covariance but strong non-linear dependence</li>
+  <li><strong>Treating KL divergence as a symmetric distance</strong> — KL(P||Q) ≠ KL(Q||P) in general; KL divergence is not a metric. In variational inference, the direction matters: KL(q||p) (forward) vs KL(p||q) (reverse) produce different approximation behaviours (mean-seeking vs mode-seeking)</li>
+  <li><strong>The law of large numbers guarantees accuracy on small samples</strong> — LLN only applies asymptotically (n → ∞). For small samples, sample statistics have high variance. Confidence intervals quantify this uncertainty; always report them alongside point estimates</li>
+  <li><strong>Assuming Gaussian distributions everywhere</strong> — many real-world quantities are heavy-tailed (financial returns, word frequencies, network degrees). Modelling them as Gaussian leads to dramatically underestimated tail risk. Check kurtosis and use appropriate distributions (log-normal, Pareto, Student-t)</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Bayesian optimisation):</strong> Gaussian Process prior over the objective function; posterior updated with each observation; acquisition function (EI, UCB) derived from the posterior distribution — probability theory is the mathematical foundation of Bayesian hyperparameter optimisation</li>
+  <li><strong>Netflix (content modelling):</strong> topic models (LDA — Latent Dirichlet Allocation) use Dirichlet priors over document-topic distributions; Bayesian generative model for content tagging and recommendation diversity</li>
+  <li><strong>OpenAI (VAEs / diffusion models):</strong> both use KL divergence as a core component — VAE ELBO = reconstruction loss + KL(q(z|x) || p(z)); diffusion model training = matching a learned denoising distribution to a Gaussian noise process</li>
+  <li><strong>Finance (risk management):</strong> Value at Risk (VaR) and Expected Shortfall are probability-theoretic measures; heavy-tailed Student-t distributions used for financial return modelling after Gaussian VaR dramatically underestimated tail risk in 2008</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Cross-entropy loss comes from maximising log-likelihood under a Bernoulli/Categorical distribution — minimising cross-entropy IS maximum likelihood estimation. KL divergence measures distribution divergence — used in VAEs (ELBO regularisation), knowledge distillation (matching teacher logits), and RL (PPO's KL penalty that prevents policy updates from straying too far). When I see a new loss function, my first question is: what probability distribution does this implicitly assume about the data?"</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "KL divergence is symmetric." — KL(P||Q) ≠ KL(Q||P). The direction matters: forward KL (used in VI) is mean-seeking (fits a distribution covering all modes); reverse KL is mode-seeking (fits the highest-probability mode only). In practice, RLHF's KL penalty uses KL(π_new || π_ref) to keep the fine-tuned policy close to the reference policy.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between MLE and MAP estimation?" — Answer: MLE maximises P(data|θ) — no prior on θ, purely data-driven. MAP maximises P(θ|data) ∝ P(data|θ)·P(θ) — includes a prior on θ. For a Gaussian prior on weights, MAP is equivalent to L2 (Ridge) regularisation. For a Laplace prior, MAP is equivalent to L1 (Lasso). Regularisation is Bayesian reasoning in disguise.</p>
+</div>
 </section>

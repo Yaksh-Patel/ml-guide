@@ -197,9 +197,28 @@ print(W1.grad)             # ∂L/∂W1 is now populated</code></pre></div></div
 
 <div class="box story"><div class="bl">📖 Telephone Game</div><p>Backprop is feedback traveling backward through 100 student pairs whispering to each other. By the time it reaches student #1 (first layer), the message is either completely garbled (vanishing) or shouted so loud it's noise (exploding). BatchNorm is a relay station every 10 pairs ensuring the message arrives intact and at the right volume.</p></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>Backprop is O(2 × forward pass) — not O(parameters) — because of the shared computation in the chain rule. The beautiful thing: ∂L/∂z² = ŷ − y for BCE + sigmoid — the sigmoid derivative cancels with the BCE derivative perfectly. This is not coincidence — BCE is the canonical loss for Bernoulli outputs precisely because of this mathematical elegance. The residual connection y = F(x) + x creates a gradient highway — the gradient flows directly through the skip connection without multiplication, so early layers always receive some gradient. That's why ResNet-152 trained successfully while a plain 152-layer net didn't.</p></div>
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>"Backprop is O(parameters)"</strong> — wrong. Backprop is O(2 × forward pass) due to the chain rule reusing intermediate activations. The cost of a backward pass is roughly 2× a forward pass regardless of depth, because each layer's gradient reuses the already-computed activations stored during the forward pass</li>
+  <li><strong>Vanishing gradients only happen in RNNs</strong> — they happen in any deep network with saturating activations (sigmoid, tanh) in hidden layers. The fix is the same: ReLU/GELU activations + BatchNorm + residual connections. RNNs are just the most severe case</li>
+  <li><strong>Exploding gradients only affect training stability visually</strong> — NaN loss or wildly oscillating training curves are the obvious sign, but subtle exploding gradients can silently prevent convergence. Always monitor gradient norms; clip at a threshold (e.g., max_norm=1.0 in PyTorch)</li>
+  <li><strong>Not zeroing gradients between batches in PyTorch</strong> — PyTorch accumulates gradients by default. Always call optimizer.zero_grad() before loss.backward(). Forgetting this causes gradients to accumulate across batches, effectively using a much larger batch size than intended</li>
+  <li><strong>Confusing backprop with gradient descent</strong> — backprop computes the gradients (the what). Gradient descent uses those gradients to update weights (the how). They are separate: backprop is an efficient algorithm for chain rule application; gradient descent is the optimisation strategy</li>
+</ul></div>
 
-<div class="card cc">
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>PyTorch autograd (Meta):</strong> backprop is implemented via dynamic computational graphs — every operation records a backward function; calling loss.backward() traverses this graph in reverse. This "define-by-run" approach enables variable-length inputs (NLP) and conditional computation</li>
+  <li><strong>Google (TPU training):</strong> gradient checkpointing used at scale — instead of storing all activations for backprop, recompute them during the backward pass, trading 33% compute overhead for 10× memory savings on billion-parameter models</li>
+  <li><strong>Transformer training (all major labs):</strong> gradient clipping (clip_grad_norm=1.0) is universal in transformer training recipes — prevents occasional large gradient spikes from destabilising attention layer training</li>
+  <li><strong>Mixed-precision training (NVIDIA):</strong> forward pass and activations stored in FP16 (half memory, faster); gradients computed in FP16 then scaled to FP32 for the weight update — gradient scaling prevents FP16 underflow in the backward pass</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Backprop is O(2 × forward pass) — not O(parameters) — because of shared computation via the chain rule. The mathematical elegance: ∂L/∂z = ŷ − y for BCE+sigmoid — the sigmoid derivative cancels perfectly with the BCE derivative, leaving a clean residual gradient. Residual connections (ResNet) create a gradient highway — the skip connection passes gradients directly to early layers without multiplicative attenuation, solving the vanishing gradient problem for depth. This is why ResNet-152 trained when a plain 152-layer net couldn't."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I forgot to zero the gradients." — In PyTorch, optimizer.zero_grad() before every backward pass is fundamental. Mentioning this in an interview without being asked signals attention to implementation details.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does gradient checkpointing work?" — Answer: normal backprop stores all layer activations during the forward pass to use in the backward pass (memory = O(depth)). Gradient checkpointing only stores activations at "checkpoint" layers; intermediate activations are recomputed during the backward pass when needed. Trades ~33% extra compute for O(√depth) memory — essential for training very deep models or very long sequences on limited GPU memory.</p>
+</div>
   <div class="card-title">▶ Run It: Manual Backprop (edit &amp; re-run)</div>
   <div class="code-runner" id="runner-backprop">
     <div class="code-runner-header">

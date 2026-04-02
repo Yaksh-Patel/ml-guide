@@ -16,5 +16,27 @@
 <tr><td>Matthews Correlation Coeff.</td><td>✅ Yes</td><td>Balanced even for extreme imbalance</td></tr>
 <tr><td>KS statistic</td><td>✅ Yes</td><td>Separation between class score distributions</td></tr></table></div>
 <div class="box story"><div class="bl">📖 Fraud Analogy</div><p>If 0.1% of transactions are fraud and you predict "not fraud" for everything: 99.9% accuracy. 0% recall. 100% of fraudsters escape. Accuracy is a lie. Your PR-AUC baseline is 0.001. Your model must beat that to add any value.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"My strategy for imbalanced data: (1) use PR-AUC as primary metric, (2) try class_weight='balanced' first — no data manipulation needed, (3) if still insufficient, apply SMOTE on training set only (never on validation/test), (4) tune the decision threshold on validation set to maximize the business-relevant metric (e.g., recall@precision=0.5), (5) use Focal Loss if training a neural network. Always stratify your CV splits to maintain class ratio in each fold."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Applying SMOTE to the whole dataset before splitting</strong> — synthetic samples from the test set contaminate training. Always split first, then apply SMOTE only to the training fold. The test set must contain only real examples</li>
+  <li><strong>"Random oversampling fixes imbalance"</strong> — it duplicates exact examples, causing the model to overfit to those specific training points. SMOTE creates synthetic interpolations between existing minority examples — always prefer SMOTE over random oversampling</li>
+  <li><strong>Not tuning the decision threshold after training</strong> — the default 0.5 threshold is almost never optimal for imbalanced problems. After training, find the threshold that maximises your business metric (e.g., F1, or recall@fixed precision) on the validation set</li>
+  <li><strong>Undersampling as the first resort</strong> — discarding majority examples loses real information. class_weight='balanced' achieves equivalent loss re-weighting without data loss — try that first</li>
+  <li><strong>Ignoring the imbalance in CV folds</strong> — always use StratifiedKFold; a random fold with 0 positive examples will produce nonsensical metrics and unstable gradient estimates during training</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Stripe / PayPal (fraud detection):</strong> class_weight or scale_pos_weight as the first adjustment; SMOTE-ENN (SMOTE + edited nearest neighbours cleaning) for borderline cases; PR-AUC as primary metric; threshold tuned to match regulatory recall requirements</li>
+  <li><strong>Google (spam detection):</strong> Focal Loss in neural models — dynamically down-weights easy negatives so training focuses on hard positive examples; standard in imbalanced NLP classification</li>
+  <li><strong>Healthcare AI (rare disease detection):</strong> extreme imbalance (1:10000); cost-sensitive learning with asymmetric loss weights; human review triggered above a low-recall threshold to avoid missing rare cases</li>
+  <li><strong>Insurance (claim fraud):</strong> XGBoost with scale_pos_weight + threshold optimised for F-beta (β=2, weighting recall 2× over precision) — missing fraud is more costly than false accusations</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "My imbalanced data strategy in order: (1) PR-AUC as primary metric — not accuracy, not AUC-ROC alone. (2) class_weight='balanced' first — no data manipulation, same information. (3) If insufficient, SMOTE on training set only — never on validation/test. (4) Tune decision threshold on validation set to maximise the business metric (e.g., recall at acceptable precision). (5) Focal Loss for neural nets — focuses training on hard examples. Always StratifiedKFold to maintain class ratio in every CV fold."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I applied SMOTE before train/test split." — This is data leakage. Synthetic minority examples generated from test data contaminate training. SMOTE must happen inside the CV loop, after splitting.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does SMOTE work?" — Answer: for each minority example, find its k nearest minority-class neighbours. Pick one at random, then generate a new synthetic example by interpolating along the line between the original point and its neighbour: x_new = x + λ·(x_neighbour − x) where λ ~ Uniform(0,1). Creates new examples in the minority manifold rather than duplicating existing ones.</p>
+</div>
 </section>

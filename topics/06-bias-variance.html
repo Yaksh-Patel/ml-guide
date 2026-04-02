@@ -45,5 +45,27 @@
 <tr><td>Irreducible noise</td><td>Better data collection</td></tr></table></div>
 </div>
 <div class="box story"><div class="bl">📖 Student Analogy</div><p><strong>High bias:</strong> Student who guesses "the answer is B" for everything — consistently wrong in the same way. <strong>High variance:</strong> Student who memorizes every practice exam word-for-word. Aces practice, fails when phrasing differs. <strong>Goal:</strong> Understand the concept — good on both.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Bias-variance tradeoff tells me how to diagnose model failure. I plot learning curves: if train and val error both plateau high → high bias, add complexity. If val error stays much higher than train → high variance, add regularization or more data. The sweet spot is found via cross-validation, not gut feel."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Thinking more data always fixes variance</strong> — it helps, but if the model is fundamentally too complex (e.g., 1000-leaf tree on 500 samples), regularization is the right tool, not more data</li>
+  <li><strong>"My train error is 0 — great!"</strong> — Zero training error with high validation error is the textbook definition of high variance/overfitting. Train error alone tells you nothing about generalization</li>
+  <li><strong>Confusing irreducible noise with model error</strong> — even a perfect model has irreducible noise (label noise, measurement error). Chasing training error to absolute zero is overfitting to noise</li>
+  <li><strong>Adding features always reduces bias</strong> — true in theory (richer hypothesis class), but in practice it can introduce multicollinearity and increase variance without bias reduction if the new features are noise</li>
+  <li><strong>Regularization only reduces variance</strong> — regularization increases bias (constraints limit the hypothesis class) while reducing variance. The net effect on test error depends on which dominates</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Search ranking):</strong> bias-variance analysis guides model complexity decisions — shallow models for features with little signal (high bias acceptable), deep models for rich feature sets where variance can be controlled via massive data volume</li>
+  <li><strong>Netflix (Recommendation):</strong> learning curve analysis used to decide whether to collect more data vs tune model complexity; for cold-start users, simpler high-bias models outperform complex ones due to sparse data</li>
+  <li><strong>Standard ML interview diagnostic:</strong> every FAANG ML interview includes a "model is performing poorly" scenario — bias-variance decomposition is the expected diagnostic framework</li>
+  <li><strong>AutoML systems (Google Vertex, AWS SageMaker):</strong> automatically navigate the bias-variance tradeoff via hyperparameter search over model complexity, regularization strength, and ensemble size</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Bias-variance tradeoff is my primary framework for diagnosing model failure. High bias shows up as high training AND validation error — fix it by increasing model capacity or reducing regularization. High variance shows as low train error but much higher validation error — fix it with more data, regularization, or ensembling. I use learning curves to distinguish them: plot train and val error vs training set size; if both plateau high → bias; if there's a persistent large gap → variance."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll just add more data." — More data only helps variance, not bias. If the model is too simple for the problem, no amount of data fixes it.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Does bagging reduce bias or variance?" — Answer: primarily variance. Each tree is trained on a bootstrap sample and has the same expected prediction as a single tree (same bias), but averaging many reduces variance. Boosting reduces bias by correcting systematic errors sequentially.</p>
+</div>
 </section>

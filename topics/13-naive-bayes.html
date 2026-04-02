@@ -21,5 +21,27 @@ P(y \mid x_1,\ldots,x_n) &\propto P(y) \times \prod_i P(x_i \mid y) \\
 <ul class="bul"><li><strong>Zero-frequency problem:</strong> if a feature-class combo never appeared in training, P = 0 kills the whole product → fix with <strong>Laplace smoothing</strong> (+1 to all counts)</li><li>Poor probability calibration — outputs aren't well-calibrated</li><li>Independence assumption breaks with correlated features</li><li>Cannot capture feature interactions</li></ul></div>
 </div>
 <div class="box story"><div class="bl">📖 Spam Filter Analogy</div><p>You see "FREE MONEY NIGERIA" in an email. NB asks: what % of spam had "FREE"? "MONEY"? "NIGERIA"? Multiply these probabilities (naively assuming word independence). Compare to legit email. Works because the words signal spam strongly — independence doesn't matter when signals are loud.</p></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"Naive Bayes is my go-to for text classification when I need speed and a strong baseline. It trains in O(n·d), predicts in O(d), and works well with very small datasets. I always use Laplace smoothing and log-probabilities to avoid underflow. For structured tabular data with correlated features, it loses badly to tree-based models — but as a text classifier, it often matches neural approaches with a fraction of the compute."</p></div>
+
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Forgetting Laplace smoothing</strong> — if any word appears in test but never in training for a class, P=0 zeroes the entire posterior. Always add-1 (Laplace) or add-α (Lidstone) smoothing to all counts</li>
+  <li><strong>Not using log-probabilities</strong> — multiplying hundreds of small probabilities causes floating-point underflow to zero. Always work in log-space: sum log-probabilities, not multiply raw probabilities</li>
+  <li><strong>"Naive" means it's a bad model</strong> — despite the violated independence assumption, Naive Bayes is competitive or best-in-class for text classification, especially with small training sets. It's "naive" about features, not naive as a model</li>
+  <li><strong>Using Gaussian NB on bag-of-words features</strong> — word count features are discrete and non-negative; Multinomial NB is the correct variant. Gaussian NB assumes continuous normally-distributed features</li>
+  <li><strong>Ignoring poor probability calibration</strong> — NB probabilities are often extreme (near 0 or 1) because of the independence assumption compounding. Never use NB raw probabilities as calibrated outputs; apply Platt scaling if probabilities matter</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Email spam filtering (Gmail, Outlook):</strong> Naive Bayes was the original spam filter backbone through the 2000s–2010s; still used as a lightweight real-time filter layer before deeper neural classifiers</li>
+  <li><strong>Medical diagnosis (low-data settings):</strong> when labeled patient data is scarce, Naive Bayes outperforms complex models; used in clinical text classification for ICD code prediction from short notes</li>
+  <li><strong>News / content categorisation:</strong> real-time topic tagging at media companies (Reuters, Bloomberg) using Multinomial NB on TF-IDF vectors — microsecond inference, no GPU needed</li>
+  <li><strong>Sentiment analysis baselines:</strong> Naive Bayes with bigrams is a strong baseline for review sentiment; frequently cited in academic papers as the comparator for new neural approaches</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What to say:</strong> "Naive Bayes is my first-try classifier for text with small training sets. The independence assumption is almost always wrong, but it rarely matters in practice — strong individual feature signals dominate. Two implementation must-dos: Laplace smoothing (prevent zero probabilities) and log-space computation (prevent underflow). For text, Multinomial NB on TF or count features; for continuous features, Gaussian NB. It trains in O(n·d) and predicts in O(d) — unbeatable for real-time low-latency applications."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "Naive Bayes is too simple for serious use." — It's one of the few models that works well with very small labeled datasets, and is still production-relevant for real-time text classification where latency matters more than 1–2% accuracy.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does Naive Bayes work well despite the independence assumption being wrong?" — Answer: even when feature probabilities are wrong in absolute terms, the ranking of P(class|features) across classes is often correct. Classification only needs the right class to win the argmax, not accurate individual probabilities. The model is miscalibrated but correctly ordered.</p>
+</div>
 </section>

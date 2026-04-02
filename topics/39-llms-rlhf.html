@@ -189,8 +189,26 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </table></div>
 </div>
 
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Confusing SFT and alignment</strong> — SFT (supervised fine-tuning) teaches format and instruction-following patterns from demonstration data. RLHF/DPO teaches values — which of two responses is preferred. You need both stages: SFT for capability, alignment for safety and quality</li>
+  <li><strong>Fine-tuning to inject facts</strong> — fine-tuning encodes behavioural patterns, not reliable factual knowledge. Facts injected via SFT hallucinate when queried slightly differently. Use RAG for knowledge retrieval; fine-tune for reasoning style and output format</li>
+  <li><strong>Treating temperature and top-p as equivalent</strong> — temperature scales the logit distribution (higher = flatter = more random). Top-p (nucleus sampling) truncates to the smallest set of tokens whose cumulative probability ≥ p, then samples from that set. Both add diversity, but top-p is more dynamic — it adapts to the sharpness of the distribution at each step. In practice, use temperature=0.7 + top-p=0.9 together; don't set both to extremes</li>
+  <li><strong>Expecting deterministic outputs from LLMs</strong> — even at temperature=0, most implementations use greedy decoding which is deterministic, but small floating-point differences across hardware can cause divergence. For truly reproducible outputs, use seed + temperature=0 and note that exact determinism is hardware-dependent</li>
+  <li><strong>Ignoring context window utilisation efficiency</strong> — LLMs attend to all tokens in context with O(n²) cost. Stuffing 100K tokens of marginally relevant context into the prompt increases latency quadratically. Retrieve only the most relevant chunks (RAG, top-k=3–5) rather than dumping entire documents</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>OpenAI (GPT-4 training pipeline):</strong> pretraining on web-scale data → SFT on high-quality demonstrations → reward model trained on human preference pairs → PPO fine-tuning maximising reward while penalising KL divergence from SFT model — this 3-stage RLHF pipeline is the blueprint for all frontier models</li>
+  <li><strong>Anthropic (Constitutional AI):</strong> extends RLHF with AI feedback — a model critiques and revises its own outputs using a set of principles (the "constitution"); reduces dependence on human labellers for harmlessness and helpfulness signal</li>
+  <li><strong>Meta (LLaMA 3 Instruct):</strong> DPO used instead of PPO for alignment — offline preference optimisation from preference pairs; simpler infrastructure (no reward model, no online rollouts), competitive performance with PPO at 8B–70B scale</li>
+  <li><strong>Google (Gemini):</strong> RLHF with Gemini-based reward models; multimodal instruction following across text, images, video, audio — the reward model must evaluate preference across modalities, a significant extension of standard RLHF</li>
+</ul></div>
+
 <div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "The LLM training pipeline: pre-train (next-token prediction) → SFT (teach format) → alignment (RLHF/DPO/ORPO, teach values). DPO is now preferred over PPO for most fine-tuning — skips the reward model, just needs preference pairs. For production: 4-bit quantisation + vLLM for batched serving + RAG for knowledge freshness. Hallucination is the core failure mode — mitigated by RAG grounding, structured outputs, and self-consistency sampling."</p>
-<p><strong>Common mistake:</strong> Confusing SFT and alignment. SFT teaches <em>format</em> (follow instructions); DPO/RLHF teaches <em>values</em> (which of two responses is better). You need both.</p>
-<p><strong>Expect this follow-up:</strong> "When would you choose DPO over RLHF?" — DPO is simpler, offline, no reward model needed; use it when you have quality preference pairs and a single-GPU budget. PPO is more powerful but expensive; use it for flagship models where you can generate new rollouts.</p></div>
+<p><strong>What to say:</strong> "The LLM training pipeline: pretraining (next-token prediction at scale) → SFT (teach instruction format from demonstrations) → alignment (RLHF or DPO, teach values from preference pairs). DPO is now preferred over PPO for most fine-tuning — no reward model needed, just preference pairs, single-stage offline optimisation. For production: 4-bit quantisation (AWQ/GPTQ) + vLLM for continuous batching + RAG for knowledge freshness. Hallucination is the core failure mode — mitigated by RAG grounding, structured outputs (JSON mode), and self-consistency sampling."</p>
+<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to update its knowledge." — Fine-tuning teaches behavioural patterns, not reliable factual knowledge. Injected facts hallucinate on paraphrase. Knowledge should live in a retrieval system (RAG), not in model weights.</p>
+<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you choose DPO over PPO?" — Answer: DPO for most fine-tuning use cases — no reward model to train and maintain, offline optimisation from existing preference pairs, single GPU feasible. PPO when you need to generate new rollouts online (the model can improve on trajectories it generates itself), when the reward signal is complex (multi-dimensional), or when you need maximum alignment performance at frontier scale where online RL signal drives the last 5–10% of quality.</p>
+</div>
 </section>
