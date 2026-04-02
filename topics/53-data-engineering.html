@@ -1,0 +1,376 @@
+<section class="section" id="sec-dataeng">
+<div class="sec-title">Data Engineering for ML</div>
+<div class="sec-desc">Most ML projects fail not because of bad models but because of bad data pipelines. Data engineering for ML covers the full journey from raw data to features ready for training — batch and streaming pipelines, transformation frameworks (Spark, dbt), table formats (Delta Lake, Iceberg), data quality, and the feature engineering infrastructure that keeps training and serving in sync.</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Data Engineering Is an ML Bottleneck</div>
+<ul class="bul">
+  <li><strong>Data scientists spend 80% of time on data</strong> — finding, cleaning, transforming, validating — and only 20% on modelling</li>
+  <li><strong>Training-serving skew:</strong> features computed differently in training pipelines vs inference APIs causes silent model degradation — the most common production ML failure</li>
+  <li><strong>Reproducibility:</strong> without versioned data and deterministic pipelines, experiments can't be reproduced and bugs can't be traced</li>
+  <li><strong>Scale:</strong> pandas works for millions of rows; real training data is often hundreds of billions of rows requiring distributed compute</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">The Modern ML Data Stack</div>
+<table class="tbl">
+<tr><th>Layer</th><th>Tool examples</th><th>Purpose</th></tr>
+<tr><td><strong>Ingestion</strong></td><td>Fivetran, Airbyte, Kafka</td><td>Move raw data from source systems to data lake/warehouse</td></tr>
+<tr><td><strong>Storage</strong></td><td>S3, GCS, ADLS + Delta Lake / Iceberg</td><td>Store raw and transformed data at scale</td></tr>
+<tr><td><strong>Transformation</strong></td><td>dbt, Spark, Flink</td><td>Clean, join, aggregate, compute features</td></tr>
+<tr><td><strong>Orchestration</strong></td><td>Airflow, Prefect, Dagster</td><td>Schedule, monitor, retry pipeline jobs</td></tr>
+<tr><td><strong>Feature store</strong></td><td>Feast, Hopsworks, Tecton</td><td>Serve features consistently for training + inference</td></tr>
+<tr><td><strong>Data quality</strong></td><td>Great Expectations, Soda, dbt tests</td><td>Validate data contracts; catch upstream failures early</td></tr>
+<tr><td><strong>Catalogue</strong></td><td>DataHub, Amundsen, dbt docs</td><td>Discover, document, and trace lineage of data assets</td></tr>
+</table></div>
+</div>
+
+<!-- Spark -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Apache Spark for ML Data Pipelines</div>
+
+<div class="card ca"><div class="card-title">Spark — Distributed Data Processing</div>
+<div class="card-body">Spark is the dominant framework for processing data too large for pandas. It distributes computation across a cluster, processes data in-memory (vs Hadoop MapReduce's disk-based approach), and provides DataFrame, SQL, and ML APIs.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder \
+    .appName("MLFeaturePipeline") \
+    .config("spark.sql.adaptive.enabled", "true") \
+    .getOrCreate()
+
+# Read 100M+ row parquet from S3
+df = spark.read.parquet("s3://bucket/transactions/")
+
+# Compute rolling 30-day payment rate per customer
+w = Window.partitionBy("customer_id") \
+          .orderBy("txn_date") \
+          .rangeBetween(-30*86400, 0)  # 30 days in seconds
+
+df_features = df.withColumn(
+    "paid_30d", F.sum("is_paid").over(w)
+).withColumn(
+    "txns_30d", F.count("*").over(w)
+).withColumn(
+    "payment_rate_30d",
+    F.col("paid_30d") / F.col("txns_30d")
+)
+
+# Write training dataset to Delta Lake
+df_features.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .save("s3://bucket/features/payment_rate/")</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Key Spark concepts for ML</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Lazy evaluation:</strong> transformations are not executed until an action (write, collect, show). Spark builds a DAG of operations and optimises before running</li>
+  <li><strong>Partitioning:</strong> data is split into partitions processed in parallel. Key for performance — too few = underutilised, too many = scheduling overhead. Rule: 128MB–1GB per partition</li>
+  <li><strong>Window functions:</strong> rolling aggregations (7d/30d/90d rates) are core ML features; Spark window functions are the scalable alternative to pandas groupby + rolling</li>
+  <li><strong>Adaptive Query Execution (AQE):</strong> auto-optimises join strategies and partition sizes at runtime — always enable in Spark 3+</li>
+  <li><strong>Broadcast join:</strong> when one table is small (&lt;10MB), broadcast it to all workers to avoid expensive shuffle join</li>
+</ul>
+</div>
+</div>
+
+<div class="box warn" style="margin-top:10px"><div class="bl">Common Spark performance pitfalls</div><p><strong>Data skew:</strong> one partition has 10× more data than others → one task takes 10× longer, blocking the job. Fix: salting keys, skew hints, or AQE skew join. <strong>Shuffle:</strong> groupBy + join operations require shuffling data across the network — the most expensive operation. Minimise shuffles; cache intermediate results if reused. <strong>UDFs:</strong> Python UDFs break Spark's JVM optimisations. Use built-in SQL functions (F.*) wherever possible.</p></div>
+</div>
+
+<!-- dbt -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — dbt for ML Feature Engineering</div>
+
+<div class="card cp"><div class="card-title">dbt — Data Build Tool</div>
+<div class="card-body">dbt transforms raw data in your data warehouse using SQL SELECT statements. It handles dependency ordering, incremental loading, testing, and documentation — everything you'd write boilerplate Python for, dbt handles declaratively.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">-- models/features/customer_payment_rate.sql
+-- dbt model: computes 30-day payment rate per customer
+
+{{
+  config(
+    materialized = 'incremental',
+    unique_key   = ['customer_id', 'snapshot_date'],
+    partition_by = {'field': 'snapshot_date', 'data_type': 'date'}
+  )
+}}
+
+with base as (
+    select
+        customer_id,
+        snapshot_date,
+        count(*) as txns_30d,
+        sum(case when status='paid' then 1 else 0 end)
+            as paid_30d
+    from {{ ref('stg_transactions') }}  -- refs ensure ordering
+    where txn_date between
+        dateadd('day', -30, snapshot_date) and snapshot_date
+    {% if is_incremental() %}
+        and snapshot_date > (select max(snapshot_date) from {{ this }})
+    {% endif %}
+    group by 1, 2
+)
+
+select
+    customer_id,
+    snapshot_date,
+    paid_30d / nullif(txns_30d, 0) as payment_rate_30d,
+    txns_30d
+from base</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Why dbt for ML</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Version-controlled SQL:</strong> feature logic is in git — auditable, reviewable, reproducible</li>
+  <li><strong>DAG of dependencies:</strong> dbt resolves <code>ref()</code> calls into the correct build order automatically</li>
+  <li><strong>Incremental models:</strong> only process new data; don't recompute the whole history on every run — essential for large feature tables</li>
+  <li><strong>Built-in testing:</strong> <code>not_null</code>, <code>unique</code>, <code>accepted_values</code>, <code>relationships</code> tests validate every model run</li>
+  <li><strong>dbt docs:</strong> auto-generated data lineage graph and data dictionary — "what does this feature mean and where does it come from?"</li>
+</ul>
+<div class="box tip" style="margin-top:8px"><div class="bl">dbt vs Spark for ML</div><p>Use <strong>dbt</strong> when your data is already in a warehouse (BigQuery, Snowflake, Redshift) and fits in SQL. Use <strong>Spark</strong> when data lives in a data lake (S3/GCS), is very large (&gt;1TB), requires complex windowed aggregations, or needs Python/MLlib transformations. Most modern stacks use both: Spark for raw ingest + heavy processing, dbt for curated feature engineering inside the warehouse.</p></div>
+</div>
+</div>
+
+<pre class="formula" style="margin-top:10px"># dbt tests in schema.yml — run automatically after every build
+models:
+  - name: customer_payment_rate
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique  # each customer appears once per snapshot date
+      - name: payment_rate_30d
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1  # rate must be in [0,1]</pre>
+</div>
+
+<!-- Delta Lake / Iceberg -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — Table Formats: Delta Lake &amp; Apache Iceberg</div>
+
+<div class="card cc"><div class="card-title">Why Table Formats Matter for ML</div>
+<div class="card-body">Raw parquet files in S3 are immutable and stateless — you can't update a row, roll back, or read consistent snapshots. Delta Lake and Iceberg add ACID transactions, versioning, and time travel on top of parquet, solving critical ML data engineering problems.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Delta Lake (Databricks)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>ACID transactions:</strong> concurrent reads and writes without corruption; no more partial writes breaking downstream jobs</li>
+  <li><strong>Time travel:</strong> query any historical version — <code>VERSION AS OF 42</code> or <code>TIMESTAMP AS OF '2024-01-01'</code></li>
+  <li><strong>Schema enforcement + evolution:</strong> rejects writes that don't match the schema; controlled schema changes</li>
+  <li><strong>DML operations:</strong> UPDATE, DELETE, MERGE INTO — update individual rows in parquet (previously impossible)</li>
+  <li><strong>Z-order clustering:</strong> co-locate related data on disk for faster queries on common filter columns</li>
+</ul>
+<pre class="formula" style="margin-top:8px">from delta.tables import DeltaTable
+
+# Time travel: reproduce training dataset from 3 months ago
+df_train = spark.read.format("delta") \
+    .option("timestampAsOf", "2024-01-15") \
+    .load("s3://bucket/features/payment_rate/")
+
+# Upsert (MERGE): update existing rows, insert new ones
+DeltaTable.forPath(spark, "s3://bucket/features/") \
+    .alias("target") \
+    .merge(new_data.alias("source"),
+           "target.customer_id = source.customer_id") \
+    .whenMatchedUpdateAll() \
+    .whenNotMatchedInsertAll() \
+    .execute()</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Apache Iceberg (Netflix / Apple)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Same core features as Delta Lake: ACID, time travel, schema evolution</li>
+  <li><strong>Hidden partitioning:</strong> partitions managed by Iceberg, not exposed to query writers — no need to remember <code>WHERE dt=...</code></li>
+  <li><strong>Multi-engine support:</strong> natively supported by Spark, Flink, Trino, Hive, DuckDB — Delta is more tightly coupled to Spark/Databricks</li>
+  <li><strong>Partition evolution:</strong> change partition strategy on existing data without rewriting</li>
+  <li><strong>Row-level deletes:</strong> GDPR deletion (right to erasure) without rewriting entire partitions</li>
+</ul>
+<div class="box info" style="margin-top:8px"><div class="bl">Delta vs Iceberg</div><p>Delta Lake is the default if you're on Databricks or already use Spark heavily. Iceberg is preferred for multi-engine environments (Flink + Spark + Trino) or when hidden partitioning is important. Both are production-ready; the choice is often ecosystem fit rather than capability gap.</p></div>
+</div>
+</div></div>
+
+<!-- Feature pipelines -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — Feature Pipelines: Batch vs Streaming</div>
+
+<div class="card cr"><div class="card-title">Batch Feature Pipelines</div>
+<div class="card-body">Compute features on a schedule (hourly, daily, weekly) from historical data. Best for features that don't need sub-minute freshness and where history matters.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Typical Airflow DAG pattern</strong>
+<pre class="formula">from airflow import DAG
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.dbt.cloud.operators.dbt import DbtCloudRunJobOperator
+
+with DAG("ml_feature_pipeline",
+         schedule_interval="0 3 * * *",  # 3am daily
+         catchup=False) as dag:
+
+    # Step 1: Run Spark job to compute raw aggregations
+    spark_agg = SparkSubmitOperator(
+        task_id="compute_raw_features",
+        application="s3://code/feature_agg.py",
+        conf={"spark.executor.memory": "8g"}
+    )
+
+    # Step 2: dbt transformation inside warehouse
+    dbt_features = DbtCloudRunJobOperator(
+        task_id="dbt_feature_models",
+        job_id=12345
+    )
+
+    # Step 3: Materialise to feature store
+    load_feast = PythonOperator(
+        task_id="load_to_feature_store",
+        python_callable=push_to_feast
+    )
+
+    spark_agg >> dbt_features >> load_feast</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Point-in-time correct joins — the critical concept</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>When building training data, you must use feature values that were available at the time of the label event — not current values</li>
+  <li><strong>Example:</strong> predicting default on a loan application filed Jan 15. The customer's 30-day payment rate feature must be computed as of Jan 15 — not today's value (which might reflect the loan outcome)</li>
+  <li>Using future feature values = <strong>target leakage</strong> — model looks great in training but fails in production</li>
+  <li>Feature stores (Feast, Tecton) implement point-in-time joins automatically</li>
+</ul>
+<pre class="formula" style="margin-top:8px"># Feast point-in-time correct retrieval
+training_df = store.get_historical_features(
+    entity_df=loan_applications_df,  # has event_timestamp
+    features=[
+        "customer_features:payment_rate_30d",
+        "customer_features:income_to_debt_ratio",
+    ]
+).to_df()
+# Feast joins features as of each row's event_timestamp
+# — no future leakage</pre>
+</div>
+</div></div>
+
+<div class="card ca"><div class="card-title">Streaming Feature Pipelines — Kafka + Flink</div>
+<div class="card-body">For features that must be fresh within seconds — fraud detection velocity signals, real-time session features, live inventory counts. Streaming pipelines consume events as they arrive and maintain continuously updated aggregations.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.table import StreamTableEnvironment
+
+env = StreamExecutionEnvironment.get_execution_environment()
+t_env = StreamTableEnvironment.create(env)
+
+# Consume from Kafka topic
+t_env.execute_sql("""
+    CREATE TABLE transactions (
+        customer_id BIGINT,
+        amount      DOUBLE,
+        is_fraud    BOOLEAN,
+        event_time  TIMESTAMP(3),
+        WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+    ) WITH (
+        'connector' = 'kafka',
+        'topic'     = 'transactions',
+        'format'    = 'json'
+    )
+""")
+
+# Sliding window: count transactions in last 1 hour
+t_env.execute_sql("""
+    CREATE TABLE velocity_features AS
+    SELECT
+        customer_id,
+        COUNT(*) AS txn_count_1h,
+        SUM(amount) AS txn_amount_1h,
+        TUMBLE_START(event_time, INTERVAL '1' HOUR) AS window_start
+    FROM transactions
+    GROUP BY customer_id,
+             TUMBLE(event_time, INTERVAL '1' HOUR)
+""")</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Streaming architecture for ML</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Kafka:</strong> event bus — all raw events (transactions, clicks, logins) published as topics; durable, replayable</li>
+  <li><strong>Flink:</strong> stateful stream processor — maintains running aggregations (counts, sums, rates) in memory as events arrive; checkpoints to S3/HDFS for fault tolerance</li>
+  <li><strong>Redis:</strong> online feature store — Flink writes computed features to Redis; model inference API reads from Redis in &lt;1ms</li>
+  <li><strong>Lambda architecture:</strong> batch pipeline (daily) for accuracy on historical features; streaming pipeline (real-time) for freshness on velocity features — results merged at serving time</li>
+</ul>
+</div>
+</div></div>
+
+<!-- Data quality -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Data Quality &amp; Contracts</div>
+
+<div class="card"><div class="card-title">Data Quality — Why It Breaks ML Pipelines</div>
+<div class="g2">
+<div>
+<strong style="font-size:12px;color:var(--text)">Common data quality failures in ML</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Issue</th><th>Effect on model</th><th>Detection</th></tr>
+<tr><td>Null values in features</td><td>Training on nulls; silent NaN propagation</td><td>not_null tests</td></tr>
+<tr><td>Schema changes upstream</td><td>Column renamed → KeyError at inference</td><td>Schema validation on ingest</td></tr>
+<tr><td>Distribution shift</td><td>Feature statistics differ from training</td><td>PSI / KS tests on feature histograms</td></tr>
+<tr><td>Duplicated rows</td><td>Over-representation of some events → biased model</td><td>unique key tests</td></tr>
+<tr><td>Future data leakage</td><td>Model learns from the future; perfect train, fails in prod</td><td>Timestamp ordering check; point-in-time joins</td></tr>
+<tr><td>Join fanout</td><td>Many-to-many join creates duplicate rows; inflates counts</td><td>Row count assertions; unique key after join</td></tr>
+</table>
+</div>
+<div>
+<pre class="formula">import great_expectations as gx
+
+# Define data contract as expectations
+context = gx.get_context()
+suite = context.add_expectation_suite("feature_suite")
+
+# Add expectations
+validator.expect_column_values_to_not_be_null(
+    "payment_rate_30d"
+)
+validator.expect_column_values_to_be_between(
+    "payment_rate_30d", min_value=0, max_value=1
+)
+validator.expect_column_values_to_be_unique(
+    "customer_id"  # one row per customer
+)
+validator.expect_table_row_count_to_be_between(
+    min_value=1_000_000,  # should have at least 1M rows
+    max_value=10_000_000
+)
+
+# Run validation before model training
+results = validator.validate()
+if not results.success:
+    raise ValueError("Data quality check failed — abort training")</pre>
+</div>
+</div></div>
+
+<!-- Common mistakes -->
+<div class="card cg"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Training-serving skew</strong> — computing features differently in the training pipeline (Spark SQL) vs the serving API (Python). The feature store enforces identical logic; without it, skew is almost inevitable at scale</li>
+  <li><strong>Target leakage via point-in-time errors</strong> — using the current value of a feature that was computed after the label event. Always verify temporal ordering; use feature store's point-in-time join API</li>
+  <li><strong>Using pandas for 100M+ rows</strong> — pandas loads everything into RAM; use Spark, DuckDB, or Polars for large-scale feature engineering. A Spark job that runs in 10 minutes processes what pandas would take 3 hours on (if it doesn't OOM first)</li>
+  <li><strong>Overwriting parquet partitions instead of merging</strong> — concurrent writes to the same partition without a table format (Delta/Iceberg) causes data corruption. Use MERGE INTO instead of overwrite for updates</li>
+  <li><strong>No data quality checks in training pipeline</strong> — a silent upstream schema change (column renamed, values rescaled) trains the model on garbage data. Always gate training on data quality validation</li>
+  <li><strong>Not versioning training datasets</strong> — if you can't reproduce the exact training dataset 6 months from now, you can't debug why the model behaved the way it did. Use Delta Lake time travel or DVC to version datasets</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Uber (Michaelangelo):</strong> pioneered the ML platform concept — Spark for feature computation, centralised feature store shared across 1000+ models; Kafka + Flink for real-time features like driver location</li>
+  <li><strong>Netflix:</strong> Spark + Iceberg on S3 for their entire data lake; dbt for warehouse transformations; Metaflow orchestrates ML pipelines that consume these features</li>
+  <li><strong>Airbnb:</strong> dbt as the standard for all feature SQL transformations; custom Minerva metric layer on top ensures consistent feature definitions across teams</li>
+  <li><strong>Meta:</strong> Spark + Hive for batch feature computation; Scribe (internal Kafka) + custom stream processors for real-time features; feature store stores billions of feature values per day</li>
+  <li><strong>Stripe:</strong> dbt for feature engineering in BigQuery; custom feature store with point-in-time joins for fraud model training; Great Expectations runs on every pipeline run before model training is triggered</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What is training-serving skew?</strong> "Training-serving skew is when features are computed differently during training vs at inference time. For example: training uses a Spark job that computes 30-day payment rate with a left join, but the serving API uses a Python function with an inner join — customers with no payments in 30 days get NULL in training but 0.0 at serving. The model sees a completely different distribution in production. A feature store solves this by enforcing a single feature definition used in both contexts."</p>
+<p style="margin-top:8px"><strong>What is point-in-time correct joining?</strong> "When building training data, you must join features that were available at the exact moment of the prediction — not the current value. If I'm predicting loan default on applications filed in January, my features must be the values known in January, not today's values (which might reflect the outcome). Using future feature values is target leakage — models look perfect in training and fail in production. Feature stores implement time-travel joins to prevent this automatically."</p>
+<p style="margin-top:8px"><strong>Spark vs dbt for feature engineering?</strong> "dbt operates inside a SQL warehouse (BigQuery, Snowflake) — great for teams already there, incremental builds, and built-in testing. Spark is for data lake processing (S3/GCS), data too large for a warehouse, or pipelines requiring Python or complex windowed aggregations. In practice, they complement each other: Spark for heavy lifting on raw data, dbt for curated feature engineering inside the warehouse."</p>
+<p style="margin-top:8px"><strong>Why Delta Lake instead of plain parquet?</strong> "Plain parquet is immutable — you can't update rows, and concurrent writes corrupt data. Delta Lake adds ACID transactions (safe concurrent writes), time travel (reproduce any historical snapshot for debugging or reproducing training data), schema enforcement (upstream changes don't silently corrupt downstream), and DML operations (UPDATE, DELETE, MERGE). For ML specifically: time travel is critical for dataset reproducibility, and MERGE is essential for feature store upserts."</p>
+</div>
+
+</section>

@@ -1,0 +1,315 @@
+<section class="section" id="sec-gnns">
+<div class="sec-title">Graph Neural Networks</div>
+<div class="sec-desc">Graphs are the natural structure for social networks, molecules, knowledge bases, fraud rings, and recommendation systems — any domain where relationships between entities matter as much as the entities themselves. GNNs learn representations by iteratively aggregating information from a node's neighbourhood, encoding both node features and graph structure into embeddings used for node classification, link prediction, and graph classification.</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Graphs Require Special Models</div>
+<ul class="bul">
+  <li>Standard ML assumes i.i.d. samples — graph nodes are <em>not</em> independent; they depend on their neighbours</li>
+  <li>Graphs have <strong>no fixed input size</strong> — a node can have 1 or 10,000 neighbours; standard neural nets can't handle variable-size inputs directly</li>
+  <li>Graphs are <strong>permutation invariant</strong> — relabelling nodes shouldn't change the output</li>
+  <li>Graph structure itself is informative — a node connected to many high-degree nodes (hubs) is different from one connected to isolated nodes, even if features are identical</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">Graph Terminology</div>
+<table class="tbl">
+<tr><th>Term</th><th>Definition</th><th>Example</th></tr>
+<tr><td><strong>Node (vertex)</strong></td><td>An entity in the graph</td><td>User, molecule atom, paper</td></tr>
+<tr><td><strong>Edge</strong></td><td>A relationship between two nodes</td><td>Friendship, bond, citation</td></tr>
+<tr><td><strong>Node features</strong></td><td>Feature vector $\mathbf{x}_v \in \mathbb{R}^d$ for each node</td><td>User age/activity, atom type</td></tr>
+<tr><td><strong>Adjacency matrix</strong></td><td>$A \in \{0,1\}^{n \times n}$; $A_{ij}=1$ if edge exists</td><td>Sparse for large graphs</td></tr>
+<tr><td><strong>Degree</strong></td><td>Number of edges connected to a node</td><td>$d_v = \sum_j A_{vj}$</td></tr>
+<tr><td><strong>Homophily</strong></td><td>Connected nodes tend to be similar</td><td>Friends share interests; fraud rings cluster</td></tr>
+</table></div>
+</div>
+
+<!-- Message passing -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — The Message Passing Framework</div>
+
+<div class="card ca"><div class="card-title">Message Passing Neural Networks (MPNN) — The Unified Framework</div>
+<div class="card-body">Almost every GNN is a special case of message passing. Each layer has two steps: <strong>aggregate</strong> messages from neighbours, then <strong>update</strong> the node's own representation.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Layer } k \text{ — aggregate neighbour messages:} \\
+\mathbf{m}_v^{(k)} &= \text{AGGREGATE}^{(k)}\!\left(\left\{\mathbf{h}_u^{(k-1)} : u \in \mathcal{N}(v)\right\}\right) \\
+\text{Update node representation:} \\
+\mathbf{h}_v^{(k)} &= \text{UPDATE}^{(k)}\!\left(\mathbf{h}_v^{(k-1)},\ \mathbf{m}_v^{(k)}\right) \\
+\text{Final embedding after } K \text{ layers:} \\
+\mathbf{z}_v &= \mathbf{h}_v^{(K)} \quad \text{(encodes } K\text{-hop neighbourhood)}
+\end{aligned}$$</div>
+<div class="box info" style="margin-top:10px"><div class="bl">Key intuition</div><p>After 1 layer, each node sees its immediate neighbours. After 2 layers, it sees neighbours-of-neighbours. After K layers, it sees its K-hop neighbourhood. Deeper = larger receptive field — but also more expensive and prone to <strong>over-smoothing</strong> (all nodes converge to the same representation).</p></div>
+</div>
+
+<!-- GCN -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Key GNN Architectures</div>
+
+<div class="card cp"><div class="card-title">GCN — Graph Convolutional Network (Kipf &amp; Welling, 2017)</div>
+<div class="card-body">The simplest and most widely cited GNN. Aggregation = normalised sum of neighbour features; no learnable aggregation weights.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbf{H}^{(k)} &= \sigma\!\left(\tilde{D}^{-\frac{1}{2}}\tilde{A}\tilde{D}^{-\frac{1}{2}}\,\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}\right) \\
+\tilde{A} &= A + I \quad \text{(add self-loops so node aggregates itself)} \\
+\tilde{D}_{ii} &= \sum_j \tilde{A}_{ij} \quad \text{(degree matrix for normalisation)}
+\end{aligned}$$</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">import torch
+import torch.nn.functional as F
+from torch_geometric.nn import GCNConv
+
+class GCN(torch.nn.Module):
+    def __init__(self, in_ch, hid_ch, out_ch):
+        super().__init__()
+        self.conv1 = GCNConv(in_ch, hid_ch)
+        self.conv2 = GCNConv(hid_ch, out_ch)
+
+    def forward(self, x, edge_index):
+        # x: [N, in_ch], edge_index: [2, E]
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.conv2(x, edge_index)
+        return F.log_softmax(x, dim=1)
+
+# Node classification
+model = GCN(dataset.num_features, 64, dataset.num_classes)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+# edge_index: COO format sparse adjacency</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Properties &amp; limitations</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Symmetric normalisation ($\tilde{D}^{-1/2}\tilde{A}\tilde{D}^{-1/2}$) prevents high-degree nodes from dominating</li>
+  <li>Transductive only — must see all nodes during training (no new nodes at inference)</li>
+  <li>Treats all neighbours equally — no attention mechanism</li>
+  <li>Over-smoothing at depth &gt;3–4 layers — all nodes converge to similar representations</li>
+  <li>Directed graphs require asymmetric normalisation ($\tilde{D}^{-1}\tilde{A}$)</li>
+</ul>
+</div>
+</div></div>
+
+<div class="card cc"><div class="card-title">GraphSAGE — Inductive Graph Learning (Hamilton et al., 2017)</div>
+<div class="card-body">Fixes GCN's inductive limitation by learning a general <em>aggregation function</em> rather than memorising fixed embeddings. Can generalise to unseen nodes and graphs — critical for production systems where new users/items arrive continuously.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbf{h}_{\mathcal{N}(v)}^{(k)} &= \text{AGGREGATE}_k\!\left(\left\{\mathbf{h}_u^{(k-1)},\ \forall u \in \mathcal{N}(v)\right\}\right) \\
+\mathbf{h}_v^{(k)} &= \sigma\!\left(\mathbf{W}^{(k)} \cdot \text{CONCAT}\!\left(\mathbf{h}_v^{(k-1)},\ \mathbf{h}_{\mathcal{N}(v)}^{(k)}\right)\right) \\
+\mathbf{h}_v^{(k)} &\leftarrow \mathbf{h}_v^{(k)} / \left\|\mathbf{h}_v^{(k)}\right\|_2
+\end{aligned}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Aggregator</th><th>Formula</th><th>Properties</th></tr>
+<tr><td><strong>Mean</strong></td><td>$\frac{1}{|\mathcal{N}(v)|}\sum_{u \in \mathcal{N}(v)} \mathbf{h}_u$</td><td>Permutation invariant; efficient; most common</td></tr>
+<tr><td><strong>Max pooling</strong></td><td>$\max_{u \in \mathcal{N}(v)} \sigma(\mathbf{W}\mathbf{h}_u)$</td><td>Captures most prominent feature; ignores weaker signals</td></tr>
+<tr><td><strong>LSTM</strong></td><td>Apply LSTM on random permutation of neighbours</td><td>More expressive; not permutation invariant — problematic</td></tr>
+<tr><td><strong>Sum</strong></td><td>$\sum_{u \in \mathcal{N}(v)} \mathbf{h}_u$</td><td>Degree-aware — nodes with more neighbours get larger aggregations</td></tr>
+</table>
+<div class="box tip" style="margin-top:8px"><div class="bl">Neighbourhood sampling</div><p>For nodes with thousands of neighbours (hubs), full neighbourhood aggregation is infeasible. GraphSAGE samples a fixed-size neighbourhood at each layer (e.g. 25 at layer 1, 10 at layer 2). This makes mini-batch training practical on million-node graphs.</p></div>
+</div>
+
+<div class="card"><div class="card-title">GAT — Graph Attention Network (Veličković et al., 2018)</div>
+<div class="card-body">Replaces uniform/normalised aggregation with <strong>learned attention weights</strong> — different neighbours contribute differently based on feature similarity.</div>
+<div class="formula math-formula">$$\begin{aligned}
+e_{vu} &= \text{LeakyReLU}\!\left(\mathbf{a}^T\!\left[\mathbf{W}\mathbf{h}_v \,\|\, \mathbf{W}\mathbf{h}_u\right]\right) \quad \text{(attention score)} \\
+\alpha_{vu} &= \text{softmax}_u(e_{vu}) = \frac{\exp(e_{vu})}{\sum_{k \in \mathcal{N}(v)} \exp(e_{vk})} \\
+\mathbf{h}_v^{(k)} &= \sigma\!\left(\sum_{u \in \mathcal{N}(v)} \alpha_{vu} \cdot \mathbf{W}\mathbf{h}_u\right)
+\end{aligned}$$</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<ul class="bul">
+  <li><strong>Multi-head attention:</strong> run K independent attention heads, concatenate or average results — same intuition as transformer multi-head attention</li>
+  <li>Attention weights are interpretable — which neighbours does the model weight most?</li>
+  <li>Stronger than GCN on heterophilic graphs (where dissimilar nodes connect)</li>
+</ul>
+</div>
+<div>
+<pre class="formula">from torch_geometric.nn import GATConv
+
+class GAT(torch.nn.Module):
+    def __init__(self, in_ch, hid_ch, out_ch, heads=8):
+        super().__init__()
+        self.conv1 = GATConv(in_ch, hid_ch,
+                             heads=heads, dropout=0.6)
+        self.conv2 = GATConv(hid_ch*heads, out_ch,
+                             heads=1, concat=False,
+                             dropout=0.6)
+    def forward(self, x, edge_index):
+        x = F.dropout(x, p=0.6, training=self.training)
+        x = F.elu(self.conv1(x, edge_index))
+        x = F.dropout(x, p=0.6, training=self.training)
+        return self.conv2(x, edge_index)</pre>
+</div>
+</div></div>
+
+<div class="card cg"><div class="card-title">GNN Architecture Comparison</div>
+<table class="tbl">
+<tr><th>Model</th><th>Aggregation</th><th>Inductive?</th><th>Attention?</th><th>Best for</th></tr>
+<tr><td><strong>GCN</strong></td><td>Normalised sum</td><td>No (transductive)</td><td>No</td><td>Small citation/social graphs; baseline</td></tr>
+<tr><td><strong>GraphSAGE</strong></td><td>Sample + aggregate</td><td>Yes</td><td>No</td><td>Large dynamic graphs; new nodes at inference</td></tr>
+<tr><td><strong>GAT</strong></td><td>Attention-weighted sum</td><td>Yes</td><td>Yes</td><td>Heterophilic graphs; when neighbour importance varies</td></tr>
+<tr><td><strong>GIN</strong></td><td>Sum + MLP</td><td>Yes</td><td>No</td><td>Graph classification; maximally expressive (≡ WL test)</td></tr>
+<tr><td><strong>LightGCN</strong></td><td>Normalised sum (no features)</td><td>No</td><td>No</td><td>Recommendation; collaborative filtering on user-item graph</td></tr>
+<tr><td><strong>HGT</strong></td><td>Type-aware attention</td><td>Yes</td><td>Yes (per type)</td><td>Heterogeneous graphs (multiple node/edge types)</td></tr>
+</table></div>
+
+<!-- Tasks -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — GNN Tasks &amp; Applications</div>
+
+<div class="g3">
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">Node Classification</div>
+<ul class="bul">
+  <li>Predict a label for each node using node features + graph structure</li>
+  <li><strong>Examples:</strong> classify users as fraudsters/legitimate; predict paper topic in citation network; classify proteins by function</li>
+  <li>Loss: cross-entropy on labelled nodes; gradients flow through the whole graph</li>
+  <li>Semi-supervised: train on small set of labelled nodes, predict on all unlabelled nodes</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">Link Prediction</div>
+<ul class="bul">
+  <li>Predict whether an edge exists between two nodes (or will exist in the future)</li>
+  <li><strong>Examples:</strong> friend recommendation, product recommendation, drug-target interaction, knowledge graph completion</li>
+  <li>Score: $\hat{A}_{uv} = \sigma(\mathbf{z}_u^T \mathbf{z}_v)$ — dot product of learned embeddings</li>
+  <li>Trained with negative sampling: sample random non-edges as negatives</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">Graph Classification</div>
+<ul class="bul">
+  <li>Predict a single label for an entire graph</li>
+  <li><strong>Examples:</strong> molecule property prediction (toxic/non-toxic), protein function, program bug detection</li>
+  <li>Requires <strong>readout / pooling:</strong> aggregate all node embeddings into a single graph embedding (sum, mean, hierarchical pooling)</li>
+  <li>GIN is theoretically the most expressive architecture for this task</li>
+</ul></div>
+</div>
+
+<!-- Fraud detection -->
+<div class="card ca"><div class="card-title">GNNs for Fraud Detection — A Worked Example</div>
+<div class="card-body">Fraud rings are hard to detect with tabular features alone. But fraudsters share devices, IP addresses, phone numbers, and bank accounts — forming distinctive subgraph patterns that GNNs can learn.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Graph construction</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Nodes:</strong> transactions, accounts, devices, IP addresses</li>
+  <li><strong>Edges:</strong> account shares device, transaction shares IP, accounts linked by same phone</li>
+  <li><strong>Node features:</strong> transaction amount, account age, location, velocity metrics</li>
+  <li><strong>Labels:</strong> confirmed fraud (1), legitimate (0) — highly imbalanced</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Why GNN outperforms tabular model</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Individual fraudulent transaction may look legitimate in isolation (features OK)</li>
+  <li>But the account is connected to 5 other accounts that all received chargebacks — structural signal</li>
+  <li>GNN propagates this neighbourhood signal: node embedding encodes "this account is connected to fraud"</li>
+  <li>Result: 15–30% recall lift over XGBoost on fraud rings (Alibaba, Amazon fraud research)</li>
+</ul>
+</div>
+</div>
+<pre class="formula" style="margin-top:10px">from torch_geometric.nn import SAGEConv
+import torch.nn as nn
+
+class FraudGNN(nn.Module):
+    def __init__(self, in_ch, hid_ch=64):
+        super().__init__()
+        self.sage1 = SAGEConv(in_ch, hid_ch)
+        self.sage2 = SAGEConv(hid_ch, hid_ch)
+        self.classifier = nn.Linear(hid_ch, 2)
+
+    def forward(self, x, edge_index):
+        x = F.relu(self.sage1(x, edge_index))
+        x = F.dropout(x, p=0.3, training=self.training)
+        x = F.relu(self.sage2(x, edge_index))
+        return self.classifier(x)  # node-level logits
+
+# Use GraphSAGE (inductive) for production — new transactions
+# arrive continuously; GCN (transductive) can't handle this</pre>
+</div>
+
+<!-- Recommender systems -->
+<div class="card cp"><div class="card-title">GNNs for Recommender Systems — LightGCN &amp; PinSage</div>
+<div class="g2">
+<div>
+<strong style="font-size:12px;color:var(--text)">LightGCN (He et al., 2020)</strong>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbf{e}_u^{(k+1)} &= \sum_{i \in \mathcal{N}_u} \frac{1}{\sqrt{|\mathcal{N}_u||\mathcal{N}_i|}} \mathbf{e}_i^{(k)} \\
+\mathbf{e}_u^* &= \frac{1}{K+1}\sum_{k=0}^{K} \mathbf{e}_u^{(k)} \quad \text{(layer combination)} \\
+\hat{y}_{ui} &= {\mathbf{e}_u^*}^T \mathbf{e}_i^* \quad \text{(predicted score)}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:6px">
+  <li>Strips GCN to the essentials — no feature transformation, no activation functions</li>
+  <li>State-of-the-art on collaborative filtering; outperforms MF, NGCF on most benchmarks</li>
+  <li>Trained with BPR loss: $\mathcal{L} = -\sum \ln\sigma(\hat{y}_{ui} - \hat{y}_{uj})$ (observed item scored higher than unobserved)</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">PinSage (Ying et al., Pinterest 2018)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>GraphSAGE on Pinterest's pin-board bipartite graph (3B nodes, 18B edges)</li>
+  <li>Importance-based neighbourhood sampling using random walks — sample neighbours proportionally to visit frequency, not uniformly</li>
+  <li>Curriculum training: hard negatives (semantically similar but non-interacted) added later in training</li>
+  <li>Deployed for "Related Pins" — one of the highest-impact recommendation improvements at Pinterest</li>
+</ul>
+</div>
+</div></div>
+
+<!-- Bipartite preserved -->
+<div class="card"><div class="card-title">Bipartite Graphs — Foundation of Collaborative Filtering</div>
+<div class="card-body">The user-item interaction graph is a bipartite graph: nodes split into users U and items V, edges only connect U↔V. All collaborative filtering methods — matrix factorisation, LightGCN, PinSage — operate on this structure.</div>
+<div class="formula math-formula">$$\begin{aligned}
+G &= (U \cup V,\ E), \quad E \subseteq U \times V \\
+R[u,v] &= \text{interaction strength (rating, click, purchase)} \\
+R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k},\ \mathbf{Q} \in \mathbb{R}^{|V|\times k} \\
+\hat{R}[u,v] &= \mathbf{p}_u^T \mathbf{q}_v \quad \text{(matrix factorisation prediction)}
+\end{aligned}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Problem</th><th>Bipartite Formulation</th><th>Algorithm</th></tr>
+<tr><td>Recommendation</td><td>User–item interactions</td><td>Matrix factorisation, LightGCN, PinSage</td></tr>
+<tr><td>Maximum matching</td><td>Worker–job assignment</td><td>Hopcroft-Karp O(E√V)</td></tr>
+<tr><td>Assignment problem</td><td>Minimise total cost of matching</td><td>Hungarian algorithm O(n³)</td></tr>
+<tr><td>Link prediction</td><td>Will user u interact with item v?</td><td>GNN embeddings + dot product scoring</td></tr>
+</table></div>
+
+<!-- Training at scale -->
+<div class="card cc"><div class="card-title">Training GNNs at Scale — Key Challenges</div>
+<div class="g2">
+<div>
+<strong style="font-size:12px;color:var(--text)">The neighbour explosion problem</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>Full-batch GNN on a million-node graph requires the entire graph in GPU memory — infeasible</li>
+  <li>Mini-batch training: sample target nodes → expand to K-hop neighbourhoods → exponential blow-up</li>
+  <li><strong>Solutions:</strong> neighbourhood sampling (GraphSAGE), cluster-GCN (partition graph into clusters, train on subgraphs), GraphSAINT (importance-based subgraph sampling)</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Over-smoothing</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>With many GNN layers, all node embeddings converge to the same value — model loses discriminative power</li>
+  <li>Fix: use 2–3 layers (sweet spot for most tasks); residual connections (jumping knowledge networks); PairNorm regularisation; DropEdge (randomly drop edges during training)</li>
+  <li>In practice: 2-layer GNNs often match or outperform deeper ones</li>
+</ul>
+</div>
+</div></div>
+
+<!-- Common mistakes -->
+<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using GCN for inductive tasks</strong> — GCN is transductive (requires all nodes during training). For new users/items arriving at inference, use GraphSAGE or GAT</li>
+  <li><strong>Too many layers</strong> — over-smoothing sets in fast. Start with 2 layers; only add more if validation performance improves</li>
+  <li><strong>Ignoring negative sampling strategy</strong> — for link prediction, random negative sampling is easy but inefficient. Hard negatives (plausible but non-existent edges) are critical for good embeddings</li>
+  <li><strong>Treating the graph as fixed</strong> — in production, graphs evolve: new nodes, new edges, deleted edges. Design the pipeline for incremental updates; GraphSAGE handles this well</li>
+  <li><strong>Not accounting for class imbalance on node labels</strong> — fraud, spam, and churn are rare events. Use weighted cross-entropy or focal loss; oversample fraudulent subgraphs</li>
+  <li><strong>Leaking future edges into training</strong> — for link prediction on temporal graphs, always use edges before a cutoff for training; future edges for test. Temporal data leakage is a common bug</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Pinterest:</strong> PinSage (GraphSAGE on 3B-node pin-board graph) powers "Related Pins" recommendation; largest industrial GNN deployment at time of publication</li>
+  <li><strong>Alibaba:</strong> GraphSAGE-based GNN for e-commerce fraud detection; 15–30% recall improvement over tabular XGBoost on fraud ring detection</li>
+  <li><strong>Twitter/X:</strong> GNN for spam and bot detection on follower graph; structural patterns of bot networks are distinctive even when individual accounts look legitimate</li>
+  <li><strong>LinkedIn:</strong> Economic Graph — GNN embeddings of jobs, skills, companies, members for job recommendation and skill inference</li>
+  <li><strong>Google DeepMind:</strong> AlphaFold 2 uses graph neural networks (Evoformer) on residue interaction graphs for protein structure prediction</li>
+  <li><strong>Drug discovery (Relay Therapeutics, Schrödinger):</strong> GNNs on molecular graphs for property prediction (toxicity, solubility, binding affinity) and de-novo drug design</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>What is a GNN?</strong> "A GNN learns node embeddings by iteratively aggregating information from a node's neighbourhood — after K layers, each node's embedding encodes its K-hop neighbourhood structure. The core operation is message passing: each node receives messages from its neighbours, aggregates them, and updates its own representation. Different GNNs differ in how they aggregate (uniform sum in GCN, attention-weighted in GAT, sampled in GraphSAGE)."</p>
+<p style="margin-top:8px"><strong>GCN vs GraphSAGE?</strong> "GCN is transductive — it learns embeddings for a fixed graph and can't generalise to unseen nodes. GraphSAGE is inductive — it learns a general aggregation function that can be applied to any node's neighbourhood, including new nodes added after training. For production where new users/items arrive constantly, GraphSAGE is the right choice."</p>
+<p style="margin-top:8px"><strong>Why GNNs for fraud detection?</strong> "Individual fraudulent transactions often look legitimate in isolation. But fraud rings share devices, IPs, and accounts — forming distinctive subgraph patterns. A GNN propagates signals across the graph: if an account connects to five others that received chargebacks, that structural signal gets encoded into the account's embedding even if its own features look clean. This catches coordinated fraud that tabular models miss entirely."</p>
+<p style="margin-top:8px"><strong>What is over-smoothing?</strong> "With many GNN layers, each node aggregates from an increasingly large neighbourhood — eventually every node sees the whole graph and all embeddings converge to the same value. The fix: use 2–3 layers (not 10), add residual connections, or use jumping knowledge networks that combine representations from all layers."</p>
+</div>
+
+</section>

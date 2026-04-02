@@ -1,0 +1,269 @@
+<section class="section" id="sec-multimodal">
+<div class="sec-title">Multimodal Models</div>
+<div class="sec-desc">Multimodal models process and connect information across multiple modalities — text, images, audio, video, and structured data. They are one of the fastest-growing areas of applied ML: powering image search, visual question answering, document understanding, generative image editing, and the vision capabilities now standard in frontier LLMs.</div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Why Multimodal Matters</div>
+<ul class="bul">
+  <li>The real world is multimodal — products have images AND text descriptions; medical records have scans AND notes; videos have frames AND transcripts</li>
+  <li>Text-only models miss visual signals that are often more informative (e.g., a skin lesion image conveys more than its textual description)</li>
+  <li>Vision capabilities are now standard in frontier LLMs (GPT-4V, Claude 3+, Gemini) — understanding how they work is increasingly expected in ML interviews</li>
+  <li>Multimodal embeddings unlock new applications: image search via text query, cross-modal retrieval, visual grounding, and rich product/content understanding</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">Modality Types &amp; Challenges</div>
+<table class="tbl">
+<tr><th>Modality</th><th>Representation</th><th>Key challenge</th></tr>
+<tr><td><strong>Image</strong></td><td>Pixel grid → patch embeddings (ViT)</td><td>Spatial structure; scale/rotation invariance</td></tr>
+<tr><td><strong>Text</strong></td><td>Token IDs → word/subword embeddings</td><td>Semantic ambiguity; compositionality</td></tr>
+<tr><td><strong>Audio</strong></td><td>Waveform → spectrograms → embeddings</td><td>Temporal structure; noise robustness</td></tr>
+<tr><td><strong>Video</strong></td><td>Frame sequence + audio → spatio-temporal</td><td>Temporal coherence; enormous data volume</td></tr>
+<tr><td><strong>Structured data</strong></td><td>Tabular rows → feature vectors</td><td>Mixed types; sparse features; joins</td></tr>
+</table>
+</div>
+</div>
+
+<!-- CLIP -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — CLIP: Contrastive Language-Image Pretraining</div>
+
+<div class="card ca"><div class="card-title">CLIP (Radford et al., OpenAI 2021) — The Foundation</div>
+<div class="card-body">CLIP trains two encoders — image and text — to produce embeddings in a shared vector space, using contrastive learning on 400M image-caption pairs scraped from the internet. Matching pairs are pushed together; non-matching pairs are pushed apart.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbf{I}_i &= f_{\text{image}}(\text{image}_i) \in \mathbb{R}^d \quad \text{(image encoder, e.g. ViT-L)} \\
+\mathbf{T}_i &= f_{\text{text}}(\text{caption}_i) \in \mathbb{R}^d \quad \text{(text encoder, e.g. Transformer)} \\
+\text{Contrastive loss (InfoNCE):} \\
+\mathcal{L} &= -\frac{1}{N}\sum_{i=1}^{N}\left[\log\frac{\exp(\mathbf{I}_i \cdot \mathbf{T}_i / \tau)}{\sum_{j=1}^{N}\exp(\mathbf{I}_i \cdot \mathbf{T}_j / \tau)}\right. \\
+&\quad\quad\quad\quad\quad + \left.\log\frac{\exp(\mathbf{T}_i \cdot \mathbf{I}_i / \tau)}{\sum_{j=1}^{N}\exp(\mathbf{T}_j \cdot \mathbf{I}_i / \tau)}\right] \\
+\tau &= \text{learned temperature parameter}
+\end{aligned}$$</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">How the contrastive loss works</strong>
+<ul class="bul" style="margin-top:6px">
+  <li>In a batch of N image-caption pairs, there are N correct pairings and N²-N incorrect pairings</li>
+  <li>For each image: maximise similarity to its correct caption vs all other captions in the batch (and vice versa)</li>
+  <li>Temperature τ controls sharpness of the distribution — lower τ = sharper contrast</li>
+  <li>With N=32,768 (large batch): each image has 32,767 negatives — a very hard contrastive problem that forces rich representations</li>
+</ul>
+</div>
+<div>
+<pre class="formula">from transformers import CLIPProcessor, CLIPModel
+import torch
+
+model = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
+
+images = [...]  # PIL Images
+texts = ["a dog", "a cat", "a car"]
+
+inputs = processor(text=texts, images=images,
+                   return_tensors="pt", padding=True)
+
+with torch.no_grad():
+    outputs = model(**inputs)
+
+# Image-text similarity scores
+logits_per_image = outputs.logits_per_image
+probs = logits_per_image.softmax(dim=1)
+# probs[i][j] = P(text j matches image i)</pre>
+</div>
+</div>
+
+<div class="box info" style="margin-top:10px"><div class="bl">Zero-shot classification with CLIP</div><p>CLIP's shared embedding space enables zero-shot image classification: describe class labels as text ("a photo of a dog", "a photo of a cat"), compute text embeddings, find the label whose text embedding is most similar to the image embedding. No task-specific training needed — CLIP achieves competitive accuracy on ImageNet zero-shot.</p></div>
+</div>
+
+<!-- ViT -->
+<div class="card cp"><div class="card-title">Vision Transformer (ViT) — How Images Become Tokens</div>
+<div class="card-body">CLIP's image encoder (and most modern vision models) uses a Vision Transformer — treating an image as a sequence of patches, just like words in a sentence.</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{Image } &\in \mathbb{R}^{H \times W \times C} \xrightarrow{\text{split}} N \text{ patches of size } P \times P \\
+N &= \frac{HW}{P^2} \quad \text{(e.g. 224×224 image, P=16 → 196 patches)} \\
+\text{Patch}_i &\xrightarrow{\text{linear proj}} \mathbf{e}_i \in \mathbb{R}^d \quad \text{(patch embedding)} \\
+\text{Input} &= [\mathbf{e}_{\text{CLS}},\ \mathbf{e}_1 + \mathbf{p}_1,\ \mathbf{e}_2 + \mathbf{p}_2,\ \ldots,\ \mathbf{e}_N + \mathbf{p}_N]
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>[CLS] token:</strong> prepended learnable token; its final embedding = the image representation (same pattern as BERT)</li>
+  <li><strong>Position embeddings:</strong> 1D learned positions for each patch — ViT doesn't inherently know patch spatial relationships</li>
+  <li>Full Transformer attention over all patches — each patch can attend to every other patch regardless of spatial distance</li>
+  <li><strong>Variants:</strong> ViT-B/16 (86M params), ViT-L/14 (307M, used by CLIP), ViT-H/14 (632M) — B/L/H = Base/Large/Huge</li>
+</ul></div>
+
+<!-- VLMs -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Vision-Language Models (VLMs)</div>
+
+<div class="card cc"><div class="card-title">LLaVA — Large Language and Vision Assistant</div>
+<div class="card-body">LLaVA (Liu et al., 2023) connects a vision encoder (CLIP ViT) to an LLM (Llama/Vicuna) via a simple learned projection layer, enabling natural language conversations about images. It established the dominant architecture pattern for open-source VLMs.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Architecture</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Vision encoder:</strong> CLIP ViT-L/14 — produces 256 image patch embeddings</li>
+  <li><strong>Projection layer (MLP):</strong> maps 1024-dim CLIP embeddings → 4096-dim LLM token space. This is the bridge between modalities</li>
+  <li><strong>Language model:</strong> Llama / Mistral / Qwen — receives the projected image tokens as if they were text tokens, then auto-regressively generates the response</li>
+  <li>Image tokens are inserted at a special <code>&lt;image&gt;</code> position in the prompt; LLM attends to them via its standard attention mechanism</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Training stages</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Stage</th><th>What trains</th><th>Data</th></tr>
+<tr><td><strong>1. Pre-training</strong></td><td>Projection layer only</td><td>558K image-caption pairs; teaches vision-language alignment</td></tr>
+<tr><td><strong>2. Fine-tuning</strong></td><td>Projection + LLM (LoRA or full)</td><td>158K visual instruction-following pairs (LLaVA-Instruct); teaches following instructions about images</td></tr>
+</table>
+<div style="margin-top:8px;font-size:13px;color:var(--text2)">Key insight: CLIP and the LLM are both frozen or lightly fine-tuned; only the small projection layer is trained from scratch in stage 1. This makes training cheap — LLaVA-7B can be trained in ~1 day on 8× A100s.</div>
+</div>
+</div></div>
+
+<div class="card"><div class="card-title">VLM Landscape — Key Models</div>
+<table class="tbl">
+<tr><th>Model</th><th>Vision encoder</th><th>Language model</th><th>Key strength</th></tr>
+<tr><td><strong>GPT-4V / GPT-4o</strong></td><td>Proprietary</td><td>GPT-4</td><td>Strongest on complex visual reasoning, chart analysis, OCR</td></tr>
+<tr><td><strong>Claude 3+ (Sonnet/Opus)</strong></td><td>Proprietary</td><td>Claude 3</td><td>Strong on documents, dense text in images, long visual context</td></tr>
+<tr><td><strong>Gemini Pro Vision</strong></td><td>Proprietary</td><td>Gemini</td><td>Native multimodal (image + video + audio); Google ecosystem</td></tr>
+<tr><td><strong>LLaVA-1.6 (34B)</strong></td><td>CLIP ViT-L</td><td>Nous-Hermes Yi-34B</td><td>Best open-source VLM; strong OCR and document understanding</td></tr>
+<tr><td><strong>InternVL2</strong></td><td>InternViT-6B</td><td>InternLM2</td><td>Top open-source; strong on Chinese + English; document heavy</td></tr>
+<tr><td><strong>Qwen-VL</strong></td><td>ViT</td><td>Qwen</td><td>Strong multilingual; grounding (bbox output); tool use</td></tr>
+<tr><td><strong>PaliGemma</strong></td><td>SigLIP ViT</td><td>Gemma-2B</td><td>Google; lightweight; strong few-shot fine-tuning</td></tr>
+<tr><td><strong>Phi-3.5 Vision</strong></td><td>CLIP</td><td>Phi-3.5</td><td>Microsoft SLM; 4.2B total; runs on device</td></tr>
+</table></div>
+
+<!-- Multimodal embeddings -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — Multimodal Embeddings &amp; Applications</div>
+
+<div class="card cp"><div class="card-title">Cross-Modal Embedding Applications</div>
+<div class="g3" style="margin-top:10px">
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Image Search via Text</div>
+<ul class="bul">
+  <li>Index product images as CLIP embeddings in a vector DB</li>
+  <li>At query time: embed the text query → ANN search over image embeddings</li>
+  <li>Returns visually matching products for natural language queries: "red floral summer dress"</li>
+  <li>No keyword matching — pure semantic visual similarity</li>
+  <li><strong>Used by:</strong> Pinterest Lens, Google Shopping, Shopify, ASOS</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">Image-to-Image Search</div>
+<ul class="bul">
+  <li>Embed query image → find visually similar images in the index</li>
+  <li>CLIP embedding captures semantic similarity (not just pixel similarity)</li>
+  <li>"Find more like this" product recommendation</li>
+  <li>Duplicate and near-duplicate detection at scale</li>
+  <li>Visual plagiarism detection; stock photo search</li>
+</ul></div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Document Understanding</div>
+<ul class="bul">
+  <li>VLMs can read text within images (OCR), understand charts/tables, and answer questions about PDF pages</li>
+  <li>Replaces fragile PDF parsing pipelines that break on complex layouts</li>
+  <li>GPT-4V / Claude 3 can extract structured data from invoices, contracts, receipts</li>
+  <li><strong>Used by:</strong> DocuSign, Harvey AI (legal docs), financial document processing</li>
+</ul></div>
+</div></div>
+
+<div class="card cg"><div class="card-title">Fine-Tuning CLIP for Domain-Specific Tasks</div>
+<div class="card-body">Pre-trained CLIP is trained on internet images — it may perform poorly on medical images, satellite imagery, or industrial defect detection where training data distribution is very different. Domain-specific fine-tuning can dramatically improve performance.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<pre class="formula">import torch
+from transformers import CLIPModel, CLIPProcessor
+from torch.optim import AdamW
+
+model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
+
+# Fine-tune on domain-specific image-text pairs
+# e.g. pathology images + radiology report captions
+optimizer = AdamW(model.parameters(), lr=1e-5)
+
+for batch in domain_dataloader:
+    inputs = processor(
+        text=batch["captions"],
+        images=batch["images"],
+        return_tensors="pt",
+        padding=True
+    )
+    outputs = model(**inputs,
+                    return_loss=True)
+    loss = outputs.loss  # contrastive loss
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()</pre>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Alternatives to full fine-tuning</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>Linear probe:</strong> freeze CLIP, train a linear classifier on top of image embeddings. Fast baseline — often surprisingly good</li>
+  <li><strong>LoRA on CLIP:</strong> add LoRA adapters to the vision transformer; train adapters on domain data while keeping base CLIP frozen. 10–30× fewer trainable params than full fine-tuning</li>
+  <li><strong>Prompt tuning:</strong> learn a soft prefix for text descriptions ("a dermoscopy image of [class]") — minimal compute, competitive performance</li>
+  <li><strong>Domain-specific CLIP variants:</strong> BioMedCLIP (medical), RemoteCLIP (satellite), FashionCLIP (retail) — pre-trained on relevant domain data</li>
+</ul>
+</div>
+</div></div>
+
+<!-- Generative multimodal -->
+<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — Generative Multimodal Models</div>
+
+<div class="card cr"><div class="card-title">Text-to-Image Generation — Architecture Overview</div>
+<div class="card-body">Text-to-image models (Stable Diffusion, DALL-E 3, Midjourney) generate images conditioned on text prompts by combining a text encoder (CLIP or T5) with a diffusion model or autoregressive image decoder.</div>
+<div class="g2" style="margin-top:10px">
+<div>
+<strong style="font-size:12px;color:var(--text)">Latent Diffusion (Stable Diffusion)</strong>
+<ul class="bul" style="margin-top:6px">
+  <li><strong>VAE encoder:</strong> compresses image from pixel space to a compact latent space (8× smaller) — diffusion operates here</li>
+  <li><strong>Text encoder:</strong> CLIP or T5 encodes the text prompt → conditioning signal</li>
+  <li><strong>U-Net / DiT:</strong> iteratively denoises a random Gaussian latent, guided by the text embedding at each step</li>
+  <li><strong>CFG (Classifier-Free Guidance):</strong> run U-Net twice (with and without conditioning); push the result towards the conditioned direction. Guidance scale controls creativity vs fidelity</li>
+  <li><strong>VAE decoder:</strong> maps denoised latent back to pixel space</li>
+</ul>
+</div>
+<div>
+<strong style="font-size:12px;color:var(--text)">Key generative VLM applications</strong>
+<table class="tbl" style="margin-top:6px">
+<tr><th>Application</th><th>Model type</th><th>Used by</th></tr>
+<tr><td>Text-to-image generation</td><td>Latent diffusion</td><td>Adobe Firefly, Canva AI, Midjourney</td></tr>
+<tr><td>Image editing (inpainting)</td><td>Conditioned diffusion</td><td>Photoshop Generative Fill</td></tr>
+<tr><td>Image captioning</td><td>VLM (LLaVA-style)</td><td>Google Photos, alt-text generation</td></tr>
+<tr><td>Visual QA</td><td>VLM</td><td>GPT-4V, Claude 3, Gemini</td></tr>
+<tr><td>Video generation</td><td>Video diffusion / autoregressive</td><td>Sora (OpenAI), Runway, Pika</td></tr>
+</table>
+</div>
+</div></div>
+
+<!-- Evaluation -->
+<div class="card ca"><div class="card-title">Evaluating Multimodal Models</div>
+<table class="tbl">
+<tr><th>Task</th><th>Benchmark</th><th>What it measures</th></tr>
+<tr><td>Image-text retrieval</td><td>MSCOCO R@1, Flickr30K R@1</td><td>Does top-1 retrieved image/caption match the query?</td></tr>
+<tr><td>Zero-shot classification</td><td>ImageNet top-1 accuracy</td><td>CLIP on ImageNet without ImageNet training</td></tr>
+<tr><td>Visual question answering</td><td>VQAv2, GQA</td><td>Accuracy on open-ended questions about images</td></tr>
+<tr><td>OCR / document understanding</td><td>DocVQA, TextVQA</td><td>Reading and reasoning about text within images</td></tr>
+<tr><td>Hallucination</td><td>POPE, CHAIR</td><td>Does the VLM hallucinate objects not present in the image?</td></tr>
+<tr><td>Reasoning</td><td>MMMU, MathVista</td><td>College-level multi-discipline reasoning with image context</td></tr>
+<tr><td>Image generation quality</td><td>FID, CLIP score, IS</td><td>FID = distributional similarity; CLIP score = text-image alignment</td></tr>
+</table></div>
+
+<!-- Common mistakes -->
+<div class="card"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<ul class="bul">
+  <li><strong>Using CLIP embeddings for text-only retrieval</strong> — CLIP's text encoder is optimised for vision-language alignment, not pure text semantic similarity. Use a dedicated text embedding model (BGE, E5) for text-only retrieval</li>
+  <li><strong>Assuming VLMs "see" images like humans</strong> — VLMs process a fixed grid of patches with no explicit spatial reasoning. They can struggle with counting, spatial relationships ("is the red ball to the left or right of the blue cube?"), and fine-grained differences between similar images</li>
+  <li><strong>Fine-tuning on tiny domain datasets without regularisation</strong> — CLIP's general knowledge is its strength; aggressive fine-tuning on small domain data causes catastrophic forgetting. Use LoRA or linear probing first</li>
+  <li><strong>Ignoring VLM hallucination</strong> — VLMs confidently describe objects not present in an image, especially when the prompt implies they should be there. Always evaluate hallucination rate (POPE benchmark) for production deployments</li>
+  <li><strong>Using CLIP patch size too large for fine-grained tasks</strong> — ViT-L/14 (14px patches, 256 patches for 224×224 image) has more spatial resolution than ViT-L/32 (49 patches). For tasks requiring fine-grained visual understanding (medical imaging, defect detection), use the smaller patch size</li>
+</ul></div>
+
+<!-- Used at top companies -->
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Pinterest:</strong> CLIP-based visual search — "Shop the Look" uses image embeddings to find visually similar shoppable products from any pinned image</li>
+  <li><strong>Shopify / Amazon:</strong> CLIP embeddings for product image similarity — "customers also viewed" powered by visual similarity, not just collaborative filtering</li>
+  <li><strong>Google (Google Lens):</strong> multimodal search — point camera at object, retrieve text information, translate text in images, find visually similar products</li>
+  <li><strong>Adobe (Firefly):</strong> Stable Diffusion fine-tuned on licensed Adobe Stock — text-to-image and generative fill; legally safe training data as competitive advantage</li>
+  <li><strong>Medical AI (Paige, PathAI):</strong> domain-specific CLIP variants on histopathology slides; VLMs for radiology report generation from chest X-rays</li>
+  <li><strong>Anthropic / OpenAI:</strong> vision capabilities in Claude 3 and GPT-4V built on transformer-based vision encoders projected into the LLM's token space — the LLaVA paradigm at scale</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<p><strong>How does CLIP work?</strong> "CLIP trains a vision encoder (ViT) and a text encoder (Transformer) jointly using contrastive learning on 400M image-caption pairs. Matching pairs are pushed together in the embedding space; non-matching pairs are pushed apart. This creates a shared representation space where similar concepts — regardless of modality — end up close together. The result: zero-shot image classification, image-text retrieval, and semantic image search without task-specific training."</p>
+<p style="margin-top:8px"><strong>How does a VLM like LLaVA work?</strong> "LLaVA connects a CLIP vision encoder to an LLM via a small learned projection layer. The image is split into patches, encoded by ViT into 256 patch embeddings, projected into the LLM's embedding space, and then concatenated with the text prompt tokens. The LLM sees image tokens and text tokens together and generates a response auto-regressively — the same way it would for a text-only prompt. Only the projection layer is trained from scratch; CLIP and the LLM are fine-tuned lightly or frozen."</p>
+<p style="margin-top:8px"><strong>Multimodal retrieval in production?</strong> "Embed all images with CLIP and index in a vector DB. At query time, embed the text query with CLIP's text encoder — the shared embedding space means the query vector is directly comparable to image vectors. Run ANN search to find the top-k visually matching images. This is how Pinterest Lens, Google Shopping, and most e-commerce visual search works. CLIP's zero-shot generalisation means you don't need to label training data for each new category — the pre-trained space already understands 'red floral dress' vs 'blue striped shirt'."</p>
+</div>
+
+</section>
