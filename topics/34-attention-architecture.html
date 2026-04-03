@@ -312,4 +312,103 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 <tr><td>RoFormer: Enhanced Transformer with Rotary Position Embedding (RoPE)</td><td>Su et al.</td><td>2021</td><td><a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener" style="color:var(--blue)">arxiv.org/abs/2104.09864</a></td></tr>
 </table></div>
 
+<!-- ── Interactive Attention Heatmap ── -->
+<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-title">Interactive — Self-Attention Heatmap: click any token to see its attention weights</div>
+<div style="margin:12px 0 6px;font-size:12px;color:var(--text3)">Sentence: <em style="color:var(--text2)">"The cat sat on the mat because it was tired"</em></div>
+<div id="attn-tokens" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
+<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Attention weights from selected token to all tokens</div>
+<div id="attn-grid" style="overflow-x:auto"></div>
+<svg id="attn-svg" viewBox="0 0 580 130" style="width:100%;display:block;margin-top:14px"><g id="attn-fan"></g></svg>
+<div id="attn-explain" style="font-size:12px;color:var(--text2);margin-top:4px;padding:8px 10px;background:var(--bg3);border-radius:7px;line-height:1.6">Click any token above to see which other tokens it attends to most.</div>
+</div>
+<script>
+(function(){
+  var tokens=['The','cat','sat','on','the','mat','because','it','was','tired'];
+  var n=tokens.length;
+  var rawW=[
+    [0.30,0.15,0.10,0.08,0.12,0.08,0.06,0.04,0.04,0.03],
+    [0.12,0.28,0.14,0.06,0.08,0.06,0.06,0.08,0.06,0.06],
+    [0.08,0.18,0.20,0.10,0.08,0.10,0.08,0.06,0.06,0.06],
+    [0.06,0.08,0.10,0.22,0.12,0.20,0.08,0.06,0.04,0.04],
+    [0.22,0.10,0.06,0.10,0.24,0.14,0.06,0.04,0.02,0.02],
+    [0.06,0.08,0.10,0.18,0.10,0.24,0.08,0.06,0.04,0.06],
+    [0.06,0.10,0.12,0.06,0.06,0.06,0.22,0.12,0.10,0.10],
+    [0.06,0.38,0.12,0.06,0.06,0.06,0.08,0.08,0.06,0.04],
+    [0.06,0.14,0.10,0.06,0.06,0.06,0.10,0.18,0.16,0.08],
+    [0.04,0.18,0.08,0.06,0.04,0.06,0.08,0.20,0.10,0.16]
+  ];
+  var selected=7;
+  function alphaCol(w){return 'rgba(91,125,248,'+Math.max(0.04,w.toFixed(2))+')';}
+  function textCol(w){return w>0.15?'#e6e9f4':'#4e5a7a';}
+  var tokDiv=document.getElementById('attn-tokens');
+  tokens.forEach(function(t,i){
+    var btn=document.createElement('button');
+    btn.textContent=t;btn.id='tok-'+i;
+    btn.style.cssText='padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s';
+    btn.onclick=function(){selected=i;render();};
+    tokDiv.appendChild(btn);
+  });
+  function renderGrid(){
+    var row=rawW[selected];
+    var html='<table style="border-collapse:collapse;font-size:11px;width:100%"><tr><td style="padding:3px 6px;color:var(--text3);font-size:10px">attending to →</td>';
+    tokens.forEach(function(t){html+='<td style="padding:3px 5px;text-align:center;color:var(--text3);font-size:10px;font-weight:600">'+t+'</td>';});
+    html+='</tr><tr>';
+    html+='<td style="padding:3px 6px;color:var(--accent);font-size:10px;font-weight:700">'+tokens[selected]+'</td>';
+    row.forEach(function(w,j){
+      var bg=alphaCol(w),tc=textCol(w);
+      var border=j===selected?'2px solid var(--accent)':'1px solid var(--border)';
+      html+='<td style="padding:6px 4px;text-align:center;background:'+bg+';border:'+border+';border-radius:4px;color:'+tc+';font-weight:'+(w>0.15?'700':'400')+';font-family:\'JetBrains Mono\',monospace">'+w.toFixed(2)+'</td>';
+    });
+    html+='</tr></table>';
+    document.getElementById('attn-grid').innerHTML=html;
+  }
+  function renderFan(){
+    var row=rawW[selected];
+    var W=560,srcY=100,tgtY=20,x0=10,slotW=W/n;
+    var srcX=x0+selected*slotW+slotW/2;
+    var html='';
+    row.forEach(function(w,j){
+      var tgtX=x0+j*slotW+slotW/2;
+      var thick=Math.max(0.5,w*14);
+      var alpha=Math.min(1,Math.max(0.08,w*1.8));
+      var col=j===selected?'#f5a623':'#5b7df8';
+      html+='<line x1="'+srcX.toFixed(1)+'" y1="'+srcY+'" x2="'+tgtX.toFixed(1)+'" y2="'+(tgtY+18)+'" stroke="'+col+'" stroke-width="'+thick.toFixed(1)+'" stroke-opacity="'+alpha.toFixed(2)+'" stroke-linecap="round"/>';
+    });
+    row.forEach(function(w,j){
+      var tgtX=x0+j*slotW+slotW/2;
+      var isSrc=j===selected,isTop=row.indexOf(Math.max.apply(null,row))===j;
+      var bg=isSrc?'#f5a623':(isTop?'rgba(91,125,248,.35)':'rgba(91,125,248,'+Math.max(0.05,w)+')');
+      var stroke=isSrc?'#f5a623':'#5b7df8';
+      html+='<rect x="'+(tgtX-22).toFixed(1)+'" y="'+tgtY+'" width="44" height="18" rx="5" fill="'+bg+'" stroke="'+stroke+'" stroke-width="'+(isSrc?'1.5':'0.75')+'" stroke-opacity="0.6"/>';
+      html+='<text x="'+tgtX.toFixed(1)+'" y="'+(tgtY+12).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="'+(isSrc?'#0b0d12':'#e6e9f4')+'" font-family="Inter,sans-serif" font-weight="'+(isSrc||isTop?'700':'400')+'">'+tokens[j]+'</text>';
+      html+='<text x="'+tgtX.toFixed(1)+'" y="'+(tgtY+32).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+(w>0.15?'#5b7df8':'#4e5a7a')+'" font-family="JetBrains Mono,monospace">'+w.toFixed(2)+'</text>';
+    });
+    html+='<rect x="'+(srcX-28).toFixed(1)+'" y="'+(srcY-14)+'" width="56" height="20" rx="6" fill="rgba(245,166,35,.25)" stroke="#f5a623" stroke-width="1.5"/>';
+    html+='<text x="'+srcX.toFixed(1)+'" y="'+(srcY-1)+'" text-anchor="middle" font-size="10" fill="#f5a623" font-family="Inter,sans-serif" font-weight="700">'+tokens[selected]+' (Q)</text>';
+    document.getElementById('attn-fan').innerHTML=html;
+  }
+  function renderExplain(){
+    var row=rawW[selected];
+    var sorted=row.map(function(w,j){return{w:w,j:j};}).sort(function(a,b){return b.w-a.w;});
+    var top3=sorted.slice(0,3).map(function(d){return'"'+tokens[d.j]+'" ('+d.w.toFixed(2)+')';}).join(', ');
+    var insight='';
+    if(selected===7)insight=' <em>Note: "it" attends most to "cat" (0.38) — the model has learned coreference: "it" refers to "cat".</em>';
+    else if(selected===9)insight=' <em>"tired" attends to "it"/"cat" — understanding who is tired requires resolving "it"→"cat".</em>';
+    else if(selected===6)insight=' <em>"because" attends to itself and surrounding context — bridging two clauses.</em>';
+    document.getElementById('attn-explain').innerHTML='<strong style="color:var(--amber)">"'+tokens[selected]+'"</strong> attends most to: '+top3+'.'+insight+' Line thickness ∝ attention weight α<sub>ij</sub> = softmax(QKᵀ/√d<sub>k</sub>).';
+  }
+  function render(){
+    tokens.forEach(function(_,i){
+      var btn=document.getElementById('tok-'+i);
+      btn.style.background=i===selected?'rgba(245,166,35,.2)':'var(--surface)';
+      btn.style.borderColor=i===selected?'#f5a623':'var(--border)';
+      btn.style.color=i===selected?'#f5a623':'var(--text2)';
+    });
+    renderGrid();renderFan();renderExplain();
+  }
+  render();
+})();
+</script>
+
 </section>

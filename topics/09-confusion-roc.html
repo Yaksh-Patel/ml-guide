@@ -53,4 +53,114 @@ F_1                &= 2 \cdot TP \;/\; (2 \cdot TP + FP + FN)
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I optimized F1 score." — F1 weights precision and recall equally, which implies equal cost to false positives and false negatives. That's almost never the business reality. Say instead: "I chose the threshold that maximized precision at our minimum acceptable recall of X%."</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Walk me through the ROC curve construction." — Answer: for each possible threshold from 1→0, compute TPR (recall = TP/P) and FPR (= FP/N). Plot TPR vs FPR. The area under this curve is AUC-ROC. Random classifier = diagonal line (AUC=0.5). Perfect classifier = top-left corner (AUC=1.0). The curve shows the tradeoff between catching positives and tolerating false alarms across all thresholds.</p>
 </div>
+
+<!-- ── Interactive Confusion Matrix & ROC Explorer ── -->
+<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-title">Interactive — Threshold Explorer: Confusion Matrix · ROC · PR Curves</div>
+<div style="display:flex;align-items:center;gap:12px;margin:10px 0 14px;flex-wrap:wrap">
+  <label style="font-size:12px;color:var(--text2)">Classification threshold</label>
+  <input type="range" id="roc-thresh" min="0" max="100" value="50" style="flex:1;min-width:140px;max-width:300px">
+  <span id="roc-thresh-val" style="font-size:12px;font-weight:700;color:var(--accent);min-width:36px">0.50</span>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Confusion Matrix</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+      <tr><td style="padding:4px;color:var(--text3);font-size:10px"></td><td style="padding:4px;text-align:center;color:var(--text3);font-size:10px;font-weight:700">Pred +</td><td style="padding:4px;text-align:center;color:var(--text3);font-size:10px;font-weight:700">Pred −</td></tr>
+      <tr><td style="padding:4px;color:var(--text3);font-size:10px;font-weight:700">Actual +</td>
+          <td id="cm-tp" style="padding:10px;text-align:center;background:rgba(34,211,160,.15);border:1px solid rgba(34,211,160,.3);border-radius:6px;font-weight:700;color:#22d3a0;font-size:13px"></td>
+          <td id="cm-fn" style="padding:10px;text-align:center;background:rgba(240,103,103,.1);border:1px solid rgba(240,103,103,.25);border-radius:6px;font-weight:700;color:#f06767;font-size:13px"></td></tr>
+      <tr><td style="padding:4px;color:var(--text3);font-size:10px;font-weight:700">Actual −</td>
+          <td id="cm-fp" style="padding:10px;text-align:center;background:rgba(240,103,103,.1);border:1px solid rgba(240,103,103,.25);border-radius:6px;font-weight:700;color:#f06767;font-size:13px"></td>
+          <td id="cm-tn" style="padding:10px;text-align:center;background:rgba(34,211,160,.08);border:1px solid rgba(34,211,160,.2);border-radius:6px;font-weight:700;color:#22d3a0;font-size:13px"></td></tr>
+    </table>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Metrics at this threshold</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr><td style="padding:3px 0;color:var(--text2)">TPR / Recall</td><td id="m-tpr" style="text-align:right;color:var(--blue);font-weight:700;font-family:'JetBrains Mono',monospace"></td></tr>
+      <tr><td style="padding:3px 0;color:var(--text2)">FPR</td><td id="m-fpr" style="text-align:right;color:var(--red);font-weight:700;font-family:'JetBrains Mono',monospace"></td></tr>
+      <tr><td style="padding:3px 0;color:var(--text2)">Precision</td><td id="m-prec" style="text-align:right;color:var(--purple);font-weight:700;font-family:'JetBrains Mono',monospace"></td></tr>
+      <tr><td style="padding:3px 0;color:var(--text2)">F1 Score</td><td id="m-f1" style="text-align:right;color:var(--cyan);font-weight:700;font-family:'JetBrains Mono',monospace"></td></tr>
+      <tr><td style="padding:3px 0;color:var(--text2)">Accuracy</td><td id="m-acc" style="text-align:right;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace"></td></tr>
+    </table>
+  </div>
+  <div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:4px">ROC Curve &amp; PR Curve</div>
+    <svg id="roc-svg" viewBox="0 0 260 220" style="width:100%;display:block">
+      <text x="60" y="10" font-size="8" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">ROC</text>
+      <rect x="18" y="14" width="92" height="92" fill="none" stroke="#2e3a58" stroke-width="0.75"/>
+      <line x1="18" y1="106" x2="110" y2="14" stroke="#2e3a58" stroke-width="0.75" stroke-dasharray="3 2"/>
+      <path id="roc-curve" fill="none" stroke="#5ba4fb" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle id="roc-dot" r="4" fill="#f5a623" stroke="#0b0d12" stroke-width="1.5"/>
+      <text x="64" y="118" font-size="7" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">FPR →</text>
+      <text x="6" y="60" font-size="7" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle" transform="rotate(-90,6,60)">TPR</text>
+      <text id="roc-auc" x="108" y="105" font-size="7" fill="#5ba4fb" font-family="Inter,sans-serif" text-anchor="end"/>
+      <text x="198" y="10" font-size="8" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">PR</text>
+      <rect x="156" y="14" width="92" height="92" fill="none" stroke="#2e3a58" stroke-width="0.75"/>
+      <line x1="156" y1="87" x2="248" y2="87" stroke="#2e3a58" stroke-width="0.75" stroke-dasharray="3 2"/>
+      <path id="pr-curve" fill="none" stroke="#b97cf8" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle id="pr-dot" r="4" fill="#f5a623" stroke="#0b0d12" stroke-width="1.5"/>
+      <text x="202" y="118" font-size="7" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">Recall →</text>
+      <text x="144" y="60" font-size="7" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle" transform="rotate(-90,144,60)">Precision</text>
+      <text id="pr-auc" x="246" y="105" font-size="7" fill="#b97cf8" font-family="Inter,sans-serif" text-anchor="end"/>
+      <circle cx="20" cy="130" r="3.5" fill="#f5a623"/>
+      <text x="28" y="133" font-size="7.5" fill="#f5a623" font-family="Inter,sans-serif">Current threshold</text>
+      <line x1="20" y1="143" x2="30" y2="143" stroke="#2e3a58" stroke-width="1.5" stroke-dasharray="3 2"/>
+      <text x="34" y="146" font-size="7.5" fill="#4e5a7a" font-family="Inter,sans-serif">Random baseline</text>
+    </svg>
+  </div>
+</div>
+<div id="roc-insight" style="font-size:12px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:7px;line-height:1.6"></div>
+</div>
+<script>
+(function(){
+  var s=42;function rand(){s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff;}
+  function randn(){return Math.sqrt(-2*Math.log(rand()+1e-9))*Math.cos(2*Math.PI*rand());}
+  var scores=[];
+  for(var i=0;i<200;i++)scores.push({s:Math.min(.999,Math.max(.001,.65+randn()*.18)),y:1});
+  for(var i=0;i<800;i++)scores.push({s:Math.min(.999,Math.max(.001,.35+randn()*.18)),y:0});
+  var P=200,N=800;
+  // Build curves by sweeping thresholds
+  var threshVals=[];for(var t=0;t<=100;t++)threshVals.push(t/100);
+  var rocCurve=[],prCurve=[];
+  threshVals.forEach(function(th){
+    var tp=0,fp=0,tn=0,fn=0;
+    scores.forEach(function(d){var p=d.s>=th?1:0;if(p===1&&d.y===1)tp++;else if(p===1&&d.y===0)fp++;else if(p===0&&d.y===0)tn++;else fn++;});
+    rocCurve.push([fp/N,tp/P]);
+    prCurve.push([tp/P,tp/(tp+fp)||1]);
+  });
+  function toD(pts,x0,y0,w,h){return pts.map(function(p,i){return(i===0?'M':'L')+(x0+p[0]*w).toFixed(2)+' '+(y0+h-p[1]*h).toFixed(2);}).join('');}
+  document.getElementById('roc-curve').setAttribute('d',toD(rocCurve,18,14,92,92));
+  document.getElementById('pr-curve').setAttribute('d',toD(prCurve.sort(function(a,b){return a[0]-b[0];}),156,14,92,92));
+  function auc(pts){var a=0;for(var i=1;i<pts.length;i++)a+=Math.abs(pts[i][0]-pts[i-1][0])*(pts[i][1]+pts[i-1][1])/2;return a;}
+  document.getElementById('roc-auc').textContent='AUC='+auc(rocCurve).toFixed(2);
+  document.getElementById('pr-auc').textContent='AUC='+auc(prCurve).toFixed(2);
+  function update(v){
+    var thresh=v/100;
+    document.getElementById('roc-thresh-val').textContent=thresh.toFixed(2);
+    var tp=0,fp=0,tn=0,fn=0;
+    scores.forEach(function(d){var p=d.s>=thresh?1:0;if(p===1&&d.y===1)tp++;else if(p===1&&d.y===0)fp++;else if(p===0&&d.y===0)tn++;else fn++;});
+    var tpr=tp/(tp+fn)||0,fpr=fp/(fp+tn)||0,prec=tp/(tp+fp)||0,f1=2*tp/(2*tp+fp+fn)||0,acc=(tp+tn)/1000;
+    document.getElementById('cm-tp').textContent='TP '+tp;
+    document.getElementById('cm-fn').textContent='FN '+fn;
+    document.getElementById('cm-fp').textContent='FP '+fp;
+    document.getElementById('cm-tn').textContent='TN '+tn;
+    document.getElementById('m-tpr').textContent=tpr.toFixed(3);
+    document.getElementById('m-fpr').textContent=fpr.toFixed(3);
+    document.getElementById('m-prec').textContent=prec.toFixed(3);
+    document.getElementById('m-f1').textContent=f1.toFixed(3);
+    document.getElementById('m-acc').textContent=acc.toFixed(3);
+    var rx=(18+fpr*92).toFixed(2),ry=(14+92-tpr*92).toFixed(2);
+    var px=(156+tpr*92).toFixed(2),py=(14+92-prec*92).toFixed(2);
+    document.getElementById('roc-dot').setAttribute('cx',rx);document.getElementById('roc-dot').setAttribute('cy',ry);
+    document.getElementById('pr-dot').setAttribute('cx',px);document.getElementById('pr-dot').setAttribute('cy',py);
+    var msg='';
+    if(thresh<0.3)msg='<strong style="color:#f5a623">Low threshold ('+thresh.toFixed(2)+'):</strong> Aggressive — high recall but many false alarms. Use when missing a positive is very costly (cancer screening).';
+    else if(thresh>0.7)msg='<strong style="color:#b97cf8">High threshold ('+thresh.toFixed(2)+'):</strong> Conservative — high precision but misses true positives. Use when false alarms are very costly.';
+    else msg='<strong style="color:#22d3a0">Threshold '+thresh.toFixed(2)+':</strong> Precision='+prec.toFixed(2)+', Recall='+tpr.toFixed(2)+', F1='+f1.toFixed(2)+'. The 0.5 default is rarely optimal — tune the threshold to your business cost of FP vs FN.';
+    document.getElementById('roc-insight').innerHTML=msg;
+  }
+  document.getElementById('roc-thresh').addEventListener('input',function(){update(+this.value);});
+  update(50);
+})();
+</script>
 </section>

@@ -68,4 +68,71 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll just add more data." — More data only helps variance, not bias. If the model is too simple for the problem, no amount of data fixes it.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Does bagging reduce bias or variance?" — Answer: primarily variance. Each tree is trained on a bootstrap sample and has the same expected prediction as a single tree (same bias), but averaging many reduces variance. Boosting reduces bias by correcting systematic errors sequentially.</p>
 </div>
+
+<!-- ── Interactive Bias-Variance Explorer ── -->
+<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-title">Interactive — Bias-Variance Tradeoff Explorer</div>
+<div style="display:flex;align-items:center;gap:12px;margin:10px 0 4px;flex-wrap:wrap">
+  <label style="font-size:12px;color:var(--text2)">Model complexity</label>
+  <input type="range" id="bv-complexity" min="0" max="100" value="30" style="flex:1;min-width:120px;max-width:280px">
+  <span id="bv-label" style="font-size:11px;font-weight:700;color:var(--amber);min-width:90px">Underfitting</span>
+</div>
+<svg id="bv-svg" viewBox="0 0 560 220" style="width:100%;display:block;margin-top:4px">
+  <line x1="44" y1="16" x2="44" y2="180" stroke="#2e3a58" stroke-width="1"/>
+  <line x1="44" y1="180" x2="536" y2="180" stroke="#2e3a58" stroke-width="1"/>
+  <text x="8" y="100" font-size="9" fill="#4e5a7a" font-family="Inter,sans-serif" transform="rotate(-90,8,100)">Error</text>
+  <text x="290" y="200" font-size="9" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">Model Complexity →</text>
+  <text x="44" y="194" font-size="8" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">Low</text>
+  <text x="536" y="194" font-size="8" fill="#4e5a7a" font-family="Inter,sans-serif" text-anchor="middle">High</text>
+  <path id="bv-bias" fill="none" stroke="#5ba4fb" stroke-width="2" stroke-linejoin="round"/>
+  <path id="bv-variance" fill="none" stroke="#b97cf8" stroke-width="2" stroke-linejoin="round"/>
+  <path id="bv-total" fill="none" stroke="#22d3a0" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>
+  <line id="bv-noise" x1="44" y1="160" x2="536" y2="160" stroke="#f5a623" stroke-width="1" stroke-dasharray="4 4"/>
+  <line id="bv-cursor" x1="120" y1="16" x2="120" y2="180" stroke="#e6e9f4" stroke-width="1" stroke-dasharray="3 3" opacity="0.4"/>
+  <circle cx="52" cy="12" r="4" fill="#5ba4fb"/>
+  <text x="60" y="16" font-size="9" fill="#5ba4fb" font-family="Inter,sans-serif">Bias²</text>
+  <circle cx="106" cy="12" r="4" fill="#b97cf8"/>
+  <text x="114" y="16" font-size="9" fill="#b97cf8" font-family="Inter,sans-serif">Variance</text>
+  <line x1="170" y1="12" x2="184" y2="12" stroke="#22d3a0" stroke-width="2" stroke-dasharray="5 3"/>
+  <text x="188" y="16" font-size="9" fill="#22d3a0" font-family="Inter,sans-serif">Total Error</text>
+  <line x1="258" y1="12" x2="272" y2="12" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text x="276" y="16" font-size="9" fill="#f5a623" font-family="Inter,sans-serif">Irreducible Noise</text>
+  <text id="bv-readout" x="536" y="50" font-size="9" fill="#e6e9f4" font-family="Inter,sans-serif" text-anchor="end"/>
+</svg>
+<div id="bv-diagnosis" style="font-size:12px;color:var(--text2);margin-top:6px;padding:8px 10px;background:var(--bg3);border-radius:7px;line-height:1.6"></div>
+<script>
+(function(){
+  const N=80,x0=44,x1=536,y0=16,y1=180,yR=y1-y0;
+  function pts(fn){return Array.from({length:N},(_,i)=>{const t=i/(N-1);return[x0+t*(x1-x0),y0+yR*(1-fn(t))];});}
+  function toD(pts){return pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join('');}
+  const noise=0.18;
+  function biasF(t){return noise+0.72*Math.pow(1-t,2.2);}
+  function varF(t){return 0.75*Math.pow(t,2.0);}
+  function totalF(t){return biasF(t)+varF(t)+noise;}
+  document.getElementById('bv-bias').setAttribute('d',toD(pts(biasF)));
+  document.getElementById('bv-variance').setAttribute('d',toD(pts(varF)));
+  document.getElementById('bv-total').setAttribute('d',toD(pts(totalF)));
+  const ny=y0+yR*(1-(noise+noise));
+  document.getElementById('bv-noise').setAttribute('y1',ny);
+  document.getElementById('bv-noise').setAttribute('y2',ny);
+  function update(v){
+    const t=v/100,cx=x0+t*(x1-x0);
+    document.getElementById('bv-cursor').setAttribute('x1',cx);
+    document.getElementById('bv-cursor').setAttribute('x2',cx);
+    const b=biasF(t),va=varF(t),tot=totalF(t);
+    document.getElementById('bv-readout').textContent='Bias²='+(b*100).toFixed(0)+'  Var='+(va*100).toFixed(0)+'  Total='+(tot*100).toFixed(0);
+    let label,diag,col;
+    if(t<0.25){label='Underfitting';col='#5ba4fb';diag='<strong style="color:#5ba4fb">High bias, low variance.</strong> Model too simple — both training and validation error are high. Fix: more capacity, less regularisation, add features.';}
+    else if(t<0.55){label='Sweet Spot ✓';col='#22d3a0';diag='<strong style="color:#22d3a0">Balanced — lowest total error.</strong> Bias and variance are balanced. Validation error is at its minimum. This is the optimal complexity.';}
+    else{label='Overfitting';col='#b97cf8';diag='<strong style="color:#b97cf8">High variance, low bias.</strong> Model memorises noise — low train error, high val error. Fix: regularisation, more data, simpler model, dropout.';}
+    document.getElementById('bv-label').textContent=label;
+    document.getElementById('bv-label').style.color=col;
+    document.getElementById('bv-diagnosis').innerHTML=diag;
+  }
+  document.getElementById('bv-complexity').addEventListener('input',function(){update(+this.value);});
+  update(30);
+})();
+</script>
+</div>
+
 </section>

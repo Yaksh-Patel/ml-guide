@@ -277,4 +277,106 @@ print(f"dW2 = {dW2.flatten().round(4)}")
   </div>
 </div>
 
+<!-- ── Animated Backpropagation Computation Graph ── -->
+<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-title">Interactive — Forward Pass → Loss → Backward Pass (step through)</div>
+<div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap;align-items:center">
+  <button id="bp-btn" onclick="bpStep()" style="background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">▶ Step Forward</button>
+  <button onclick="bpReset()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit">↺ Reset</button>
+  <span id="bp-phase" style="font-size:12px;color:var(--text3);margin-left:4px"></span>
+</div>
+<svg id="bp-svg" viewBox="0 0 580 280" style="width:100%;display:block">
+  <defs>
+    <marker id="bp-arr-f" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 2L8 5L1 8" fill="none" stroke="#5ba4fb" stroke-width="1.5" stroke-linecap="round"/></marker>
+    <marker id="bp-arr-b" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M9 2L2 5L9 8" fill="none" stroke="#f06767" stroke-width="1.5" stroke-linecap="round"/></marker>
+  </defs>
+  <!-- Forward edges -->
+  <line id="e-x-z1"  x1="74"  y1="140" x2="152" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-z1-h1" x1="208" y1="140" x2="278" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-w1-z1" x1="178" y1="52"  x2="178" y2="120" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-h1-z2" x1="336" y1="140" x2="396" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-w2-z2" x1="418" y1="52"  x2="418" y2="120" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-z2-yh" x1="452" y1="140" x2="510" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <line id="e-yh-L"  x1="546" y1="162" x2="546" y2="192" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
+  <!-- Backward edges (hidden) -->
+  <line id="b-z2-h1" x1="452" y1="158" x2="338" y2="158" stroke="#f06767" stroke-width="1.5" stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
+  <line id="b-z1-x"  x1="208" y1="158" x2="76"  y2="158" stroke="#f06767" stroke-width="1.5" stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
+  <line id="b-w1"    x1="178" y1="120" x2="178" y2="62"  stroke="#b97cf8" stroke-width="2"   stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
+  <line id="b-w2"    x1="418" y1="120" x2="418" y2="62"  stroke="#b97cf8" stroke-width="2"   stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
+  <!-- Nodes -->
+  <g id="n-x"><ellipse cx="50" cy="140" rx="26" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="50" y="137" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">x</text><text id="v-x" x="50" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">input</text></g>
+  <g id="n-w1"><rect x="152" y="26" width="52" height="36" rx="7" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="178" y="41" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">W₁</text><text id="v-w1" x="178" y="54" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">0.5</text></g>
+  <g id="n-z1"><ellipse cx="178" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="178" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">z₁=W₁x</text><text id="v-z1" x="178" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
+  <g id="n-h1"><ellipse cx="308" cy="140" rx="30" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="308" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">h₁=ReLU</text><text id="v-h1" x="308" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
+  <g id="n-w2"><rect x="392" y="26" width="52" height="36" rx="7" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="418" y="41" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">W₂</text><text id="v-w2" x="418" y="54" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">0.8</text></g>
+  <g id="n-z2"><ellipse cx="420" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="420" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">z₂=W₂h₁</text><text id="v-z2" x="420" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
+  <g id="n-yh"><ellipse cx="530" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="530" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">ŷ=σ(z₂)</text><text id="v-yh" x="530" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
+  <g id="n-L"><rect x="508" y="192" width="76" height="42" rx="9" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="546" y="210" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">L = BCE</text><text id="v-L" x="546" y="225" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
+  <!-- Gradient labels -->
+  <text id="g-w2" x="428" y="85"  font-size="9" fill="#b97cf8" font-family="JetBrains Mono,monospace" opacity="0"></text>
+  <text id="g-w1" x="186" y="85"  font-size="9" fill="#b97cf8" font-family="JetBrains Mono,monospace" opacity="0"></text>
+  <text id="g-z2" x="370" y="172" font-size="9" fill="#f06767" font-family="JetBrains Mono,monospace" text-anchor="middle" opacity="0"></text>
+  <text id="g-h1" x="270" y="172" font-size="9" fill="#f06767" font-family="JetBrains Mono,monospace" text-anchor="middle" opacity="0"></text>
+  <text id="bp-phase-svg" x="290" y="268" text-anchor="middle" font-size="10" fill="#4e5a7a" font-family="Inter,sans-serif" font-weight="700" letter-spacing=".6"></text>
+</svg>
+<div id="bp-explain" style="font-size:12px;color:var(--text2);margin-top:8px;padding:8px 12px;background:var(--bg3);border-radius:7px;line-height:1.7"></div>
+</div>
+<script>
+(function(){
+  var x=2.0,W1=0.5,W2=0.8,y=1.0;
+  var z1=W1*x,h1=Math.max(0,z1),z2=W2*h1,yh=1/(1+Math.exp(-z2));
+  var L=-(y*Math.log(yh)+(1-y)*Math.log(1-yh));
+  var dL_dz2=yh-y,dL_dW2=dL_dz2*h1,dL_dh1=dL_dz2*W2,dL_dz1=dL_dh1*(z1>0?1:0),dL_dW1=dL_dz1*x;
+  function hi(id,stroke,fill){var el=document.querySelector('#n-'+id+' ellipse')||document.querySelector('#n-'+id+' rect');if(el){el.setAttribute('stroke',stroke);el.setAttribute('fill',fill);}}
+  function se(id,op){document.getElementById(id).style.opacity=op;}
+  function st(id,t){document.getElementById(id).textContent=t;}
+  function sg(id,t){var el=document.getElementById(id);el.textContent=t;el.style.opacity='1';}
+  var phase=0;
+  function bpReset(){
+    phase=0;
+    ['x','z1','h1','z2','yh','L','w1','w2'].forEach(function(id){hi(id,'#2e3a58','#1a1f2e');});
+    st('v-x','2.0');st('v-w1','0.5');st('v-w2','0.8');
+    ['v-z1','v-h1','v-z2','v-yh','v-L'].forEach(function(id){st(id,'');});
+    ['e-x-z1','e-z1-h1','e-w1-z1','e-h1-z2','e-w2-z2','e-z2-yh','e-yh-L'].forEach(function(id){document.getElementById(id).style.stroke='#2e3a58';});
+    ['b-z2-h1','b-z1-x','b-w1','b-w2'].forEach(function(id){se(id,0);});
+    ['g-w2','g-w1','g-z2','g-h1'].forEach(function(id){document.getElementById(id).style.opacity='0';});
+    document.getElementById('bp-btn').textContent='▶ Step Forward';
+    document.getElementById('bp-btn').style.background='var(--accent)';
+    document.getElementById('bp-phase').textContent='';
+    st('bp-phase-svg','');
+    document.getElementById('bp-explain').innerHTML='Click <strong>Step Forward</strong> to walk through: values flow left→right (forward pass), then gradients flow right→left (backward pass).';
+  }
+  window.bpReset=bpReset;
+  window.bpStep=function(){
+    phase++;
+    if(phase===1){
+      hi('x','#5ba4fb','rgba(91,164,251,.15)');hi('z1','#5ba4fb','rgba(91,164,251,.15)');hi('w1','#5ba4fb','rgba(91,164,251,.12)');
+      st('v-x',x.toFixed(1));st('v-z1',z1.toFixed(2));
+      document.getElementById('e-x-z1').style.stroke='#5ba4fb';document.getElementById('e-w1-z1').style.stroke='#5ba4fb';
+      st('bp-phase-svg','FORWARD PASS');document.getElementById('bp-phase').textContent='Step 1 / 4';
+      document.getElementById('bp-explain').innerHTML='<strong style="color:#5ba4fb">Forward pass (layer 1):</strong> z₁ = W₁ · x = '+W1+' × '+x+' = <strong>'+z1.toFixed(2)+'</strong>. h₁ = ReLU('+z1.toFixed(2)+') = <strong>'+h1.toFixed(2)+'</strong>.';
+    } else if(phase===2){
+      hi('h1','#5ba4fb','rgba(91,164,251,.15)');hi('z2','#5ba4fb','rgba(91,164,251,.15)');hi('yh','#5ba4fb','rgba(91,164,251,.15)');hi('w2','#5ba4fb','rgba(91,164,251,.12)');hi('L','#f5a623','rgba(245,166,35,.15)');
+      st('v-h1',h1.toFixed(2));st('v-z2',z2.toFixed(2));st('v-yh',yh.toFixed(3));st('v-L','L='+L.toFixed(3));
+      ['e-h1-z2','e-w2-z2','e-z2-yh','e-yh-L'].forEach(function(id){document.getElementById(id).style.stroke='#5ba4fb';});
+      document.getElementById('bp-phase').textContent='Step 2 / 4';
+      document.getElementById('bp-explain').innerHTML='<strong style="color:#5ba4fb">Forward pass (layer 2 + loss):</strong> z₂ = W₂ · h₁ = '+W2+' × '+h1+' = <strong>'+z2.toFixed(2)+'</strong>. ŷ = σ(z₂) = <strong>'+yh.toFixed(3)+'</strong>. L = BCE = <strong>'+L.toFixed(3)+'</strong>. This scalar is what we differentiate.';
+    } else if(phase===3){
+      se('b-z2-h1',1);hi('z2','#f06767','rgba(240,103,103,.18)');hi('h1','#f06767','rgba(240,103,103,.15)');
+      sg('g-z2','∂L/∂z₂='+dL_dz2.toFixed(3));sg('g-h1','∂L/∂h₁='+dL_dh1.toFixed(3));
+      st('bp-phase-svg','BACKWARD PASS');document.getElementById('bp-phase').textContent='Step 3 / 4';
+      document.getElementById('bp-btn').textContent='▶ Step Backward';document.getElementById('bp-btn').style.background='#b97cf8';
+      document.getElementById('bp-explain').innerHTML='<strong style="color:#f06767">Backward pass:</strong> ∂L/∂z₂ = ŷ − y = '+yh.toFixed(3)+' − 1 = <strong>'+dL_dz2.toFixed(3)+'</strong> (sigmoid+BCE gradient simplifies cleanly). ∂L/∂h₁ = ∂L/∂z₂ · W₂ = <strong>'+dL_dh1.toFixed(3)+'</strong>. Gradients flow right → left.';
+    } else if(phase===4){
+      se('b-z1-x',1);se('b-w1',1);se('b-w2',1);
+      hi('w1','#b97cf8','rgba(185,124,248,.2)');hi('w2','#b97cf8','rgba(185,124,248,.2)');
+      sg('g-w2','∂L/∂W₂='+dL_dW2.toFixed(3));sg('g-w1','∂L/∂W₁='+dL_dW1.toFixed(3));
+      document.getElementById('bp-phase').textContent='Step 4 / 4 — Complete';
+      document.getElementById('bp-btn').textContent='↺ Reset';document.getElementById('bp-btn').style.background='#2e3a58';
+      document.getElementById('bp-explain').innerHTML='<strong style="color:#b97cf8">Weight gradients:</strong> ∂L/∂W₂ = ∂L/∂z₂ · h₁ = <strong>'+dL_dW2.toFixed(3)+'</strong>. ∂L/∂W₁ = ∂L/∂z₁ · x = <strong>'+dL_dW1.toFixed(3)+'</strong>. Update: W₁ ← W₁ − α·('+dL_dW1.toFixed(3)+'), W₂ ← W₂ − α·('+dL_dW2.toFixed(3)+'). Then repeat for next batch.';
+    } else { bpReset(); }
+  };
+  bpReset();
+})();
+</script>
 </section>
