@@ -39,7 +39,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .layout{display:flex;min-height:100vh}
 
 /* SIDEBAR */
-.sidebar{width:268px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);position:fixed;top:0;left:0;height:100vh;overflow-y:auto;overflow-x:hidden;z-index:100;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:var(--border) transparent;transition:background .25s,border-color .25s,width .2s}
+.sidebar{width:268px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:var(--border) transparent;transition:background .25s,border-color .25s}
 .sidebar::-webkit-scrollbar{width:4px}.sidebar::-webkit-scrollbar-thumb{background:var(--border)}
 .sb-hdr{padding:16px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .sb-logo{font-family:'Syne',sans-serif;font-size:13.5px;font-weight:800;color:var(--accent)}
@@ -181,17 +181,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 .sb-collapse-btn:hover{border-color:var(--accent);color:var(--text)}
 
 /* Collapsed sidebar — icon-only mode */
-.sidebar.sb-collapsed{width:44px;overflow:hidden}
+.sidebar.sb-collapsed{width:44px}
 .sidebar.sb-collapsed .sb-sub,
 .sidebar.sb-collapsed .sb-search,
 .sidebar.sb-collapsed .sb-grp,
-.sidebar.sb-collapsed .sb-progress,
 .sidebar.sb-collapsed .sb-ctrl-right{display:none}
 .sidebar.sb-collapsed .sb-logo{font-size:0;overflow:hidden}
 .sidebar.sb-collapsed .sb-logo::after{content:'ML';font-size:11px;font-family:'Syne',sans-serif;font-weight:800;color:var(--accent)}
 .sidebar.sb-collapsed .sb-hdr{padding:14px 8px 10px}
-.sidebar.sb-collapsed .sb-top-controls{justify-content:center;padding:6px 0;min-width:0;width:44px;box-sizing:border-box}
-.sidebar.sb-collapsed .sb-collapse-btn{margin:0 auto;flex-shrink:0}
+.sidebar.sb-collapsed .sb-top-controls{justify-content:center;padding:6px 0}
+.sidebar.sb-collapsed .sb-collapse-btn{margin:0 auto}
 .main{transition:margin-left .2s}
 .sidebar.sb-collapsed ~ .main{margin-left:44px}
 @media(max-width:768px){.sidebar.sb-collapsed ~ .main{margin-left:0}}
