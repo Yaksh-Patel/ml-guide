@@ -320,8 +320,13 @@ async function nav(id, crumb, title) {
 function updateReadButton(id) {
   const btn = document.getElementById('tb-read-btn');
   if (!btn) return;
-  if (!id || id === 'home' || !TOPIC_META[id]) { btn.style.display = 'none'; return; }
-  btn.style.display = 'inline-flex';
+  if (!id || id === 'home' || !TOPIC_META[id]) {
+    btn.style.visibility = 'hidden';
+    btn.style.pointerEvents = 'none';
+    return;
+  }
+  btn.style.visibility = 'visible';
+  btn.style.pointerEvents = 'auto';
   const read = isRead(id);
   btn.textContent = read ? '✓ Read' : '○ Mark read';
   btn.className   = 'tb-read-btn' + (read ? ' tb-read-done' : '');
