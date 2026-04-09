@@ -321,7 +321,7 @@ function updateReadButton(id) {
   const btn = document.getElementById('tb-read-btn');
   if (!btn) return;
   if (!id || id === 'home' || !TOPIC_META[id]) { btn.style.display = 'none'; return; }
-  btn.style.display = '';
+  btn.style.display = 'inline-flex';
   const read = isRead(id);
   btn.textContent = read ? '✓ Read' : '○ Mark read';
   btn.className   = 'tb-read-btn' + (read ? ' tb-read-done' : '');
