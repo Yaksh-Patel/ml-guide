@@ -279,6 +279,18 @@ async function nav(id, crumb, title) {
 
         const justLoaded = document.getElementById('sec-' + id);
         if (justLoaded) {
+          // Re-execute any <script> tags — insertAdjacentHTML strips them for security
+          // but our interactive diagrams need them to run
+          justLoaded.querySelectorAll('script').forEach(oldScript => {
+            const newScript = document.createElement('script');
+            // Copy all attributes (type, src, etc.)
+            [...oldScript.attributes].forEach(attr =>
+              newScript.setAttribute(attr.name, attr.value)
+            );
+            newScript.textContent = oldScript.textContent;
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+          });
+
           if (window.Prism) Prism.highlightAllUnder(justLoaded);
           if (window.renderMathInElement) {
             renderMathInElement(justLoaded, {
