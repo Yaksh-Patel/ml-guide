@@ -279,18 +279,6 @@ async function nav(id, crumb, title) {
 
         const justLoaded = document.getElementById('sec-' + id);
         if (justLoaded) {
-          // Re-execute any <script> tags — insertAdjacentHTML strips them for security
-          // but our interactive diagrams need them to run
-          justLoaded.querySelectorAll('script').forEach(oldScript => {
-            const newScript = document.createElement('script');
-            // Copy all attributes (type, src, etc.)
-            [...oldScript.attributes].forEach(attr =>
-              newScript.setAttribute(attr.name, attr.value)
-            );
-            newScript.textContent = oldScript.textContent;
-            oldScript.parentNode.replaceChild(newScript, oldScript);
-          });
-
           if (window.Prism) Prism.highlightAllUnder(justLoaded);
           if (window.renderMathInElement) {
             renderMathInElement(justLoaded, {
@@ -332,13 +320,8 @@ async function nav(id, crumb, title) {
 function updateReadButton(id) {
   const btn = document.getElementById('tb-read-btn');
   if (!btn) return;
-  if (!id || id === 'home' || !TOPIC_META[id]) {
-    btn.style.visibility = 'hidden';
-    btn.style.pointerEvents = 'none';
-    return;
-  }
-  btn.style.visibility = 'visible';
-  btn.style.pointerEvents = 'auto';
+  if (!id || id === 'home' || !TOPIC_META[id]) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
   const read = isRead(id);
   btn.textContent = read ? '✓ Read' : '○ Mark read';
   btn.className   = 'tb-read-btn' + (read ? ' tb-read-done' : '');
@@ -366,6 +349,8 @@ function toggleSidebar() {
   const collapsed = sidebar.classList.toggle('sb-collapsed');
   const icon = document.getElementById('sb-collapse-icon');
   if (icon) icon.textContent = collapsed ? '▶' : '◀';
+  const expandBtn = document.getElementById('sb-expand-btn');
+  if (expandBtn) expandBtn.style.display = collapsed ? 'flex' : 'none';
   try { localStorage.setItem('ml-guide-sb', collapsed ? '1' : '0'); } catch(e) {}
 }
 
@@ -380,6 +365,8 @@ function toggleMobileSidebar() {
         document.getElementById('sidebar').classList.add('sb-collapsed');
         const icon = document.getElementById('sb-collapse-icon');
         if (icon) icon.textContent = '▶';
+        const expandBtn = document.getElementById('sb-expand-btn');
+        if (expandBtn) expandBtn.style.display = 'flex';
       });
     }
   } catch(e) {}
