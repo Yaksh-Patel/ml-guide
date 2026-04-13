@@ -20,7 +20,7 @@ No framework, no build step, no install. Open `index.html` via a local server an
 
 | | Detail |
 |---|---|
-| **57 topics** | Math foundations → classical ML → deep learning → LLMs → RAG → agents → production |
+| **54 topics** | Math foundations → classical ML → deep learning → LLMs → RAG → agents → production |
 | **Progress tracking** | Mark topics as read — persists in localStorage, progress bar in sidebar |
 | **Interactive diagrams** | Bias-variance slider, attention heatmap, backprop step-through, confusion matrix + ROC explorer |
 | **LaTeX rendering** | All formulas rendered via KaTeX — clean, properly spaced math |
