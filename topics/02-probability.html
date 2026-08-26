@@ -1,67 +1,25 @@
 <section class="section" id="sec-prob">
 <div class="sec-title">Probability Theory</div>
-<div class="sec-desc">The mathematical language of uncertainty — every ML model is fundamentally making probabilistic statements, whether it admits it or not.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Basic Rules</div>
+<div class="sec-desc">The part of maths that tells you how much to believe something. Every classifier that outputs a score is making a probability claim, and most of the ways those claims go wrong — miscalibration, base-rate neglect, the independence assumption in Naive Bayes — are failures of the handful of rules below.</div>
+
+<div class="card cb"><div class="card-title">The three rules everything else is built from</div>
 <div class="formula math-formula">$$\begin{aligned}
-\mathbb{P}(A \cup B) = \mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A \cap B) \\
-\mathbb{P}(A \cap B) = \mathbb{P}(A) \cdot \mathbb{P}(B \mid A) \\
-\mathbb{P}(A \mid B) = \mathbb{P}(A \cap B) / \mathbb{P}(B) \\
-\text{Independent: } \mathbb{P}(A \cap B) = \mathbb{P}(A) \cdot \mathbb{P}(B)
-\end{aligned}$$</div></div>
-<div class="card cg"><div class="card-title">Bayes' Theorem</div>
-<div class="formula math-formula">$$\begin{aligned}
-P(H \mid E) = \frac{P(E \mid H) \cdot P(H)}{P(E)} \\[6pt]
-\text{Posterior} = \frac{\text{Likelihood} \times \text{Prior}}{\text{Evidence}}
+\mathbb{P}(A \cup B) &= \mathbb{P}(A) + \mathbb{P}(B) - \mathbb{P}(A \cap B) \\
+\mathbb{P}(A \cap B) &= \mathbb{P}(A) \cdot \mathbb{P}(B \mid A) \\
+\mathbb{P}(A \mid B) &= \frac{\mathbb{P}(A \cap B)}{\mathbb{P}(B)} \\
+\text{independent:}\quad \mathbb{P}(A \cap B) &= \mathbb{P}(A) \cdot \mathbb{P}(B)
 \end{aligned}$$</div>
-<div class="box story"><div class="bl">📖 Rare Disease Trap</div><p>A test is 99% accurate for a disease affecting 1% of people. You test positive. P(sick|positive) = 0.99×0.01/(0.99×0.01+0.01×0.99) ≈ 50%! The low prior (1%) kills the intuition. Bayes corrects your panic.</p></div></div>
-</div>
-<div class="card"><div class="card-title">Key Distributions — Quick Reference</div>
-<table class="tbl"><tr><th>Distribution</th><th>Parameters</th><th>Mean/Var</th><th>ML Context</th></tr>
-<tr><td><strong>Bernoulli</strong></td><td>p</td><td>p / p(1−p)</td><td>Binary label, one coin flip</td></tr>
-<tr><td><strong>Binomial</strong></td><td>n, p</td><td>np / np(1−p)</td><td>Count of successes in n trials</td></tr>
-<tr><td><strong>Normal N(μ,σ²)</strong></td><td>μ, σ</td><td>μ / σ²</td><td>Weight init, noise, CLT limit</td></tr>
-<tr><td><strong>Poisson(λ)</strong></td><td>λ</td><td>λ / λ</td><td>Rare event counts (fraud, bugs)</td></tr>
-<tr><td><strong>Exponential</strong></td><td>λ</td><td>1/λ / 1/λ²</td><td>Time between events, survival</td></tr>
-<tr><td><strong>Beta(α,β)</strong></td><td>α, β</td><td>α/(α+β)</td><td>Prior over probability, A/B testing</td></tr>
-<tr><td><strong>Categorical</strong></td><td>p₁…pₖ</td><td>—</td><td>Softmax output, multi-class</td></tr></table></div>
-<div class="g2">
-<div class="card"><div class="card-title">Expectation &amp; Variance</div>
-<div class="formula math-formula">$$\begin{aligned}
-E[X] = \sum x_i P(x_i) \quad \text{(discrete)} \\
-\mathrm{Var}(X) = E[X^2] - (E[X])^2 \\
-\mathrm{Var}(aX+b) = a^2 \mathrm{Var}(X) \\
-\mathrm{Cov}(X,Y) = E\!\left[(X - \mu_x)(Y - \mu_y)\right] \\
-\rho(X,Y) = \mathrm{Cov}(X,Y) / (\sigma_x \sigma_y) \quad \text{(Pearson r)}
-\end{aligned}$$</div></div>
-<div class="card"><div class="card-title">MLE vs MAP</div>
-<ul class="bul"><li><strong>MLE:</strong> θ̂ = argmax P(data|θ). No prior. Logistic regression minimizes CE = maximizes Bernoulli log-likelihood.</li><li><strong>MAP:</strong> θ̂ = argmax P(θ|data). Includes prior.</li></ul>
-<div class="box mem"><div class="bl">💡 Key insight</div><p>Ridge regression (L2) = MAP with Gaussian prior. Lasso (L1) = MAP with Laplace prior. Math and ML are the same thing.</p></div></div>
-</div>
+<div class="card-body" style="margin-top:8px">The subtraction in the first line is there because the overlap would otherwise be counted twice. The second line is the important one: joint probability is <em>not</em> a product unless the events are independent, and in real data they essentially never are.</div>
+<div class="box mem"><div class="bl">the intuition to keep</div>
+<p>Conditioning is <strong>shrinking the world</strong>. P(A | B) asks: having thrown away every outcome where B did not happen, what fraction of what remains has A? That is why the denominator is P(B) — it renormalises to the smaller world.</p></div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Confusing P(A|B) and P(B|A)</strong> — the base rate fallacy. P(disease|positive test) ≠ P(positive test|disease). Bayes' theorem is needed to convert sensitivity/specificity into the probability that matters clinically. A test with 99% sensitivity still has a low positive predictive value if the disease prevalence is 0.1%</li>
-  <li><strong>Independence vs uncorrelated</strong> — if X and Y are independent, they are uncorrelated. But uncorrelated does NOT imply independent (only for jointly Gaussian). Two variables can have zero covariance but strong non-linear dependence</li>
-  <li><strong>Treating KL divergence as a symmetric distance</strong> — KL(P||Q) ≠ KL(Q||P) in general; KL divergence is not a metric. In variational inference, the direction matters: KL(q||p) (forward) vs KL(p||q) (reverse) produce different approximation behaviours (mean-seeking vs mode-seeking)</li>
-  <li><strong>The law of large numbers guarantees accuracy on small samples</strong> — LLN only applies asymptotically (n → ∞). For small samples, sample statistics have high variance. Confidence intervals quantify this uncertainty; always report them alongside point estimates</li>
-  <li><strong>Assuming Gaussian distributions everywhere</strong> — many real-world quantities are heavy-tailed (financial returns, word frequencies, network degrees). Modelling them as Gaussian leads to dramatically underestimated tail risk. Check kurtosis and use appropriate distributions (log-normal, Pareto, Student-t)</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (Bayesian optimisation):</strong> Gaussian Process prior over the objective function; posterior updated with each observation; acquisition function (EI, UCB) derived from the posterior distribution — probability theory is the mathematical foundation of Bayesian hyperparameter optimisation</li>
-  <li><strong>Netflix (content modelling):</strong> topic models (LDA — Latent Dirichlet Allocation) use Dirichlet priors over document-topic distributions; Bayesian generative model for content tagging and recommendation diversity</li>
-  <li><strong>OpenAI (VAEs / diffusion models):</strong> both use KL divergence as a core component — VAE ELBO = reconstruction loss + KL(q(z|x) || p(z)); diffusion model training = matching a learned denoising distribution to a Gaussian noise process</li>
-  <li><strong>Finance (risk management):</strong> Value at Risk (VaR) and Expected Shortfall are probability-theoretic measures; heavy-tailed Student-t distributions used for financial return modelling after Gaussian VaR dramatically underestimated tail risk in 2008</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Cross-entropy loss comes from maximising log-likelihood under a Bernoulli/Categorical distribution — minimising cross-entropy IS maximum likelihood estimation. KL divergence measures distribution divergence — used in VAEs (ELBO regularisation), knowledge distillation (matching teacher logits), and RL (PPO's KL penalty that prevents policy updates from straying too far). When I see a new loss function, my first question is: what probability distribution does this implicitly assume about the data?"</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "KL divergence is symmetric." — KL(P||Q) ≠ KL(Q||P). The direction matters: forward KL (used in VI) is mean-seeking (fits a distribution covering all modes); reverse KL is mode-seeking (fits the highest-probability mode only). In practice, RLHF's KL penalty uses KL(π_new || π_ref) to keep the fine-tuned policy close to the reference policy.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between MLE and MAP estimation?" — Answer: MLE maximises P(data|θ) — no prior on θ, purely data-driven. MAP maximises P(θ|data) ∝ P(data|θ)·P(θ) — includes a prior on θ. For a Gaussian prior on weights, MAP is equivalent to L2 (Ridge) regularisation. For a Laplace prior, MAP is equivalent to L1 (Lasso). Regularisation is Bayesian reasoning in disguise.</p>
-</div>
-
+<div class="card cg"><div class="card-title">Bayes' theorem, and why the prior dominates</div>
+<div class="formula math-formula">$$\underbrace{\mathbb{P}(H \mid E)}_{\text{posterior}} = \frac{\overbrace{\mathbb{P}(E \mid H)}^{\text{likelihood}} \cdot \overbrace{\mathbb{P}(H)}^{\text{prior}}}{\underbrace{\mathbb{P}(E)}_{\text{evidence}}}$$</div>
+<div class="card-body" style="margin-top:8px">Read it as an update rule: you had a belief, evidence arrived, here is the revised belief. The denominator is just the total probability of seeing that evidence at all, across every hypothesis — it is what makes the posterior sum to one.</div>
+<div class="card-body" style="margin-top:8px">The counter-intuitive part is that a very accurate test can still leave you at a coin flip, because <strong>accuracy is a property of the test and the answer depends on the population</strong>.</div>
+<div class="box warn"><div class="bl">the trap, with the numbers</div>
+<p>A disease affects 1% of people. A test is 99% sensitive and 99% specific. You test positive. Out of 10,000 people: 100 are sick and 99 of them test positive; 9,900 are healthy and 1% of those — <strong>99 people</strong> — also test positive. So 198 positive tests, of which 99 are real.</p>
+<p style="margin-top:6px">P(sick | positive) = 99 / 198 = <strong>50%</strong>. Nothing is wrong with the test. The false positives are simply drawn from a pool 99× larger.</p></div>
 <div class="anim-wrap"><div class="anim-title">Why a 99%-accurate test gives a 50% answer</div>
 <svg viewBox="0 0 500 188" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -88,6 +46,66 @@ E[X] = \sum x_i P(x_i) \quad \text{(discrete)} \\
 <text x="250.0" y="161.0" fill="#22d3a0" font-size="11" text-anchor="middle" font-family="JetBrains Mono">P(sick | positive) = 99 / 198 = 50%</text>
 <text x="250.0" y="177.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">The false positives are drawn from a base 99x larger. That is the entire trap.</text>
 </svg></div>
+</div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">Distributions worth knowing cold</div>
+<table class="tbl">
+<tr><th>Distribution</th><th>Models</th><th>Where it appears</th></tr>
+<tr><td><strong>Bernoulli</strong></td><td>one yes/no trial</td><td>a single binary label</td></tr>
+<tr><td><strong>Binomial</strong></td><td>k successes in n trials</td><td>conversion counts, A/B tests</td></tr>
+<tr><td><strong>Poisson</strong></td><td>events per interval</td><td>arrivals, defects, claim counts</td></tr>
+<tr><td><strong>Normal</strong></td><td>sums of many small effects</td><td>errors, and every CLT argument</td></tr>
+<tr><td><strong>Exponential</strong></td><td>waiting time to an event</td><td>churn, time-to-default</td></tr>
+<tr><td><strong>Beta</strong></td><td>a probability itself</td><td>priors over rates; Thompson sampling</td></tr>
+</table>
+<div class="card-body" style="margin-top:8px">Beta is the one people skip and then need constantly: it is a distribution <em>over</em> probabilities, which is exactly what you want when you have seen 3 conversions out of 10 and need to express how unsure that leaves you.</div></div>
+
+<div class="card cp"><div class="card-title">Expectation and variance, and the identity that saves algebra</div>
+<div class="formula math-formula">$$\begin{aligned}
+\mathbb{E}[X] &= \sum_x x\,\mathbb{P}(x) \\
+\operatorname{Var}(X) &= \mathbb{E}[X^2] - (\mathbb{E}[X])^2 \\
+\mathbb{E}[aX + bY] &= a\mathbb{E}[X] + b\mathbb{E}[Y] \quad \text{(always)} \\
+\operatorname{Var}(X + Y) &= \operatorname{Var}(X) + \operatorname{Var}(Y) \quad \text{(only if independent)}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Expectation is linear unconditionally. Variance is not.</strong> That asymmetry is why averaging n independent models divides variance by n — the whole statistical argument for bagging — and why it stops working when the models are correlated.</div>
+<div class="box mem"><div class="bl">worked</div>
+<p>A fair die: E[X] = 3.5, E[X²] = 15.167, so Var = 15.167 − 12.25 = 2.917. Two dice summed: E = 7, and because they are independent, Var = 5.833. Correlate them and that second number is simply wrong.</p></div></div>
+</div>
+
+<div class="card"><div class="card-title">Independence, conditional independence, and the difference that matters</div>
+<div class="card-body">These are not the same thing, and the gap between them is where Naive Bayes lives and where confounding hides.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Independent:</strong> knowing B tells you nothing about A. Rare in real data</li>
+<li><strong>Conditionally independent given C:</strong> once you know C, B tells you nothing more about A. Common, and much weaker</li>
+</ul>
+<div class="card-body" style="margin-top:10px">Ice-cream sales and drowning deaths are strongly correlated. Condition on temperature and the correlation largely disappears — they were never related, they were both driven by the weather. Temperature is a <em>confounder</em>, and this is the same structure that makes an unadjusted treatment effect come out with the wrong sign.</div>
+<div class="box tip"><div class="bl">why Naive Bayes gets away with it</div>
+<p>Naive Bayes assumes features are conditionally independent given the class. For text that is plainly false — "space" and "shuttle" co-occur constantly. The classifier still works, because a systematically over-confident product biases <em>every</em> class in the same direction, and the argmax survives. Use it for the ranking; never quote its probabilities.</p></div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that show up in real models</div>
+<ul class="bul">
+<li><strong>Base-rate neglect.</strong> Quoting model precision without the prevalence it was measured at. A fraud model with 90% precision on a 5% base rate is a different object from one measured at 0.1%</li>
+<li><strong>Treating P(A|B) as P(B|A).</strong> "99% of fraudsters do X" is not "99% of people doing X are fraudsters". This inversion is the single most common probability error in production reasoning, and it is exactly what the rare-disease example above formalises</li>
+<li><strong>Assuming independence to make the algebra work.</strong> Multiplying probabilities of correlated events understates joint risk badly — this is roughly how correlated mortgage defaults were mispriced in 2008</li>
+<li><strong>Confusing a probability with a frequency.</strong> A model's 0.7 output is only "70 out of 100 such cases" if the model is calibrated. Most tree ensembles are not, out of the box</li>
+<li><strong>Forgetting the law of total probability.</strong> When P(E) is hard, expand it: P(E) = Σ P(E | Hᵢ)P(Hᵢ). Nearly every "impossible" Bayes question is this one line</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where this bites in production</div>
+<ul class="bul">
+<li><strong>Fraud and credit scoring.</strong> Both are Bayesian updates at heart: a prior risk from the population, a likelihood from behaviour, a posterior that drives a decision. Model the base rate wrong and every downstream threshold is wrong</li>
+<li><strong>Calibration for decisioning.</strong> If a score feeds an expected-value calculation — expected loss = P(default) × exposure — then the probability has to mean what it says. Ranking is not enough; this is why calibration is a separate step</li>
+<li><strong>Thompson sampling.</strong> Maintain a Beta posterior per arm, sample from each, play the winner. Exploration falls out of the posterior width instead of needing an ε schedule</li>
+<li><strong>A/B testing.</strong> A p-value is P(data this extreme | no effect), not P(no effect | data). Reporting it as the latter is the most common statistical misstatement in product reviews</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>The rare-disease question will come up</strong> in some form. Do not reach for the formula — build the 10,000-person table out loud. It is faster, it is impossible to get backwards, and it shows the interviewer you understand why the answer is 50% rather than that you memorised Bayes.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "When does Var(X+Y) = Var(X) + Var(Y)?" — only under independence (strictly, zero covariance). The follow-up is usually why bagging helps less than 1/n suggests: the trees are correlated, so the covariance term does not vanish.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "What is the difference between independence and conditional independence?" — Give the ice-cream and drowning example. It lands immediately and sets you up to talk about confounding.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> that a p-value is the probability the null is true.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The Bayes computation everyone gets wrong in interviews, done numerically — then verified by simulation, which is the fastest way to check any probability claim.</div>

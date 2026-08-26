@@ -1,28 +1,32 @@
 <section class="section" id="sec-calc">
 <div class="sec-title">Calculus &amp; Optimization</div>
-<div class="sec-desc">The engine behind every learning algorithm — gradients tell the model which direction to nudge its parameters to reduce error. Without this, gradient descent is magic. With it, it's engineering.</div>
+<div class="sec-desc">You never compute a derivative by hand in ML — a framework does it. What you do need is the ability to read a gradient and say why training stalled, exploded, or converged to something useless. That reading is what this topic is for.</div>
+
 <div class="g2">
-<div class="card cb"><div class="card-title">Derivatives</div>
+<div class="card cb"><div class="card-title">Derivatives: a local slope, nothing more</div>
+<div class="card-body">The derivative at a point answers one question: if I nudge the input a little, how much does the output move, and in which direction? Everything else is bookkeeping.</div>
 <div class="formula math-formula">$$\begin{aligned}
-f'(x) = \lim_{h \to 0} (f(x+h)-f(x))/h \\
-\frac{d}{dx}(x^{n}) = nx^{n-1} \\
-\frac{d}{dx}(e^x) = e^x \\
-\frac{d}{dx}(\ln x) = 1/x \\
-\frac{d}{dx}(\sigma (x)) = \sigma (x)(1-\sigma (x))     \; (\text{\text{sigmoid} gradient}) \\
-\frac{d}{dx}(\text{ReLU}(x)) = \begin{cases}1 & x > 0 \\ 0 & \text{otherwise}\end{cases}
-\end{aligned}$$</div></div>
-<div class="card cg"><div class="card-title">Gradient (Multivariable)</div>
-<div class="formula math-formula">$$\begin{aligned}
-\nabla f = \left[\frac{\partial f}{\partial x_1},\, \frac{\partial f}{\partial x_2},\, \ldots,\, \frac{\partial f}{\partial x_n}\right]^T \quad \text{(points in direction of steepest ascent)} \\
-\text{Gradient descent: } \theta \leftarrow \theta - \alpha \nabla L(\theta) \\
-\text{Partial derivative: hold all other vars constant}
+f'(x) &= \lim_{h \to 0} \frac{f(x+h) - f(x)}{h} \\
+\tfrac{d}{dx}x^n &= n x^{n-1} \qquad \tfrac{d}{dx}e^x = e^x \qquad \tfrac{d}{dx}\ln x = \tfrac{1}{x} \\
+\sigma'(x) &= \sigma(x)\,(1 - \sigma(x)) \\
+\text{ReLU}'(x) &= \begin{cases} 1 & x > 0 \\ 0 & x \le 0 \end{cases}
 \end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">The gradient is a vector field — at each point it shows the direction to climb fastest. Gradient descent walks <em>opposite</em> to this, descending toward a minimum.</div></div>
+<div class="card-body" style="margin-top:8px">Those last two are the ones to actually remember. The sigmoid derivative peaks at 0.25 and decays to nothing at both ends — that single fact is the vanishing-gradient problem. The ReLU derivative is exactly 1 or exactly 0, which is why ReLU trains deep networks and why a unit can die permanently.</div></div>
+
+<div class="card cg"><div class="card-title">The gradient: one number per parameter</div>
+<div class="card-body">With many inputs, the derivative becomes a vector of partial derivatives — one per parameter, each computed while holding the others fixed. It points in the direction of steepest <em>increase</em>, which is why every update subtracts it.</div>
+<div class="formula math-formula">$$\nabla f = \left[\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n}\right]^{T} \qquad \theta \leftarrow \theta - \alpha \nabla L(\theta)$$</div>
+<div class="card-body" style="margin-top:8px">A model with 7 billion parameters has a gradient with 7 billion components. Each one is a scalar answering "if I nudge only this weight, how does the loss move?" — and they are all computed in a single backward pass.</div>
+<div class="box mem"><div class="bl">what the gradient norm tells you</div>
+<p>‖∇L‖ is the single most useful number to log during training. Growing without bound: exploding gradients, clip them. Collapsing to ~0 while loss is still high: vanishing gradients or dead units. Oscillating wildly between steps: learning rate too high. You can diagnose most training failures from that one curve.</p></div></div>
 </div>
-<div class="card cp"><div class="card-title">Chain Rule — The Heart of Backpropagation</div>
-<div class="card-body">If L = f(g(h(x))), then dL/dx = (dL/df)(df/dg)(dg/dh)(dh/dx) — multiply local gradients along the path.</div>
-<div class="formula math-formula">$$\partial L/\partial W^1 = (\partial L/\partial \hat{y})\cdot(\partial \hat{y}/\partial h^2)\cdot(\partial h^2/\partial h^1)\cdot(\partial h^1/\partial W^1)$$</div>
-<!-- Chain rule animation -->
+
+<div class="card"><div class="card-title">The chain rule is backpropagation</div>
+<div class="card-body">A neural network is a composition of functions. The chain rule says the derivative of a composition is the product of the derivatives along the path — so you can compute a gradient for a 100-layer network by multiplying 100 local derivatives together.</div>
+<div class="formula math-formula">$$\frac{\partial L}{\partial w_1} = \frac{\partial L}{\partial a_3} \cdot \frac{\partial a_3}{\partial a_2} \cdot \frac{\partial a_2}{\partial a_1} \cdot \frac{\partial a_1}{\partial w_1}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Because it is a product, depth is dangerous.</strong> Multiply many numbers below 1 and the result vanishes; multiply many above 1 and it explodes. Both failures are the same arithmetic seen from opposite ends.</div>
+<div class="box mem"><div class="bl">worked — why sigmoid stopped being used in hidden layers</div>
+<p>Sigmoid's derivative maxes out at 0.25. Ten sigmoid layers, all at their best case, give 0.25¹⁰ ≈ 9.5 × 10⁻⁷. The gradient reaching layer one is a millionth of the gradient at the output, so the early layers effectively never train. ReLU's derivative is 1 on the active side, so 1¹⁰ = 1 and the signal survives. That is the entire argument, and it is arithmetic rather than intuition.</p></div>
 <div class="anim-wrap"><div class="anim-title">Chain Rule: gradient flows backward</div>
 <svg viewBox="0 0 500 100" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -58,35 +62,58 @@ f'(x) = \lim_{h \to 0} (f(x+h)-f(x))/h \\
   <animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
 </line>
 <text x="250" y="88" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">🔵 Forward pass (predict)   🔴 Backward pass (learn)</text>
-</svg></div></div>
-<div class="g2">
-<div class="card"><div class="card-title">Convexity</div>
-<ul class="bul"><li><strong>Convex function:</strong> any local min = global min. Logistic regression loss is convex.</li><li><strong>Non-convex:</strong> neural networks — many local minima, but in practice most are good enough</li><li><strong>Saddle points:</strong> gradient = 0 but not a min — SGD noise helps escape these</li></ul></div>
-<div class="card"><div class="card-title">Useful Calculus Tricks</div>
-<ul class="bul"><li><strong>Log-trick:</strong> max P(data) ≡ max log P(data) — turns products into sums</li><li><strong>Jensen's inequality:</strong> E[f(X)] ≥ f(E[X]) for convex f — used in ELBO</li><li><strong>Hessian (∂²L/∂θ²):</strong> matrix of 2nd derivatives — curvature, used in Newton's method</li></ul></div>
+</svg></div>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="g2">
+<div class="card ca"><div class="card-title">Convexity: whether "the" minimum exists</div>
+<div class="card-body">A convex function has exactly one basin. Any local minimum is the global one, so gradient descent cannot get stuck in a bad place — only converge slowly.</div>
+<div class="formula math-formula">$$f''(x) \ge 0 \quad \text{(1-D)} \qquad \nabla^2 f \succeq 0 \quad \text{(Hessian is PSD)}$$</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Convex:</strong> linear and ridge regression, logistic regression, SVM with a fixed kernel, lasso. Reproducible answers; the seed does not matter</li>
+<li><strong>Not convex:</strong> every neural network. Different seeds give genuinely different models</li>
+</ul>
+<div class="card-body" style="margin-top:8px">The reassuring result is that in very high dimensions, bad local minima are rare — most critical points are saddles, and a saddle has a descent direction to escape along. That is why non-convexity turned out to be survivable in practice.</div></div>
+
+<div class="card cp"><div class="card-title">Second-order information, and why nobody uses it</div>
+<div class="card-body">The Hessian holds all second derivatives and describes curvature: whether the surface is a narrow ravine or a round bowl. Newton's method uses it to take a perfectly scaled step.</div>
+<div class="formula math-formula">$$\theta \leftarrow \theta - (\nabla^2 L)^{-1} \nabla L$$</div>
+<div class="card-body" style="margin-top:8px">For n parameters the Hessian has n² entries. At 7 billion parameters that is 4.9 × 10¹⁹ numbers, so it is not stored, let alone inverted. <strong>Adam is a cheap stand-in:</strong> it keeps a running average of squared gradients per coordinate, which approximates the diagonal of the curvature and costs two extra vectors instead of a matrix.</div>
+<div class="card-body" style="margin-top:8px">This is also the honest answer to "why not use second-order methods": you cannot afford them, and the diagonal approximation captures most of the benefit.</div></div>
+</div>
+
+<div class="card cc"><div class="card-title">The tricks that actually come up</div>
+<table class="tbl">
+<tr><th>Trick</th><th>Why it exists</th></tr>
+<tr><td><strong>Log-sum-exp</strong></td><td>exp() overflows on large logits. Subtract the max first — mathematically identical, numerically safe. Every softmax implementation does this</td></tr>
+<tr><td><strong>Optimise log-likelihood</strong></td><td>Turns a product of thousands of probabilities into a sum, which neither underflows nor loses precision. The argmax is unchanged because log is monotonic</td></tr>
+<tr><td><strong>Gradient clipping</strong></td><td>Rescale the gradient when its norm exceeds a threshold. Keeps the direction, bounds the step. Standard in RNN and transformer training</td></tr>
+<tr><td><strong>Numerical gradient check</strong></td><td>(f(x+ε) − f(x−ε)) / 2ε compared against your analytic gradient. The single best way to find a sign error in a custom layer</td></tr>
+<tr><td><strong>Jacobian</strong></td><td>Gradient generalised to vector-valued outputs. Autodiff computes Jacobian-vector products without ever materialising the matrix</td></tr>
+</table></div>
+
+<div class="card cr"><div class="card-title">Mistakes that produce plausible, wrong training</div>
 <ul class="bul">
-  <li><strong>Chain rule direction confusion in backprop</strong> — the chain rule flows backward: ∂L/∂w = (∂L/∂a) × (∂a/∂z) × (∂z/∂w). A common mistake is computing partial derivatives in the wrong order or forgetting to multiply by the upstream gradient. Always trace the computation graph explicitly when debugging gradient shapes</li>
-  <li><strong>Gradient vs derivative conflation</strong> — the derivative is a scalar (for scalar outputs); the gradient is a vector (partial derivatives w.r.t. each input). The Jacobian is a matrix of partial derivatives (for vector-to-vector functions). Neural networks compute Jacobians at each layer; understanding the difference matters for debugging shape errors</li>
-  <li><strong>"Saddle points trap gradient descent in neural networks"</strong> — early theory suggested saddle points were the main difficulty. Empirically, SGD with noise and momentum escapes saddle points readily. The real challenge is flat loss landscapes (poorly conditioned Hessians) and sharp minima that don't generalise well</li>
-  <li><strong>Forgetting the log-sum-exp trick for numerical stability</strong> — computing log(sum(exp(x))) directly overflows for large x (exp(1000) = ∞). The log-sum-exp trick: log(Σ exp(xᵢ)) = c + log(Σ exp(xᵢ - c)) where c = max(x). This is how softmax is implemented stably in every framework</li>
-  <li><strong>Second-order methods are always better than first-order</strong> — Newton's method uses the Hessian (second derivatives) and converges in far fewer steps than gradient descent. But computing and inverting the full Hessian is O(n³) for n parameters — infeasible for neural networks with millions of parameters. This is why Adam (a diagonal Hessian approximation) is practical and full second-order methods are not</li>
+<li><strong>Forgetting the negative sign.</strong> The gradient points uphill. Descent subtracts it. Add it instead and the loss climbs smoothly — which looks like a bug in the data, not the sign</li>
+<li><strong>Not zeroing gradients.</strong> In PyTorch, <code>.backward()</code> accumulates. Skip <code>optimizer.zero_grad()</code> and every step uses the sum of all gradients so far. Training appears to work for a few steps, then diverges</li>
+<li><strong>Treating the learning rate as a minor knob.</strong> It is the most consequential hyperparameter in deep learning by a wide margin. Too high and you bounce out of the basin; too low and you converge to the nearest mediocre point</li>
+<li><strong>Assuming a differentiable loss where there is none.</strong> Accuracy, F1 and AUC have zero gradient almost everywhere — you cannot optimise them directly. That is precisely why cross-entropy exists as a differentiable surrogate</li>
+<li><strong>Ignoring the ReLU kink.</strong> ReLU is not differentiable at exactly 0. Frameworks pick a subgradient (usually 0) and move on. It is harmless in practice, but claiming ReLU is differentiable everywhere is a quick way to look careless</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card ca"><div class="card-title">Where this shows up in real systems</div>
 <ul class="bul">
-  <li><strong>Google Brain / DeepMind (optimizer research):</strong> Shampoo and SOAP are practical second-order optimisers that approximate the Hessian using Kronecker-factored curvature; used in LLM training to achieve faster convergence than Adam with manageable memory overhead</li>
-  <li><strong>Meta (automatic differentiation — torch.autograd):</strong> PyTorch's autograd engine records a dynamic computation graph during the forward pass; calling .backward() traverses this graph in reverse applying the chain rule at each node — calculus implemented as software</li>
-  <li><strong>OpenAI (gradient checkpointing at scale):</strong> trading recomputation for memory — during backprop, only a subset of activations are stored; the rest are recomputed from checkpoints. The mathematical cost analysis (33% extra FLOPs for ~10× memory reduction) is a direct calculus-in-practice application</li>
-  <li><strong>Physics-informed ML:</strong> Physics-Informed Neural Networks (PINNs) incorporate PDE residuals as loss terms — ∂u/∂t + N[u] = 0 must hold throughout the domain. The loss gradient w.r.t. neural net parameters involves automatic differentiation through both the network and the PDE residual</li>
+<li><strong>Autodiff is the whole framework.</strong> PyTorch records a graph of operations during the forward pass, then walks it backwards applying the chain rule. Nothing symbolic happens; it is bookkeeping plus a table of local derivatives</li>
+<li><strong>Learning-rate schedules encode curvature intuition.</strong> Warmup exists because early gradients are large and badly scaled; cosine decay exists because near a minimum you want small steps. Both are calculus arguments dressed as recipes</li>
+<li><strong>Mixed precision needs loss scaling.</strong> fp16 gradients underflow to zero, so the loss is multiplied by a large constant before the backward pass and the gradients divided afterwards — linearity of differentiation, exploited deliberately</li>
+<li><strong>The Adam variance term is diagonal curvature.</strong> Dividing by √v̂ gives each coordinate its own effective step size, which is a cheap Newton method restricted to the diagonal</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Every training step is applied calculus: compute the gradient of loss w.r.t. every parameter via the chain rule (backprop), then step in the negative gradient direction (gradient descent). Understanding this lets you debug vanishing gradients — if activations saturate (sigmoid at extremes), local derivatives → 0, gradients vanish, early layers stop learning. ReLU's derivative is exactly 1 for positive inputs, so gradients flow unchanged — that's why it fixed vanishing gradients. The log-sum-exp trick is calculus in practice: numerical stability for softmax and cross-entropy at scale."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "Gradient descent finds the global minimum." — Only for convex loss surfaces (logistic regression, linear regression). Neural network losses are highly non-convex; gradient descent finds a local minimum. In practice this is fine because most local minima in overparameterised networks are close to the global minimum — but this is an empirical observation, not a guarantee.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between the gradient and the Jacobian?" — Answer: the gradient ∇f is the vector of partial derivatives of a scalar-valued function f: ℝⁿ → ℝ, shape (n,). The Jacobian J is the matrix of partial derivatives of a vector-valued function f: ℝⁿ → ℝᵐ, shape (m, n). In neural networks, each layer maps a vector to a vector — its local derivative is a Jacobian. Backprop computes the product of Jacobians from output to input via the chain rule, but never materialises the full Jacobian matrix (too large); it uses vector-Jacobian products (VJPs) instead.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>The question is almost always the chain rule.</strong> Say that backpropagation is the chain rule applied to a computation graph, that the gradient is a product of local derivatives, and that being a product is exactly why deep networks vanish or explode. Then give the 0.25¹⁰ number — it converts a vague claim into a demonstration.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why not use Newton's method?" — The Hessian is n × n. Quote the number for a real model size and note that Adam approximates its diagonal for two extra vectors.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "Why can't we optimise accuracy directly?" — Zero gradient almost everywhere; cross-entropy is the differentiable surrogate.</p>
+<p style="margin-top:8px"><strong>Strong close:</strong> mention that you log the gradient norm during training and what each failure shape looks like. It signals you have debugged a real training run rather than read about one.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

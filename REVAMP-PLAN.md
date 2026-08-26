@@ -36,7 +36,7 @@ are thin and note-like, topics written later are much fuller.
 Ordered thinnest-and-most-foundational first, since those are read most and
 are currently weakest. One chunk per session-batch; commit after each.
 
-- [ ] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
+- [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [ ] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
 - [ ] C3  08 eval-metrics · 09 confusion-roc · 10 calibration
 - [ ] C4  11 linear-logistic · 12 knn · 13 naive-bayes

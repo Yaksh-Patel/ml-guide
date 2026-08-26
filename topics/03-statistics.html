@@ -1,63 +1,37 @@
 <section class="section" id="sec-stats">
 <div class="sec-title">Statistics &amp; Inference</div>
-<div class="sec-desc">Where probability meets data. The toolkit for making confident, honest claims from noisy observations — the foundation of A/B testing and scientific ML.</div>
-<div class="card"><div class="card-title">p-value — the most misunderstood number in science</div>
-<div class="card-body">P(observing data this extreme | H₀ is true). NOT the probability that H₀ is true.</div>
-<div class="box warn"><div class="bl">⚠️ Three Things p-value Is NOT</div><p>1) Not the probability H₀ is true. 2) Not the probability your result happened by chance. 3) Not a measure of effect size. With 10M users, p &lt; 0.001 for a 0.0001% CTR change — statistically significant, practically irrelevant. Always pair with effect size + CI.</p></div>
-<div class="box story"><div class="bl">📖 The Coin Story</div><p>You flip a coin 10 times, get 9 heads. p ≈ 1% = "if this were a fair coin, I'd see this by luck only 1% of the time." Since 1% &lt; 5% (your threshold), you reject "it's a fair coin." p = 30%? Meh — totally plausible by chance, don't reject.</p></div></div>
+<div class="sec-desc">How to say something about a population when all you have is a sample — and how to know when you are not entitled to say it. Every experiment result, every "the model improved", every confidence number in a report is an inference claim, and a surprising share of them are made slightly wrong.</div>
+
+<div class="card cb"><div class="card-title">The p-value, stated correctly once</div>
+<div class="card-body">A p-value is the probability of seeing data <em>at least this extreme</em>, assuming the null hypothesis is true. That is the whole definition, and every common misuse comes from dropping the second half of it.</div>
+<div class="formula math-formula">$$p = \mathbb{P}(\text{data at least this extreme} \mid H_0 \text{ true})$$</div>
+<div class="box warn"><div class="bl">⚠️ three things it is not</div>
+<p><strong>Not</strong> the probability the null is true. That would be P(H₀ | data) — the conditional the other way round, and getting it requires a prior.</p>
+<p style="margin-top:6px"><strong>Not</strong> the probability your result was luck.</p>
+<p style="margin-top:6px"><strong>Not</strong> a measure of effect size. With a large enough sample, a completely irrelevant difference reaches p &lt; 0.001. Report the effect and its interval alongside it, always.</p></div>
+<div class="box mem"><div class="bl">the coin intuition</div>
+<p>Flip a coin 10 times, get 9 heads. Under "the coin is fair", how often would you see something that lopsided? About 2% of the time. That 2% is the p-value. It does <strong>not</strong> say there is a 98% chance the coin is loaded — a trick coin was unlikely before you started, and the p-value knows nothing about that.</p></div></div>
+
 <div class="g2">
-<div class="card cr"><div class="card-title">Type I Error (α) — False Positive</div>
-<div class="card-body">Reject H₀ when it's true. See an effect that doesn't exist.</div>
-<div class="box warn"><div class="bl">🔥 Fire alarm, no fire</div><p>You ran outside for nothing. α = 0.05 means 5% chance of this mistake per test.</p></div></div>
-<div class="card ca"><div class="card-title">Type II Error (β) — False Negative</div>
-<div class="card-body">Fail to reject H₀ when it's false. Miss a real effect.</div>
-<div class="box story"><div class="bl">🏠 Real fire, no alarm</div><p>Power = 1 − β = probability of detecting a real effect. More data = higher power.</p></div></div>
-</div>
-<div class="card"><div class="card-title">Confidence Interval &amp; Hypothesis Testing</div>
-<div class="formula math-formula">$$\begin{aligned}
-95\%\ \text{CI:} \quad \bar{x} \pm 1.96 \times \frac{\sigma}{\sqrt{n}}
-\end{aligned}$$</div>
-<div class="formula" style="margin-top:8px">5-step process:
+<div class="card cr"><div class="card-title">Type I error (α) — crying wolf</div>
+<div class="card-body">You reject the null when it was true. You shipped a change that does nothing, and reported a win.</div>
+<div class="box warn"><div class="bl">🔥 fire alarm, no fire</div>
+<p>α is the rate you <em>choose</em>. Setting α = 0.05 is a decision to be wrong this way 5% of the time when there is no effect. It is a budget, not a property of the world.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>Test twenty independent things at α = 0.05 and you expect one false positive by construction.</strong> That is not bad luck; it is the definition. Correct for it — Bonferroni is crude but honest, Benjamini–Hochberg is better once you have many tests.</div></div>
 
-1. H₀ (no effect) vs H₁ (effect exists)
-2. Choose α (usually 0.05)
-3. Collect data, pick test
-4. Compute p-value
-5. p &lt; α → reject H₀ (≠ accept H₁!)</div>
-<div class="box mem"><div class="bl">💡 CI Interpretation</div><p>A 95% CI does NOT mean "95% probability the true value is in this range." It means: if we repeated this experiment 100 times, ~95 of those intervals would contain the true value. The interval either contains the true value or it doesn't.</p></div></div>
-<div class="card"><div class="card-title">Which Statistical Test?</div>
-<table class="tbl"><tr><th>Situation</th><th>Test</th><th>Assumption</th></tr>
-<tr><td>Compare means, 2 groups, normal</td><td>t-test (Welch's)</td><td>Normality, independence</td></tr>
-<tr><td>Compare means, 3+ groups</td><td>ANOVA</td><td>Normality, equal variance</td></tr>
-<tr><td>Categorical outcomes / proportions</td><td>Chi-square</td><td>Expected freq ≥ 5</td></tr>
-<tr><td>Non-normal / ordinal, 2 groups</td><td>Mann-Whitney U</td><td>None parametric</td></tr>
-<tr><td>Linear relationship between 2 vars</td><td>Pearson correlation</td><td>Normality, linearity</td></tr>
-<tr><td>Rank-based correlation</td><td>Spearman</td><td>Monotonic relationship</td></tr>
-<tr><td>Paired samples</td><td>Paired t-test / Wilcoxon</td><td>Before/after same subjects</td></tr></table></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Peeking at results before the experiment ends</strong> — checking significance mid-experiment and stopping early when p &lt; 0.05 inflates Type I error severely. With α=0.05 and 5 peeks, the true false positive rate approaches 19%. Pre-register sample size via power analysis; commit to it before any data is collected</li>
-  <li><strong>"p &lt; 0.05 means the effect is real and important"</strong> — statistical significance ≠ practical significance. At n=1,000,000, a 0.001% conversion rate lift will be highly significant (p &lt; 0.001) but economically meaningless. Always report Cohen's d or relative lift alongside p-values</li>
-  <li><strong>Multiple comparisons without correction</strong> — testing 20 metrics at α=0.05 gives an expected 1 false positive just by chance. Apply Bonferroni correction (α/n tests) or Benjamini-Hochberg (controls false discovery rate) when testing multiple hypotheses simultaneously. This is especially critical in A/B tests monitoring many metrics</li>
-  <li><strong>Assuming normality without checking</strong> — t-tests assume normally distributed residuals (or large n by CLT). Revenue, session time, and purchase counts are typically right-skewed. For n &lt; 30 with skewed data, use bootstrapped confidence intervals or Mann-Whitney U instead of a t-test</li>
-  <li><strong>Confusing correlation and causation in observational data</strong> — Pearson/Spearman correlation measures association; it says nothing about direction or causality. Ice cream sales and drowning rates are correlated (both increase in summer). Causal inference requires randomisation (RCT) or quasi-experimental methods (DiD, IV, RDD)</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Airbnb / Booking.com (A/B testing):</strong> sequential testing (always-valid p-values using e-values or mixture sequential probability ratio tests) — allows peeking without inflating Type I error; replaces fixed-horizon tests for faster iteration. Power analysis determines minimum detectable effect (MDE) before each experiment</li>
-  <li><strong>Netflix (experimentation platform):</strong> delta method for ratio metrics (e.g., revenue per user when both numerator and denominator vary); bootstrapped CIs for non-normal metrics (session time, engagement rates); CUPED (controlled-experiment using pre-experiment data) to reduce variance and increase power without more traffic</li>
-  <li><strong>Google (Statsig / experiment infrastructure):</strong> ANOVA and regression-adjusted analysis for multivariate experiments; Bonferroni correction as default when testing multiple metrics simultaneously; holdout groups maintained permanently to measure cumulative experiment effects</li>
-  <li><strong>Stripe (metric selection):</strong> pre-specified primary metric with pre-registered sample size; secondary metrics monitored with FDR control; guardrail metrics (latency, error rate) that must not degrade — the full statistical framework defined before any data collection begins</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "I always pair p-values with effect sizes and confidence intervals — statistical significance without practical significance is noise. For A/B tests: power analysis to pre-register sample size before peeking (peeking inflates Type I error); at massive scale, everything is 'significant' — the real question is whether the lift is worth the cost. For non-normal metrics (revenue, session time), I prefer bootstrapped CIs or Mann-Whitney U over t-tests. Multiple comparisons: Bonferroni for few tests, Benjamini-Hochberg for many."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The A/B test was significant at p=0.03 so we shipped." — Without pre-registration, sample size calculation, and multiple comparison correction, p=0.03 may be a false positive. Interviewers at product companies will probe whether you understand the full rigour of experiment design, not just significance testing.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you determine sample size for an A/B test?" — Answer: power analysis requires four inputs: baseline metric value, minimum detectable effect (MDE — the smallest lift worth detecting), significance level α (usually 0.05), and desired power 1−β (usually 0.80). n ≈ 2 × (z_α/2 + z_β)² × σ² / δ² where δ is the MDE and σ² is metric variance. Tools: statsmodels.stats.power, or the formula directly. Always compute this before starting the experiment, not after.</p>
+<div class="card ca"><div class="card-title">Type II error (β) — missing it</div>
+<div class="card-body">You fail to reject when there really was an effect. The change worked and you threw it away.</div>
+<div class="box story"><div class="bl">🏠 real fire, no alarm</div>
+<p>Power = 1 − β is the probability of detecting a real effect of a given size. 80% is the usual target, which means <strong>you accept a 20% chance of missing a real improvement</strong> — worth saying out loud when someone asks why the test was inconclusive.</p></div>
+<div class="card-body" style="margin-top:8px">Power depends on sample size, effect size, variance and α. Underpowered tests are the most common experimental failure in industry, and in the write-up they look identical to "no effect".</div></div>
 </div>
 
+<div class="card cg"><div class="card-title">Confidence intervals, and why they beat p-values</div>
+<div class="card-body">An interval tells you the size of the thing you found, not merely that you found something. "The lift is 2.3% ± 0.4%" answers the business question. "p = 0.03" does not.</div>
+<div class="formula math-formula">$$\bar{x} \pm t_{\alpha/2,\,n-1} \cdot \frac{s}{\sqrt{n}} \qquad\qquad \text{SE} = \frac{s}{\sqrt{n}}$$</div>
+<div class="box info"><div class="bl">💡 what the "95%" attaches to</div>
+<p>It is a property of the <em>procedure</em>, not of your one interval. Repeat the whole experiment many times and 95% of the intervals you construct would contain the true value. "There is a 95% probability the true mean is in this interval" is the Bayesian statement, and it needs a prior to be true.</p></div>
+<div class="card-body" style="margin-top:10px"><strong>The √n in the denominator is the expensive part.</strong> Halving an interval takes four times the data. That is why "collect more data" stops being a strategy quickly, and why variance reduction — stratification, CUPED, paired designs — is where experienced experimenters actually spend their effort.</div>
 <div class="anim-wrap"><div class="anim-title">Central limit theorem, and why √n is expensive</div>
 <svg viewBox="0 0 500 172" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -74,6 +48,51 @@
 <text x="250.0" y="146.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">The population can be any shape — the distribution of its mean is still normal.</text>
 <text x="250.0" y="161.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="JetBrains Mono">SE = σ/√n  →  four times the data halves the interval</text>
 </svg></div>
+</div>
+
+<div class="card cp"><div class="card-title">When the formula runs out: bootstrap</div>
+<div class="card-body">Parametric intervals need a sampling distribution you can write down. For a median, a 90th percentile, a Gini coefficient or a ratio of two metrics, often you cannot. The bootstrap skips the algebra entirely.</div>
+<ul class="bul" style="margin-top:6px">
+<li>Resample your data with replacement, same size, a few thousand times</li>
+<li>Recompute the statistic on every resample</li>
+<li>Take the 2.5th and 97.5th percentiles of those values</li>
+</ul>
+<div class="card-body" style="margin-top:8px">It works because the empirical distribution stands in for the population. It fails when the statistic depends on the extreme tail (a maximum), when the sample is tiny, and when observations are dependent — time series need a <em>block</em> bootstrap, not a plain one.</div></div>
+
+<div class="card"><div class="card-title">Which Statistical Test?</div>
+<table class="tbl"><tr><th>Situation</th><th>Test</th><th>Assumption</th></tr>
+<tr><td>Compare means, 2 groups, normal</td><td>t-test (Welch's)</td><td>Normality, independence</td></tr>
+<tr><td>Compare means, 3+ groups</td><td>ANOVA</td><td>Normality, equal variance</td></tr>
+<tr><td>Categorical outcomes / proportions</td><td>Chi-square</td><td>Expected freq ≥ 5</td></tr>
+<tr><td>Non-normal / ordinal, 2 groups</td><td>Mann-Whitney U</td><td>None parametric</td></tr>
+<tr><td>Linear relationship between 2 vars</td><td>Pearson correlation</td><td>Normality, linearity</td></tr>
+<tr><td>Rank-based correlation</td><td>Spearman</td><td>Monotonic relationship</td></tr>
+<tr><td>Paired samples</td><td>Paired t-test / Wilcoxon</td><td>Before/after same subjects</td></tr></table></div>
+
+<div class="card cr"><div class="card-title">Mistakes that invalidate real experiments</div>
+<ul class="bul">
+<li><strong>Peeking.</strong> Checking significance daily and stopping when it crosses 0.05 pushes the false-positive rate well past 5% — often past 20%. Either fix the sample size in advance, or use a sequential test built for continuous monitoring</li>
+<li><strong>p-hacking by segment.</strong> Slicing by country, device and cohort until something is significant is the twenty-tests problem in disguise. Decide the segments before you look</li>
+<li><strong>Assuming equal variances.</strong> Student's t-test assumes them; Welch's does not, and costs nothing. Use Welch by default — in scipy it is one argument</li>
+<li><strong>Confusing statistical and practical significance.</strong> At n = 10 million a 0.01% lift is significant and irrelevant</li>
+<li><strong>Reading non-significance as proof of no effect.</strong> "We did not detect it" is not "it is not there", especially at 80% power. An interval that spans zero <em>and</em> spans a large effect means inconclusive, not negative</li>
+<li><strong>Ignoring multiple comparisons across metrics.</strong> Ten guardrail metrics at α = 0.05 means one is expected to trip on a completely neutral change</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is actually run at scale</div>
+<ul class="bul">
+<li><strong>Fixed-horizon or sequential, decided up front.</strong> Mature experimentation platforms enforce this in tooling precisely because peeking is otherwise irresistible</li>
+<li><strong>Variance reduction beats more traffic.</strong> CUPED uses pre-experiment data as a covariate and routinely cuts variance 30–50% — equivalent to a large traffic increase, for free</li>
+<li><strong>Guardrails beside the target metric.</strong> A checkout change that lifts conversion and raises p99 latency is not a win. Guardrails are how you notice — and they need multiple-comparison discipline of their own</li>
+<li><strong>Model comparison is an experiment too.</strong> "New model has better AUC" needs an interval. Bootstrap the metric over the test set, or compare paired predictions; a single point estimate on one split is not evidence</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Define the p-value precisely, unprompted.</strong> "The probability of data this extreme or more, given the null is true." Then say what it is not. Interviewers ask this specifically because so many candidates state the conditional backwards.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "The A/B test has run a week and just hit p = 0.04. Do you ship?" — The right answer starts with a question: was the sample size fixed in advance? If not, this is peeking and the number is not trustworthy. That reply is the thing being tested.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "How would you get a confidence interval for a median?" — Bootstrap. Naming it immediately signals practical experience.</p>
+<p style="margin-top:8px"><strong>Strong close:</strong> when asked how to make a test more sensitive, most candidates say "more data". Say CUPED or stratification, and explain that √n makes traffic an expensive lever.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">A confidence interval and a bootstrap interval for the same statistic. When the sampling distribution is unknown or the statistic is awkward (a median, a Gini), the bootstrap just works.</div>
