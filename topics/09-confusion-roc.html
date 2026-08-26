@@ -1,60 +1,41 @@
 <section class="section" id="sec-confusion">
-<div class="sec-title">Confusion Matrix &amp; ROC Curves</div>
-<div class="sec-desc">The 2×2 truth table that gives birth to every classification metric — and the curves that let you evaluate model quality across all decision thresholds.</div>
-<div class="card"><div class="card-title">Confusion Matrix</div>
+<div class="sec-title">Confusion Matrix &amp; ROC</div>
+<div class="sec-desc">Four numbers, and every classification metric is a ratio of two of them. Learn to derive the metrics from the matrix rather than memorising them and the whole family stops being confusable — including which axis ROC uses and why AUC flatters an imbalanced problem.</div>
+
+<div class="card cb"><div class="card-title">The matrix, and deriving everything from it</div>
+<div class="card-body">Predictions against truth. The naming is mechanical once you see it: the second word is what you <em>predicted</em>, the first is whether you were right. A false positive is a positive prediction that was wrong.</div>
 <div class="cgrid">
-<div class="ch"></div><div class="ch">Predicted Positive</div><div class="ch">Predicted Negative</div>
-<div class="ch" style="text-align:left;padding:9px 12px">Actual Positive</div>
-<div class="cg-cc ctp">TP<br><span style="font-size:10px;font-weight:400">True Positive</span></div>
-<div class="cg-cc cfn">FN<br><span style="font-size:10px;font-weight:400">False Negative (Miss)</span></div>
-<div class="ch" style="text-align:left;padding:9px 12px">Actual Negative</div>
-<div class="cg-cc cfp">FP<br><span style="font-size:10px;font-weight:400">False Positive (False alarm)</span></div>
-<div class="cg-cc ctn">TN<br><span style="font-size:10px;font-weight:400">True Negative</span></div>
+<div class="ch"></div><div class="ch">predicted 0</div><div class="ch">predicted 1</div>
+<div class="ch">actual 0</div><div class="cg-cc ctn">TN<br><span style="font-size:11px">correct reject</span></div><div class="cg-cc cfp">FP<br><span style="font-size:11px">false alarm</span></div>
+<div class="ch">actual 1</div><div class="cg-cc cfn">FN<br><span style="font-size:11px">missed it</span></div><div class="cg-cc ctp">TP<br><span style="font-size:11px">caught it</span></div>
 </div>
 <div class="formula math-formula">$$\begin{aligned}
-\text{TPR/Recall}  &= TP/(TP+FN) \quad \leftarrow \text{sensitivity} \\
-\text{FPR}         &= FP/(FP+TN) \quad \leftarrow 1-\text{specificity} \\
-\text{Specificity} &= TN/(TN+FP) \\
-\text{Precision}   &= TP/(TP+FP) \\
-F_1                &= 2 \cdot TP \;/\; (2 \cdot TP + FP + FN)
-\end{aligned}$$</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">AUC-ROC</div>
-<div class="card-body">Plots TPR vs FPR at every threshold. Area = P(positive scores higher than random negative).</div>
-<ul class="bul" style="margin-top:8px"><li>AUC=1: perfect | AUC=0.5: random | AUC&lt;0.5: flip predictions</li><li><strong>Weakness:</strong> inflated by large TN pool in imbalanced data</li><li><strong>Use when:</strong> balanced classes, overall ranking quality</li></ul></div>
-<div class="card cg"><div class="card-title">PR-AUC (Precision-Recall)</div>
-<div class="card-body">Plots Precision vs Recall. Neither formula touches TN — immune to class imbalance effect.</div>
-<ul class="bul" style="margin-top:8px"><li>Baseline = prevalence of positives (e.g. 1% for fraud)</li><li><strong>Use when:</strong> imbalanced — fraud, disease, spam detection</li><li>Higher is better; compare to random baseline, not to 0.5</li></ul></div>
-</div>
-<div class="card ca"><div class="card-title">KS Statistic — Banking's Favorite</div>
-<div class="card-body">Maximum separation between CDF of positive scores and CDF of negative scores. Identifies the score threshold that best separates the classes.</div>
-<ul class="bul" style="margin-top:8px"><li>Range: 0–100. KS = 0: no separation. KS = 100: perfect.</li><li>Used in credit scoring to find the optimal approval cutoff score</li><li>Weak point: only captures max at one threshold; ignores rest of the curve</li></ul>
-<div class="box story"><div class="bl">📖 Rice Pile Analogy</div><p>KS finds the score where the red pile (defaulters) and blue pile (good customers) diverge most. A lender picks exactly that score as the loan approval cutoff.</p></div></div>
+\text{recall} = \text{TPR} = \text{sensitivity} &= \frac{TP}{TP + FN} \quad \text{(row of actual positives)} \\
+\text{precision} &= \frac{TP}{TP + FP} \quad \text{(column of predicted positives)} \\
+\text{FPR} &= \frac{FP}{FP + TN} \quad \text{(row of actual negatives)} \\
+\text{specificity} = 1 - \text{FPR} &= \frac{TN}{TN + FP}
+\end{aligned}$$</div>
+<div class="box mem"><div class="bl">the one thing worth memorising</div>
+<p><strong>Recall divides along the actual-positive row. Precision divides along the predicted-positive column.</strong> Same numerator, different denominator. Every other metric in this topic is built from those two directions, and getting the direction right is the whole game.</p></div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Reporting AUC-ROC without context on class balance</strong> — AUC-ROC of 0.95 on a 1% positive rate dataset tells you very little about minority class recall. Always pair with PR-AUC and report the positive rate</li>
-  <li><strong>Treating 0.5 as the classification threshold</strong> — sklearn's default threshold of 0.5 is almost never optimal. Tune the threshold on a validation set to maximize your business metric (e.g., precision at 80% recall); never ship with the default</li>
-  <li><strong>Confusing precision and recall direction</strong> — precision = of what we predicted positive, how many were correct? Recall = of all actual positives, how many did we catch? Common interview confusion: "we want to minimize false negatives" = maximize recall, not precision</li>
-  <li><strong>Using micro-averaged F1 on imbalanced multiclass</strong> — micro-average is dominated by the large majority class. Use macro-average (equal weight per class) or weighted-average (weight by support) depending on whether rare classes matter equally</li>
-  <li><strong>Comparing AUC-ROC across very different datasets</strong> — AUC-ROC is dataset-specific. A 0.85 model on a hard problem may outperform a 0.95 model on an easy one. Always compare relative to a sensible baseline on the same data</li>
+<div class="card cg"><div class="card-title">ROC: the matrix recomputed at every threshold</div>
+<div class="card-body">A classifier outputs scores, not classes. Pick a threshold and you get one confusion matrix and one (FPR, TPR) point. Sweep the threshold from 1 to 0 and you trace the ROC curve. <strong>The curve is not a different object from the matrix — it is the matrix, several hundred times.</strong></div>
+<div class="formula math-formula">$$\text{AUC} = \mathbb{P}\big(\hat{s}(x^{+}) > \hat{s}(x^{-})\big)$$</div>
+<div class="card-body" style="margin-top:8px">That identity is the interpretation worth carrying: AUC is the probability that a randomly chosen positive is scored above a randomly chosen negative. It is a pure <em>ranking</em> measure — it says nothing about whether the scores are honest probabilities, and it is unchanged by any monotonic rescaling of them.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>0.5</strong> — no better than a coin. The diagonal</li>
+<li><strong>Below 0.5</strong> — your labels or signs are flipped. Invert and you have a working model</li>
+<li><strong>Above ~0.95 on real tabular data</strong> — suspect leakage before celebrating</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>PayPal / Stripe (fraud):</strong> operate at a fixed recall threshold (catch ≥90% of fraud) and maximise precision within that constraint — the confusion matrix is monitored daily; threshold is adjusted monthly as fraud patterns drift</li>
-  <li><strong>Google (medical AI):</strong> dermatology cancer detection reported at both AUC-ROC and sensitivity@specificity=90% — the fixed-operating-point metric is more clinically meaningful than aggregate AUC</li>
-  <li><strong>Amazon (content moderation):</strong> PR curve used to select operating point: high-precision mode for auto-removal, lower-precision mode for flagging for human review — two thresholds, one model</li>
-  <li><strong>Credit bureaus (FICO, Experian):</strong> KS statistic is the regulatory standard for scorecard quality; models must achieve KS ≥ 30 to be approved for production lending decisions</li>
-</ul></div>
+<div class="card ca"><div class="card-title">Why AUC flatters rare-positive problems</div>
+<div class="card-body">FPR's denominator is every actual negative. When negatives outnumber positives 1,000 to 1, that denominator is enormous, so a large absolute number of false positives barely moves the x-axis.</div>
+<div class="box warn"><div class="bl">worked — the same model, two metrics</div>
+<p>100,000 transactions, 100 fraudulent. The model flags 1,000 and catches 90.</p>
+<p style="margin-top:6px">TPR = 90/100 = <strong>0.90</strong>. FPR = 910/99,900 = <strong>0.009</strong>. On an ROC curve that is a point in the top-left corner — near-perfect, AUC likely above 0.97.</p>
+<p style="margin-top:6px">Precision = 90/1,000 = <strong>0.09</strong>. The analyst working the queue sees nine real cases in every hundred alerts. Same model, and PR-AUC would report roughly 0.09 against a 0.001 baseline.</p>
+<p style="margin-top:6px"><strong>Neither number is wrong.</strong> ROC answers "how well does it rank?", PR answers "how much of my reviewer's day is wasted?" — and only one of those is the operational question.</p></div></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "With 99% negatives, AUC-ROC can be 0.97 for a mediocre model — the TN pool inflates specificity. PR-AUC is more honest: it ignores true negatives entirely. For credit risk I report three metrics: AUC-ROC for overall ranking quality, KS for the single best threshold, and PR-AUC for honest minority-class performance. I never use the default 0.5 threshold — I tune it on a validation set to match the business operating point (e.g., recall=90% then maximise precision)."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I optimized F1 score." — F1 weights precision and recall equally, which implies equal cost to false positives and false negatives. That's almost never the business reality. Say instead: "I chose the threshold that maximized precision at our minimum acceptable recall of X%."</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Walk me through the ROC curve construction." — Answer: for each possible threshold from 1→0, compute TPR (recall = TP/P) and FPR (= FP/N). Plot TPR vs FPR. The area under this curve is AUC-ROC. Random classifier = diagonal line (AUC=0.5). Perfect classifier = top-left corner (AUC=1.0). The curve shows the tradeoff between catching positives and tolerating false alarms across all thresholds.</p>
-</div>
-
-<!-- ── Interactive Confusion Matrix & ROC Explorer ── -->
 <div class="anim-wrap" style="padding:16px 20px">
 <div class="anim-title">Interactive — Threshold Explorer: Confusion Matrix · ROC · PR Curves</div>
 <div style="display:flex;align-items:center;gap:12px;margin:10px 0 14px;flex-wrap:wrap">
@@ -163,6 +144,53 @@ F_1                &= 2 \cdot TP \;/\; (2 \cdot TP + FP + FN)
   update(50);
 })();
 </script>
+
+<div class="g2">
+<div class="card cp"><div class="card-title">KS statistic — the banking standard</div>
+<div class="formula math-formula">$$\text{KS} = \max_{t} \big| F_{\text{bad}}(t) - F_{\text{good}}(t) \big|$$</div>
+<div class="card-body" style="margin-top:8px">The largest vertical gap between the cumulative score distributions of the two classes. It answers a specific operational question: <em>at which cutoff does this model separate best</em>, and how much separation is there at that point.</div>
+<ul class="bul" style="margin-top:6px">
+<li>KS below 20 — weak, generally not deployable for credit decisioning</li>
+<li>30 to 50 — the normal range for a working scorecard</li>
+<li>Above 70 — investigate for leakage rather than celebrate</li>
+</ul>
+<div class="card-body" style="margin-top:8px">KS relates to AUC (Gini = 2·AUC − 1 is the other number quoted in the same rooms) but has the practical advantage of naming a threshold, which is what a policy team needs.</div></div>
+
+<div class="card cc"><div class="card-title">Multi-class: the matrix grows, the averaging becomes a choice</div>
+<div class="card-body">With C classes the matrix is C × C, and collapsing it to one number requires deciding how to weight classes. The three options can differ by tens of points.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Macro</strong> — average the per-class metric equally. A rare class counts as much as a common one. Use when every class matters equally</li>
+<li><strong>Micro</strong> — pool all TP/FP/FN, then compute once. Dominated by the frequent classes; equals accuracy for single-label problems</li>
+<li><strong>Weighted</strong> — average per-class, weighted by support. Sits between the two</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Reporting "F1 = 0.82" without saying which average is a genuinely incomplete statement.</strong> Off-diagonal cells are also the most useful debugging artefact you have — they show exactly which pairs of classes the model conflates, which usually points at a labelling ambiguity rather than a model defect.</div></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Transposing the matrix.</strong> sklearn's <code>confusion_matrix</code> returns rows as actuals; many textbooks use the opposite. <code>ravel()</code> gives (tn, fp, fn, tp) in that order. Print it once with labels and confirm — precision and recall silently swap otherwise</li>
+<li><strong>Confusing FPR with 1 − precision.</strong> FPR divides by all actual negatives; 1 − precision divides by all predicted positives. Under imbalance these differ by orders of magnitude, and it is the mistake behind most "but the AUC was great" post-mortems</li>
+<li><strong>Reporting AUC on an imbalanced problem and stopping there.</strong> Report PR-AUC alongside, plus precision at the operating point you will actually use</li>
+<li><strong>Shipping the 0.5 threshold.</strong> 0.5 is a library default, not a decision. It is only right if the two errors cost the same and the model is calibrated</li>
+<li><strong>Believing AUC says anything about probability quality.</strong> Apply any monotonic squashing to your scores and AUC is identical while Brier score changes completely</li>
+<li><strong>Comparing AUCs from different test sets.</strong> Difficulty varies. Compare on the same data, and bootstrap the difference before believing a 0.005 gap</li>
+<li><strong>Ignoring FN cost asymmetry.</strong> In screening, a missed case can cost a thousand times a false alarm. No single-number metric encodes that unless you put it there</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is used in practice</div>
+<ul class="bul">
+<li><strong>Credit and risk teams speak in KS and Gini.</strong> Not because AUC is wrong, but because KS names a cutoff and Gini has decades of institutional benchmarks behind it. Knowing the translation (Gini = 2·AUC − 1) is table stakes in those interviews</li>
+<li><strong>Fraud operates at fixed review capacity.</strong> The number that matters is precision at the top-k the team can actually work through, and the threshold is set by queue length rather than by a metric optimum</li>
+<li><strong>Medical screening picks the point on the curve deliberately.</strong> Regulators and clinicians choose an operating point by sensitivity requirement, then live with the resulting specificity. The curve is the artefact under discussion, not the AUC</li>
+<li><strong>Production monitoring watches the score distribution, not just the metric.</strong> Labels arrive late, so a shift in the predicted-score histogram is often your first warning — long before any confusion matrix can be computed</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Derive, do not recite.</strong> Asked for precision and recall, draw the four cells and say "recall divides along the actual-positive row, precision along the predicted-positive column". Deriving them takes ten seconds and is impossible to get backwards.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Your fraud model has 0.97 AUC. Are you happy?" — Not yet. Ask the base rate, then walk the 100,000-transaction arithmetic: TPR 0.90, FPR 0.009, precision 0.09. Doing that out loud is the strongest possible answer.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "What does AUC actually mean?" — The probability a random positive outranks a random negative. Then note it is invariant to monotonic transformations, which is why it says nothing about calibration.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> that FPR is one minus precision.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Building the matrix by hand once fixes the axis confusion for good, then sweeping the threshold shows why one number can never describe a classifier.</div>

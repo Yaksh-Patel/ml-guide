@@ -38,7 +38,7 @@ are currently weakest. One chunk per session-batch; commit after each.
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
-- [ ] C3  08 eval-metrics · 09 confusion-roc · 10 calibration
+- [x] C3  08 eval-metrics · 09 confusion-roc · 10 calibration
 - [ ] C4  11 linear-logistic · 12 knn · 13 naive-bayes
 - [ ] C5  14 svm · 15 decision-trees · 16 random-forest
 - [ ] C6  17 gradient-boosting · 18 xgboost · 19 clustering · 20 dimred
@@ -61,9 +61,10 @@ are currently weakest. One chunk per session-batch; commit after each.
 
 Rewrites must not drop working assets. Two helpers live in /tmp during a
 session and are worth recreating: one walks div depth to extract every
-`anim-wrap` / `code-runner` block (a naive regex misses wrappers that carry a
-style attribute, which is how an interactive explorer nearly got dropped from
-06), and one diffs asset counts against the pre-revamp commit:
+`anim-wrap` / `code-runner` block AND any `<script>` immediately following it
+(a naive regex misses wrappers carrying a style attribute — nearly dropped 06's
+explorer — and a depth walk alone misses the script, which sits outside the
+wrapper in 09), and one diffs asset counts against the pre-revamp commit:
 
     anim / svg / script / code-runner / table / pre   before vs after
 

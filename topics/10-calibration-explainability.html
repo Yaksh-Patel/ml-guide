@@ -1,55 +1,31 @@
 <section class="section" id="sec-calibration">
 <div class="sec-title">Calibration &amp; Explainability</div>
-<div class="sec-desc">A model that's 70% confident should be right 70% of the time. Calibration checks this. Explainability turns black boxes into stories stakeholders trust.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Model Calibration</div>
-<div class="card-body">A well-calibrated model's predicted probabilities match observed frequencies.</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Reliability diagram:</strong> x-axis = predicted prob buckets, y-axis = actual frequency. Perfect calibration = diagonal.</li><li><strong>Overconfident:</strong> sigmoid curve below diagonal (predictions too extreme)</li><li><strong>Underconfident:</strong> S-curve above diagonal (predictions too conservative)</li><li><strong>ECE (Expected Calibration Error):</strong> weighted average of |pred − actual| per bucket</li></ul>
-<div class="card-body" style="margin-top:10px"><strong>Fixing calibration:</strong></div>
-<ul class="bul"><li><strong>Platt scaling:</strong> fit logistic regression on validation scores → calibrated prob</li><li><strong>Isotonic regression:</strong> non-parametric, more flexible, needs more data</li><li><strong>Temperature scaling:</strong> divide logits by T before softmax (for NNs)</li></ul></div>
-<div class="card cg"><div class="card-title">SHAP — SHapley Additive exPlanations</div>
-<div class="card-body">Allocates the model's prediction to each feature based on Shapley values from cooperative game theory.</div>
-<div class="formula math-formula">$$\begin{aligned}
-\phi_i = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|!\,(n-|S|-1)!}{n!} \left[f(S \cup \{i\}) - f(S)\right] \\[4pt]
-\text{(average marginal contribution across all feature orderings)}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Global SHAP:</strong> mean |SHAP| per feature = feature importance ranking</li><li><strong>Local SHAP:</strong> why did THIS prediction get this score?</li><li><strong>SHAP dependence plots:</strong> how does feature X affect predictions across its range?</li><li><strong>TreeSHAP:</strong> O(TLD) exact computation for tree models — very fast</li></ul></div>
-</div>
-<div class="card cp"><div class="card-title">LIME — Local Interpretable Model-Agnostic Explanations</div>
-<div class="card-body">Fit a simple linear model locally around a single prediction to explain it. Perturb the input, see how predictions change, fit interpretable model to those changes.</div>
-<ul class="bul" style="margin-top:8px"><li>Works for any black-box model (text, image, tabular)</li><li>Approximation is local — explanation only valid near the explained instance</li><li>Less stable than SHAP — can give different explanations for similar instances</li></ul></div>
-<div class="card"><div class="card-title">Feature Importance Types</div>
-<table class="tbl"><tr><th>Type</th><th>Method</th><th>Pros / Cons</th></tr>
-<tr><td>Impurity-based</td><td>sklearn feature_importances_</td><td>Fast; biased toward high-cardinality features</td></tr>
-<tr><td>Permutation importance</td><td>Shuffle feature, measure score drop</td><td>Model-agnostic; slower; accounts for correlations poorly</td></tr>
-<tr><td>SHAP</td><td>Shapley values</td><td>Theoretically sound; local + global; best overall</td></tr>
-<tr><td>Coefficient magnitude</td><td>Linear/logistic regression</td><td>Only valid after feature scaling; interpretable</td></tr>
-<tr><td>Gradient-based</td><td>Integrated gradients (NNs)</td><td>Principled; works for images/text</td></tr></table></div>
+<div class="sec-desc">Two questions a good AUC cannot answer: does 0.8 actually mean 80%, and why did this particular row get that score. The first matters the moment a probability is multiplied by money. The second matters the moment a human has to defend the decision.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Assuming tree models are well-calibrated</strong> — Random Forests and XGBoost tend to produce probabilities pushed toward 0 and 1 (overconfident). Always check a reliability diagram; apply CalibratedClassifierCV with isotonic regression post-hoc</li>
-  <li><strong>Using LIME for global explanations</strong> — LIME is a local explainer; each explanation is only valid near one prediction. For global feature importance, use SHAP's mean absolute SHAP value summary. Using LIME globally misleads</li>
-  <li><strong>Confusing feature importance with causation</strong> — SHAP tells you which features the model relies on, not which features causally drive the outcome. A correlated proxy feature (e.g., zip code as proxy for income) can have high SHAP but removing it may not change the real-world outcome</li>
-  <li><strong>Platt scaling vs isotonic regression choice</strong> — Platt scaling assumes a sigmoid relationship between scores and probabilities (works well for SVMs, naive Bayes). Isotonic regression is non-parametric and more flexible but needs more calibration data (&gt;1000 examples). For small calibration sets, use Platt</li>
-  <li><strong>Ignoring calibration drift in production</strong> — a model can maintain good AUC-ROC after concept drift while its calibration degrades severely. Monitor Expected Calibration Error (ECE) in production alongside discrimination metrics</li>
+<div class="card cb"><div class="card-title">Calibration: is the number honest</div>
+<div class="card-body">A model is calibrated if, among all rows it scores 0.30, roughly 30% actually turn out positive. That is a completely separate property from ranking — <strong>a model can order every case perfectly and still be systematically wrong about probability.</strong></div>
+<div class="formula math-formula">$$\mathbb{P}\big(y = 1 \mid \hat{p} = p\big) = p \quad \text{for all } p$$</div>
+<div class="card-body" style="margin-top:8px">To see that these are independent: take a perfectly calibrated model and square all its scores. Every ranking is unchanged, so AUC is identical — and the model now understates every probability. Any monotonic transformation does this.</div>
+<div class="box warn"><div class="bl">when it stops being academic</div>
+<p>Expected loss = P(default) × exposure. If the model says 0.05 and the truth is 0.12, you have under-reserved by a factor of two and every limit, price and provision built on it is wrong. <strong>Ranking is enough to sort a queue; only calibration survives being multiplied.</strong></p></div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Logistic regression</strong> is calibrated more or less by construction — it optimises log loss, which is a proper scoring rule</li>
+<li><strong>Tree ensembles are not.</strong> Random forests average votes and pull away from 0 and 1; boosted trees optimise a margin and push toward them. Both need fixing</li>
+<li><strong>Neural nets with modern training are usually overconfident</strong> — high capacity plus long training drives scores toward the extremes</li>
+<li><strong>Any resampling or class weighting destroys calibration</strong> by design: you deliberately changed the base rate the model believes in</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Lending Club / credit firms:</strong> predicted P(default) directly determines the interest rate offered; miscalibrated probabilities translate to mispriced loans and direct financial loss — calibration is validated monthly on recent cohorts</li>
-  <li><strong>Google (ads bidding):</strong> calibrated CTR predictions feed directly into the auction price calculation; a 2× miscalibration in predicted CTR causes advertisers to overbid or underbid by 2×, breaking auction theory</li>
-  <li><strong>FICO (credit scores):</strong> SHAP used to generate adverse action notices — legally required explanation of why a loan was denied, formatted as "top 4 reasons" for each applicant</li>
-  <li><strong>Healthcare AI (FDA-regulated):</strong> SHAP + calibration plots required in regulatory submissions; model must be demonstrated to be reliable across demographic subgroups with calibration tested separately per group</li>
-  <li><strong>Airbnb (trust &amp; safety):</strong> LIME used for debugging individual suspicious-listing predictions; SHAP used for global model monitoring — a SHAP value shift signals data or concept drift before metrics visibly degrade</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Calibration matters whenever the probability itself is the output — credit risk pricing, medical diagnosis, insurance underwriting. XGBoost is poorly calibrated out-of-the-box; I apply CalibratedClassifierCV with isotonic regression post-hoc (or Platt scaling if calibration data is small). For explainability, SHAP is my default — the only method with solid game-theoretic guarantees. TreeSHAP runs in O(n·d·T) — fast enough for production. Key distinction: SHAP explains what the model relies on; it does not establish causation."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used LIME for global feature importance." — LIME is strictly local. Aggregate SHAP values (mean |SHAP|) for global importance. Mixing these up signals a gap in XAI understanding.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is Expected Calibration Error (ECE)?" — Answer: divide predictions into bins by predicted probability. For each bin, compute |mean predicted probability − actual positive rate|. ECE is the weighted average of these gaps. A perfectly calibrated model has ECE=0: if you say 70% confident, you should be right 70% of the time.</p>
-</div>
-
+<div class="card cg"><div class="card-title">Measuring and fixing it</div>
+<div class="card-body">Plot observed frequency against predicted probability in bins — the reliability curve. Below the diagonal means overconfident; above means underconfident. Then score it with a metric that rewards honesty rather than order.</div>
+<div class="formula math-formula">$$\text{Brier} = \frac{1}{n}\sum_i (\hat{p}_i - y_i)^2 \qquad \text{log loss} = -\frac{1}{n}\sum_i \big[y_i \log \hat{p}_i + (1-y_i)\log(1-\hat{p}_i)\big]$$</div>
+<div class="card-body" style="margin-top:8px">Both are <em>proper scoring rules</em>: they are minimised only by the true probability, so they cannot be gamed by shifting scores around. Log loss punishes confident mistakes far harder — one prediction of 0.001 on a positive case dominates the average, which is a feature when confidence is what you are grading.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Fix</th><th>How</th><th>When</th></tr>
+<tr><td><strong>Platt scaling</strong></td><td>fit a 1-D logistic regression on the scores</td><td>little calibration data; the distortion is roughly sigmoidal</td></tr>
+<tr><td><strong>Isotonic regression</strong></td><td>fit any monotonic step function</td><td>more data (~1,000+); handles arbitrary distortion, will overfit on little</td></tr>
+<tr><td><strong>Temperature scaling</strong></td><td>divide logits by a single learned T</td><td>neural nets — one parameter, does not touch accuracy at all</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Calibrate on data the model has not been trained on.</strong> Fitting the calibrator on training predictions produces a calibrator that fixes memorised scores and does nothing for new ones. sklearn's <code>CalibratedClassifierCV</code> handles the split for you.</div>
 <div class="anim-wrap"><div class="anim-title">Reliability curve: does 0.8 actually mean 80%?</div>
 <svg viewBox="0 0 500 196" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -72,6 +48,66 @@
 <text x="384.0" y="166.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">after isotonic scaling</text>
 <text x="250.0" y="186.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Calibration changes the numbers, not the order — AUC barely moves, Brier improves.</text>
 </svg></div>
+</div>
+
+<div class="card cp"><div class="card-title">SHAP: attribution with a guarantee</div>
+<div class="card-body">SHAP borrows a result from cooperative game theory. Treat each feature as a player and the prediction as the payout; a feature's SHAP value is its average marginal contribution across every possible ordering of the features.</div>
+<div class="formula math-formula">$$\hat{f}(x) = \phi_0 + \sum_{j=1}^{M} \phi_j$$</div>
+<div class="card-body" style="margin-top:8px">That equation is the property that matters and the reason SHAP won: <strong>the attributions sum exactly to the prediction.</strong> Start at the base rate φ₀, add each feature's contribution, arrive at the model's output. Nothing is unexplained and nothing is double-counted — which is precisely what you need when someone asks why <em>this</em> application was declined.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Local:</strong> one row's φ values are an adverse-action explanation you can put in a letter</li>
+<li><strong>Global:</strong> mean |φ| per feature gives an importance ranking that, unlike impurity importance, is not biased by cardinality</li>
+<li><strong>TreeSHAP is exact and fast</strong> for tree ensembles. KernelSHAP is model-agnostic, approximate, and slow enough to matter</li>
+</ul>
+<div class="box warn"><div class="bl">the limit to state out loud</div>
+<p>SHAP explains <em>the model</em>, not the world. A large φ for income means the model leans on income — not that income causes default. Under correlated features the split between two collinear variables is somewhat arbitrary, and reading SHAP as causal is the most common misuse in production.</p></div></div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">LIME, and why SHAP mostly replaced it</div>
+<div class="card-body">Perturb the row, see how predictions move, fit a small interpretable model to that local neighbourhood, and read its coefficients.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Genuinely model-agnostic</strong> and intuitive to explain to a non-specialist</li>
+<li><strong>Unstable:</strong> re-run it and the explanation can change, because the perturbation sample is random</li>
+<li><strong>No additivity guarantee</strong> — the pieces need not sum to the prediction</li>
+<li><strong>Neighbourhood definition is a free parameter</strong> that materially changes the answer</li>
+</ul>
+<div class="card-body" style="margin-top:8px">Still useful for images and text where the perturbation is natural (mask a region, drop a word). For tabular models, TreeSHAP is exact and reproducible, which regulated settings require.</div></div>
+
+<div class="card cc"><div class="card-title">Importance: three kinds, only two trustworthy</div>
+<table class="tbl">
+<tr><th>Kind</th><th>Measures</th><th>Watch out</th></tr>
+<tr><td><strong>Impurity / gain</strong></td><td>training-time split contribution</td><td>biased toward high-cardinality and continuous features; computed on train, so it rewards overfitting</td></tr>
+<tr><td><strong>Permutation</strong></td><td>metric drop when a column is shuffled</td><td>splits credit unpredictably between correlated features; must be measured on held-out data</td></tr>
+<tr><td><strong>SHAP</strong></td><td>additive contribution per prediction</td><td>the only one that is both local and global; cost matters for non-tree models</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Default to permutation importance on validation data, or SHAP.</strong> The impurity importances printed by <code>feature_importances_</code> are the ones most often quoted and least often correct — a random unique-per-row id will rank near the top.</div></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that reach production</div>
+<ul class="bul">
+<li><strong>Assuming a good AUC implies usable probabilities.</strong> They are different properties. Check the reliability curve before any expected-value calculation</li>
+<li><strong>Calibrating on training predictions.</strong> The calibrator learns to correct scores the model has memorised and generalises nothing</li>
+<li><strong>Resampling and then trusting the probabilities.</strong> SMOTE or class weighting shifts the implied base rate. If you need calibrated output, either skip resampling or recalibrate afterwards on the true prevalence</li>
+<li><strong>Reading SHAP as causal.</strong> "Reducing utilisation would lower this customer's risk" does not follow from a SHAP value. It is a statement about the model's mechanics</li>
+<li><strong>Quoting impurity importance.</strong> Cardinality bias makes it actively misleading; the classic demonstration is a random id ranking above real features</li>
+<li><strong>Explaining a model that is wrong.</strong> A clean SHAP plot on a leaking model explains the leak beautifully. Explanations validate reasoning, not correctness</li>
+<li><strong>Averaging SHAP without absolute value.</strong> Positive and negative contributions cancel, and an important feature looks unimportant. Global importance uses mean |φ|</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where this is mandatory rather than nice</div>
+<ul class="bul">
+<li><strong>Credit decisioning is legally required to explain.</strong> US adverse-action notices under ECOA/Reg B need the principal reasons for a decline, per applicant. SHAP's additivity is why it became the standard mechanism — the reasons provably account for the score</li>
+<li><strong>Any expected-value pipeline needs calibration as a build step.</strong> Pricing, limit setting, reserving, ad bidding: all multiply a probability by an amount, so calibration is validated and monitored alongside discrimination, not instead of it</li>
+<li><strong>Model risk review asks for both.</strong> A validation team will want discrimination (AUC/KS/Gini), calibration (reliability plus Brier), and stability (PSI) — and will ask what happens to each under a stressed population</li>
+<li><strong>Monitoring watches calibration drift separately.</strong> A model can keep its ranking power while its probabilities go stale, which happens whenever the base rate moves. Ranking metrics will not catch it</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Separate the two properties immediately.</strong> "AUC measures ranking; calibration measures whether the probability is honest. They are independent — square every score and AUC is unchanged while calibration breaks." That one sentence answers most calibration questions before they are fully asked.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Your random forest has great AUC but the business says the probabilities are wrong." — Diagnose with a reliability curve, fix with isotonic or Platt on held-out data, and check whether anyone resampled the training set. Mention that forests are systematically under-confident at the extremes because they average votes.</p>
+<p style="margin-top:8px"><strong>On SHAP:</strong> lead with additivity — contributions sum to the prediction — then state the limit unprompted: it explains the model, not causality. Volunteering the limitation is what distinguishes a practitioner from someone who has read the README.</p>
+<p style="margin-top:8px"><strong>Do not quote</strong> <code>feature_importances_</code> as evidence without noting its cardinality bias.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">A model can rank perfectly and still lie about probability. Reliability curves diagnose it; isotonic or Platt scaling fixes it without touching the ranking.</div>

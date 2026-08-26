@@ -1,58 +1,30 @@
 <section class="section" id="sec-metrics">
 <div class="sec-title">Evaluation Metrics</div>
-<div class="sec-desc">Choosing the wrong metric is one of the most common mistakes in applied ML. The metric must reflect business reality, not just mathematical convenience.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Regression Metrics</div>
+<div class="sec-desc">The metric is not a reporting detail chosen at the end — it is the objective, and picking it decides which model wins. Most arguments about whether a model is good are really unstated disagreements about which error is more expensive.</div>
+
+<div class="card cb"><div class="card-title">Classification: what each number is blind to</div>
 <div class="formula math-formula">$$\begin{aligned}
-\text{MAE} &= \frac{1}{n}\sum|y_i - \hat{y}_i| \\
-\text{MSE} &= \frac{1}{n}\sum(y_i - \hat{y}_i)^2 \\
-\text{RMSE} &= \sqrt{\text{MSE}} \\
-R^2 &= 1 - \frac{SS_\text{res}}{SS_\text{tot}} \quad [0 = \text{mean model},\; 1 = \text{perfect}] \\
-\text{MAPE} &= \frac{1}{n}\sum\frac{|y_i - \hat{y}_i|}{|y_i|} \times 100\%
+\text{precision} &= \frac{TP}{TP + FP} \quad \text{— of the ones I flagged, how many were real} \\
+\text{recall} &= \frac{TP}{TP + FN} \quad \text{— of the real ones, how many did I catch} \\
+F_1 &= 2 \cdot \frac{\text{precision} \cdot \text{recall}}{\text{precision} + \text{recall}}
 \end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>MAE:</strong> interpretable, robust to outliers, same units as y</li><li><strong>RMSE:</strong> penalizes large errors heavily; differentiable; outlier sensitive</li><li><strong>R²:</strong> proportion of variance explained; use adjusted R² for multiple features</li><li><strong>MAPE:</strong> percentage error; unstable when y ≈ 0</li></ul></div>
-<div class="card cg"><div class="card-title">Classification Metrics</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Accuracy}  &= (TP+TN)/(TP+TN+FP+FN) \\
-\text{Precision} &= TP/(TP+FP) \quad \text{(quality of positives)} \\
-\text{Recall}    &= TP/(TP+FN) \quad \text{(coverage of positives)} \\
-F_1              &= 2 \cdot P \cdot R / (P+R) \quad \text{(harmonic mean)} \\
-F_\beta          &= (1+\beta^2) \cdot P \cdot R \;/\; (\beta^2 \cdot P + R)
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Accuracy:</strong> misleading when classes imbalanced (99% neg → always predict neg = 99% accuracy)</li><li><strong>Precision:</strong> cost of false alarms (spam filter)</li><li><strong>Recall:</strong> cost of missing positives (cancer detection)</li><li><strong>F1:</strong> balance of both; F2 weights recall more; F0.5 weights precision more</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Metric Selection Framework</div>
-<table class="tbl"><tr><th>Use Case</th><th>Primary Metric</th><th>Why</th></tr>
-<tr><td>Fraud detection (imbalanced)</td><td>PR-AUC, Recall@FPR</td><td>Missing fraud is costly; rare positives</td></tr>
-<tr><td>Credit default prediction</td><td>KS stat, AUC, Gini</td><td>Ranking quality; single threshold needed</td></tr>
-<tr><td>Spam filter</td><td>Precision, F1</td><td>False positives (blocking legit email) are bad</td></tr>
-<tr><td>Medical diagnosis</td><td>Recall, Specificity</td><td>Missing disease is catastrophic</td></tr>
-<tr><td>Search ranking</td><td>NDCG, MAP, MRR</td><td>Order matters; top results most important</td></tr>
-<tr><td>Revenue forecasting</td><td>MAPE, RMSE</td><td>Interpretable, same scale as revenue</td></tr>
-<tr><td>Balanced classification</td><td>AUC-ROC, F1</td><td>Balanced classes, need overall quality</td></tr></table></div>
+<div class="card-body" style="margin-top:8px">Precision and recall answer different questions and move in opposite directions as you slide the threshold. F₁ is their harmonic mean, which punishes imbalance between them — a model at 0.99 precision and 0.01 recall scores F₁ ≈ 0.02, where the arithmetic mean would have flattered it at 0.5.</div>
+<div class="box warn"><div class="bl">accuracy is the trap, with numbers</div>
+<p>Fraud at a 3% base rate. Predict "not fraud" for every transaction: <strong>97% accuracy</strong>, zero fraud caught, no model required. Accuracy is only meaningful when classes are roughly balanced <em>and</em> the two error types cost about the same — which is almost never true for anything worth modelling.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>F₁ has its own blind spot:</strong> it ignores true negatives entirely and weights precision and recall equally, which is a business assumption disguised as a default. If a false negative costs ten times a false positive, use F₂ or state the cost ratio explicitly.</div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Optimizing accuracy on imbalanced data</strong> — predicting the majority class always achieves (1 − minority rate) accuracy. A fraud model with 99.9% accuracy that catches 0 frauds is useless. Default to PR-AUC or F1 for imbalanced problems</li>
-  <li><strong>Not pre-registering the metric before training</strong> — choosing the metric that makes your model look best after seeing results is p-hacking for ML. Agree the primary metric with stakeholders before any training begins</li>
-  <li><strong>Confusing RMSE and MAE intuitions</strong> — RMSE penalises large errors more heavily (squared); MAE treats all errors equally. Use RMSE when large errors are especially costly (e.g., revenue); MAE when all errors are treated equally or the data has outliers</li>
-  <li><strong>"My AUC-ROC is 0.95, model is great"</strong> — AUC-ROC can be very high with extreme class imbalance even if the minority class recall is poor. Always pair AUC-ROC with PR-AUC and a confusion matrix at your chosen operating threshold</li>
-  <li><strong>Reporting a single F1 score without the threshold</strong> — F1 depends on the classification threshold. Report F1 at the business-chosen threshold, not the sklearn default of 0.5. Consider F-beta (β &gt; 1 weights recall more heavily) for high-recall requirements</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Airbnb (search ranking):</strong> NDCG as the primary offline ranking metric; complemented by online A/B test on booking conversion rate — offline metric must correlate with the online business metric to be trusted</li>
-  <li><strong>Stripe (fraud):</strong> precision@fixed-recall as the primary metric — business sets a minimum recall (e.g., catch 90% of fraud), then maximise precision (minimise false positives that block good transactions)</li>
-  <li><strong>Netflix (recommendations):</strong> moved from RMSE (star rating prediction) to ranking metrics (NDCG, recall@k) after discovering RMSE improvements didn't translate to better user engagement — lesson in metric alignment</li>
-  <li><strong>Google (search quality):</strong> human rater-based quality metrics (NDCG over human relevance labels) as ground truth; model AUC-ROC used as a proxy during development, human eval as the final gate</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Metric selection is a business decision before it's a technical one. I always ask: what is the cost of false positives vs false negatives? Credit risk: false negative (missed default) is catastrophic — maximise recall. Spam: false positive (blocking real email) destroys trust — maximise precision. For imbalanced problems, PR-AUC not AUC-ROC — PR-AUC is honest about minority class performance. I agree the primary metric with stakeholders before any training and never change it after seeing results."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use accuracy." — Unless you can demonstrate class balance and that all errors have equal cost, accuracy signals a lack of ML maturity. Almost always start with AUC-ROC or PR-AUC.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is AUC-ROC optimistic on imbalanced data?" — Answer: AUC-ROC includes True Negatives in the denominator (specificity = TN/(TN+FP)). When negatives dominate, the model can have poor recall while still scoring well on specificity, inflating AUC-ROC. PR-AUC uses only positives and predicted positives — it's blind to the large TN pool and gives a truthful picture of minority-class detection.</p>
-</div>
+<div class="card cg"><div class="card-title">Threshold-free: ROC-AUC vs PR-AUC</div>
+<div class="card-body">Both summarise a model across every threshold at once, which makes them useful for comparing models before you have chosen an operating point. They disagree sharply under imbalance, and knowing why is the whole skill.</div>
+<table class="tbl">
+<tr><th></th><th>ROC-AUC</th><th>PR-AUC (average precision)</th></tr>
+<tr><td>Axes</td><td>TPR vs FPR</td><td>precision vs recall</td></tr>
+<tr><td>Baseline</td><td>0.5 always</td><td>the positive rate — 0.03 at a 3% base rate</td></tr>
+<tr><td>Under imbalance</td><td>flatters: FPR has a huge denominator, so thousands of false positives barely move it</td><td>honest: precision collapses immediately</td></tr>
+<tr><td>Reads as</td><td>P(random positive ranked above random negative)</td><td>area under the precision-recall trade</td></tr>
+<tr><td>Use when</td><td>classes are balanced, or you care about both errors symmetrically</td><td>positives are rare and you care about them</td></tr>
+</table>
+<div class="box mem"><div class="bl">worked — why they diverge</div>
+<p>10,000 transactions, 100 fraudulent. A model flags 300 to catch 90. Recall 0.90, precision 0.30. The 210 false positives against 9,900 negatives is an FPR of 2.1% — so ROC-AUC looks excellent. But an analyst reviewing those 300 alerts finds 7 in 10 are wasted work. <strong>PR-AUC reflects the analyst's experience; ROC-AUC does not.</strong></p></div></div>
 
 <div class="anim-wrap"><div class="anim-title">One model, one ranking, a different trade at every threshold</div>
 <svg viewBox="0 0 500 170" xmlns="http://www.w3.org/2000/svg">
@@ -71,6 +43,70 @@ F_\beta          &= (1+\beta^2) \cdot P \cdot R \;/\; (\beta^2 \cdot P + R)
 <text x="404.0" y="144.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">only fire when sure</text>
 <text x="250.0" y="160.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Both curves come from ONE model and ONE ranking. AUC summarises every column at once.</text>
 </svg></div>
+
+<div class="g2">
+<div class="card ca"><div class="card-title">Regression: the choice is about outliers</div>
+<div class="formula math-formula">$$\begin{aligned}
+\text{MAE} &= \tfrac{1}{n}\sum |y - \hat{y}| \\
+\text{RMSE} &= \sqrt{\tfrac{1}{n}\sum (y - \hat{y})^2} \\
+R^2 &= 1 - \frac{\sum (y-\hat{y})^2}{\sum (y-\bar{y})^2}
+\end{aligned}$$</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>MAE</strong> treats every error proportionally. Optimising it predicts the conditional <em>median</em></li>
+<li><strong>RMSE</strong> squares first, so one large miss dominates. Optimising it predicts the conditional <em>mean</em></li>
+<li><strong>MAPE</strong> is scale-free and explodes near zero — never use it on a target that can be small</li>
+<li><strong>R²</strong> is the fraction of variance explained, and can go negative when the model is worse than predicting the mean</li>
+</ul>
+<div class="card-body" style="margin-top:8px">Errors of 1, 1, 1, 10: MAE = 3.25, RMSE = 5.15. The gap between the two <em>is</em> your outlier problem, quantified. If they diverge, decide deliberately whether those outliers are the thing you care about or noise you want to ignore.</div></div>
+
+<div class="card cp"><div class="card-title">Ranking: position matters</div>
+<div class="card-body">For search, feeds and recommendations, being right about item 1 is worth more than being right about item 40. Pointwise metrics cannot express that.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Precision@k / Recall@k</strong> — the simplest honest framing: users only see the first k</li>
+<li><strong>MAP</strong> — averages precision at each relevant hit, so earlier hits count more</li>
+<li><strong>NDCG</strong> — discounts by log(position) and supports graded relevance. The standard for search</li>
+<li><strong>MRR</strong> — one over the rank of the first correct answer. Right when there is a single target</li>
+</ul>
+<div class="card-body" style="margin-top:8px">A model with excellent AUC can rank badly at the top of the list, because AUC averages over all pairs and most pairs are deep in the tail where nobody looks.</div></div>
+</div>
+
+<div class="card cc"><div class="card-title">Choosing the metric: work backwards from the decision</div>
+<table class="tbl">
+<tr><th>What the model is for</th><th>Metric</th><th>Because</th></tr>
+<tr><td>Rare fraud, analysts review alerts</td><td>PR-AUC; precision@k</td><td>the review queue has a fixed size</td></tr>
+<tr><td>Disease screening</td><td>recall at a precision floor</td><td>a missed case is far worse than a recall</td></tr>
+<tr><td>Credit limit, expected-loss maths</td><td>calibration (Brier, log loss) + AUC</td><td>the probability is multiplied by money</td></tr>
+<tr><td>Demand forecasting</td><td>MAE or quantile loss</td><td>over- and under-stocking cost differently</td></tr>
+<tr><td>Search / feed ranking</td><td>NDCG@k</td><td>only the top of the list is seen</td></tr>
+<tr><td>Model comparison, no threshold yet</td><td>AUC — plus the spread across folds</td><td>threshold comes later, from the business</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Ask what happens to a prediction after it leaves the model.</strong> Something acts on it — a queue, a limit, a page of results — and that action defines the metric. Choosing the metric before understanding the action is how teams optimise the wrong thing competently for months.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that make a metric misleading</div>
+<ul class="bul">
+<li><strong>Quoting accuracy on imbalanced data.</strong> The single most common one. Always give the base rate next to any classification number</li>
+<li><strong>Comparing PR-AUC across datasets.</strong> Its baseline is the positive rate, so 0.4 on a 3% base rate is strong and 0.4 on a 40% base rate is poor. ROC-AUC is comparable across datasets; PR-AUC is not</li>
+<li><strong>Optimising a threshold metric during training, then shipping the default 0.5.</strong> Threshold choice is a separate decision made on business cost, not a constant inherited from a library</li>
+<li><strong>Averaging metrics over imbalanced classes without saying how.</strong> Macro treats every class equally, micro weights by frequency, weighted sits between. They can differ by tens of points and the word "F1" hides which one you used</li>
+<li><strong>Reporting a point estimate from one split.</strong> Bootstrap the metric or report fold spread. A 0.01 AUC difference on one test set is usually noise</li>
+<li><strong>Ignoring calibration because AUC is good.</strong> Ranking and probability are different properties. If a downstream calculation multiplies your score by an amount of money, AUC does not tell you whether the score is honest</li>
+<li><strong>Letting the offline metric drift from the business metric.</strong> AUC up, revenue flat is a normal outcome. Any offline metric is a proxy, and the proxy needs periodic re-validation against reality</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is handled at scale</div>
+<ul class="bul">
+<li><strong>Alert capacity sets the metric.</strong> If the fraud team can review 500 cases a day, the metric is precision@500 — not AUC, not F₁. Fixed-capacity review is extremely common and almost never reflected in the metric people report</li>
+<li><strong>Cost-weighted decisions, not thresholds.</strong> Mature systems compute expected value per action — P(fraud) × amount versus review cost — and act on that. The threshold falls out of the arithmetic instead of being tuned</li>
+<li><strong>Guardrails alongside the target.</strong> A ranking change that lifts clicks and cuts long-term retention is a loss. The target metric alone will never tell you</li>
+<li><strong>Segment-level reporting.</strong> One aggregate number hides a model that works on the majority group and fails on a minority one. Reporting by segment is both a fairness requirement and a good way to find broken features</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Never answer "which metric" without asking what the prediction is used for.</strong> Handed "we're detecting fraud", ask how many alerts can be reviewed per day, and what a missed fraud costs versus a false alarm. Then name the metric. The question is testing whether you connect metrics to decisions.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why is accuracy a bad metric for fraud?" — Give the 3% base rate and the 97% do-nothing model. Concrete numbers end that question immediately.</p>
+<p style="margin-top:8px"><strong>Then:</strong> "ROC-AUC or PR-AUC?" — PR-AUC when positives are rare, because FPR's denominator is enormous so ROC barely moves while precision collapses. Add that PR-AUC's baseline is the positive rate, so it is not comparable across datasets.</p>
+<p style="margin-top:8px"><strong>Strong close:</strong> distinguish ranking from calibration and say when each matters. It is the fastest way to show you have shipped a model into a decision system.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Pick the metric before you fit anything. This prints the whole panel at once so the trade-off is visible rather than argued about.</div>
