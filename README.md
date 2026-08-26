@@ -125,6 +125,12 @@ JetBrains Mono for metadata only.
 | `.tag` + `.tb .tg .ta .tr .tp .tc` | inline pills |
 | `.cgrid` `.ch` `.cg-cc` `.ctp .ctn .cfp .cfn` | confusion-matrix grid |
 | `.anim-wrap` `.anim-title` | wrapper for an inline SVG diagram |
+
+Every topic carries a diagram and a worked code example. The diagrams share one
+visual language (L-shaped axes, mono micro-labels, the same six semantic hues),
+so they read as one guide rather than 55 unrelated illustrations. Draw new ones
+with the legacy palette hexes — section 8 of `style.css` maps those onto the
+live tokens, so a diagram follows both themes for free.
 | `.code-runner` | interactive Python block |
 
 ### A note on diagram colours

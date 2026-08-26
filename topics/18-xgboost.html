@@ -57,6 +57,31 @@ G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost handle missing values?" — Answer: during training, XGBoost tries both directions (left and right child) for missing values at each split and picks whichever gives better gain. This learned default direction is stored in the model and applied at inference — no imputation needed.</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">XGBoost = gradient boosting + four engineering decisions</div>
+<svg viewBox="0 0 500 178" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">the four additions over plain gradient boosting</text>
+<rect x="18" y="26" width="110" height="86" rx="6" fill="#1a1f2e" stroke="#22d3a0" opacity=".95"/>
+<text x="73.0" y="44.0" fill="#22d3a0" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">2nd-order</text>
+<text x="73.0" y="62.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">uses the hessian, not just</text>
+<text x="73.0" y="75.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">the gradient → better steps</text>
+<rect x="139" y="26" width="110" height="86" rx="6" fill="#1a1f2e" stroke="#5ba4fb" opacity=".95"/>
+<text x="194.0" y="44.0" fill="#5ba4fb" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">regularised</text>
+<text x="194.0" y="62.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">γ per leaf + λ‖w‖² inside</text>
+<text x="194.0" y="75.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">the split gain itself</text>
+<rect x="260" y="26" width="110" height="86" rx="6" fill="#1a1f2e" stroke="#b97cf8" opacity=".95"/>
+<text x="315.0" y="44.0" fill="#b97cf8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">sparsity-aware</text>
+<text x="315.0" y="62.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">learns a default direction</text>
+<text x="315.0" y="75.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">for missing values</text>
+<rect x="381" y="26" width="110" height="86" rx="6" fill="#1a1f2e" stroke="#f5a623" opacity=".95"/>
+<text x="436.0" y="44.0" fill="#f5a623" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">histogram</text>
+<text x="436.0" y="62.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">bins features → O(n) splits</text>
+<text x="436.0" y="75.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">instead of O(n log n) sorts</text>
+<text x="250.0" y="132.0" fill="#22d3a0" font-size="11" text-anchor="middle" font-family="JetBrains Mono">gain  =  ½ · G²/(H+λ)  −  γ</text>
+<text x="250.0" y="150.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">A split happens only if the gain clears γ. That single line is the pruning rule.</text>
+<text x="250.0" y="168.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">monotone_constraints is what makes it defensible in a regulated model.</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The three things XGBoost adds over plain gradient boosting — second-order gradients, structural regularisation, and early stopping on a real validation set.</div>
 <pre class="language-python"><code class="language-python">import numpy as np

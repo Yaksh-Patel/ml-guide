@@ -69,6 +69,29 @@ F(x) = F_0 + \eta \cdot \sum_m h_m(x)
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost differ from vanilla gradient boosting?" — Answer: second-order Taylor approximation of the loss (uses curvature, not just gradient), built-in L1/L2 regularization on leaf weights, and column/row subsampling per tree. These together make it more regularized and faster to converge than sklearn GradientBoostingClassifier.</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">Boosting: fitting the leftovers, round after round</div>
+<svg viewBox="0 0 500 202" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">each tree is fitted to what the ensemble still gets wrong</text>
+<rect x="24" y="24" width="128" height="104" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<line x1="32" y1="76" x2="144" y2="76" stroke="#4e5a7a" stroke-width="1" stroke-dasharray="3 3"/>
+<path d="M32.0,76.0 L36.9,60.9 L41.7,51.4 L46.6,51.1 L51.5,60.0 L56.3,74.9 L61.2,90.2 L66.1,100.2 L71.0,101.2 L75.8,92.8 L80.7,78.2 L85.6,62.7 L90.4,52.2 L95.3,50.5 L100.2,58.4 L105.0,72.8 L109.9,88.4 L114.8,99.3 L119.7,101.6 L124.5,94.4 L129.4,80.3 L134.3,64.6 L139.1,53.1 L144.0,50.2" fill="none" stroke="#f06767" stroke-width="2" stroke-linecap="round"/>
+<text x="88.0" y="142.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">round 1</text>
+<text x="88.0" y="156.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="JetBrains Mono">residual amplitude 1.00</text>
+<rect x="186" y="24" width="128" height="104" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<line x1="194" y1="76" x2="306" y2="76" stroke="#4e5a7a" stroke-width="1" stroke-dasharray="3 3"/>
+<path d="M194.0,76.0 L198.9,69.2 L203.7,64.9 L208.6,64.8 L213.5,68.8 L218.3,75.5 L223.2,82.4 L228.1,86.9 L233.0,87.3 L237.8,83.6 L242.7,77.0 L247.6,70.0 L252.4,65.3 L257.3,64.5 L262.2,68.1 L267.0,74.5 L271.9,81.6 L276.8,86.5 L281.7,87.5 L286.5,84.3 L291.4,77.9 L296.3,70.9 L301.1,65.7 L306.0,64.4" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"/>
+<text x="250.0" y="142.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">round 5</text>
+<text x="250.0" y="156.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="JetBrains Mono">residual amplitude 0.45</text>
+<rect x="348" y="24" width="128" height="104" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<line x1="356" y1="76" x2="468" y2="76" stroke="#4e5a7a" stroke-width="1" stroke-dasharray="3 3"/>
+<path d="M356.0,76.0 L360.9,74.5 L365.7,73.5 L370.6,73.5 L375.5,74.4 L380.3,75.9 L385.2,77.4 L390.1,78.4 L395.0,78.5 L399.8,77.7 L404.7,76.2 L409.6,74.7 L414.4,73.6 L419.3,73.5 L424.2,74.2 L429.0,75.7 L433.9,77.2 L438.8,78.3 L443.7,78.6 L448.5,77.8 L453.4,76.4 L458.3,74.9 L463.1,73.7 L468.0,73.4" fill="none" stroke="#22d3a0" stroke-width="2" stroke-linecap="round"/>
+<text x="412.0" y="142.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">round 50</text>
+<text x="412.0" y="156.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="JetBrains Mono">residual amplitude 0.10</text>
+<text x="250.0" y="178.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">For squared error the negative gradient IS the residual — that is the whole trick.</text>
+<text x="250.0" y="192.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Halve the learning rate and you need roughly twice the trees for the same fit.</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Gradient boosting in fifteen lines, so the "fit the next tree to the residual" claim stops being a slogan. The final loop shows the learning-rate / n_estimators trade.</div>
 <pre class="language-python"><code class="language-python">import numpy as np

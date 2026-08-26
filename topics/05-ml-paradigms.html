@@ -48,6 +48,37 @@
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between online and offline reinforcement learning?" — Answer: online RL collects experience by interacting with the environment during training (AlphaGo, RLHF with PPO rollouts) — expensive but can explore to improve. Offline RL (also called batch RL) trains entirely from a fixed logged dataset of past interactions (e.g., historical user trajectories) without further environment interaction — safer for production but can't explore beyond the data distribution. DPO is effectively offline RL for LLM alignment.</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">Four paradigms, by what the data brings with it</div>
+<svg viewBox="0 0 500 190" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">the difference is what arrives with the data</text>
+<text x="112.0" y="46.0" fill="#22d3a0" font-size="10" text-anchor="end" font-family="DM Sans" font-weight="600">Supervised</text>
+<rect x="124" y="30" width="104" height="24" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="176.0" y="45.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">X + y</text>
+<line x1="232" y1="42" x2="262" y2="42" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="266" y="30" width="200" height="24" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="366.0" y="45.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">learn f(X) → y</text>
+<text x="112.0" y="80.0" fill="#5ba4fb" font-size="10" text-anchor="end" font-family="DM Sans" font-weight="600">Unsupervised</text>
+<rect x="124" y="64" width="104" height="24" rx="4" fill="#1a1f2e" stroke="#5ba4fb"/>
+<text x="176.0" y="79.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">X only</text>
+<line x1="232" y1="76" x2="262" y2="76" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="266" y="64" width="200" height="24" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="366.0" y="79.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">find structure in X</text>
+<text x="112.0" y="114.0" fill="#b97cf8" font-size="10" text-anchor="end" font-family="DM Sans" font-weight="600">Self-supervised</text>
+<rect x="124" y="98" width="104" height="24" rx="4" fill="#1a1f2e" stroke="#b97cf8"/>
+<text x="176.0" y="113.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">X → X</text>
+<line x1="232" y1="110" x2="262" y2="110" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="266" y="98" width="200" height="24" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="366.0" y="113.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">label made from X</text>
+<text x="112.0" y="148.0" fill="#f5a623" font-size="10" text-anchor="end" font-family="DM Sans" font-weight="600">Reinforcement</text>
+<rect x="124" y="132" width="104" height="24" rx="4" fill="#1a1f2e" stroke="#f5a623"/>
+<text x="176.0" y="147.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">state + r</text>
+<line x1="232" y1="144" x2="262" y2="144" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<rect x="266" y="132" width="200" height="24" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="366.0" y="147.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">act, observe reward</text>
+<text x="250.0" y="180.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Only the first row needs a human to have labelled anything.</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The three paradigms on one dataset, so the difference is in the code rather than in prose: labels used, labels ignored, and reward observed.</div>
 <pre class="language-python"><code class="language-python">import numpy as np

@@ -204,4 +204,26 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I use model.predict() for inference in PyTorch." — PyTorch doesn't have a predict() method; that's Keras/sklearn. PyTorch inference: model.eval(), then with torch.no_grad(): output = model(x). Confusing these frameworks signals shallow hands-on experience.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does torch.compile() improve performance?" — Answer: torch.compile() (introduced in PyTorch 2.0) traces the model's computation graph and compiles it to optimised kernels using TorchInductor (targeting CUDA or CPU). It fuses operations (e.g., attention + softmax + dropout into one kernel), eliminates Python overhead in the training loop, and can achieve 30–50% speedup on transformer training with a single line: model = torch.compile(model).</p>
 </div>
+
+<div class="anim-wrap"><div class="anim-title">Eager vs compiled execution</div>
+<svg viewBox="0 0 500 182" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">the difference that actually shows up in your workflow</text>
+<rect x="26" y="26" width="204" height="112" rx="6" fill="#1a1f2e" stroke="#5ba4fb"/>
+<text x="128.0" y="44.0" fill="#5ba4fb" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">eager  (PyTorch default)</text>
+<text x="128.0" y="62.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">line runs</text>
+<text x="128.0" y="79.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">value exists</text>
+<text x="128.0" y="96.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">pdb works here</text>
+<text x="128.0" y="113.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">graph rebuilt each step</text>
+<rect x="270" y="26" width="204" height="112" rx="6" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="372.0" y="44.0" fill="#22d3a0" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">compiled  (tf.function, torch.compile)</text>
+<text x="372.0" y="62.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">traced once</text>
+<text x="372.0" y="79.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">then optimised &amp; fused</text>
+<text x="372.0" y="96.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">faster, harder to debug</text>
+<text x="372.0" y="113.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">python side-effects run ONCE</text>
+<line x1="232" y1="82" x2="268" y2="82" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="250.0" y="74.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">decorate</text>
+<text x="250.0" y="156.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Write and debug eagerly, then compile the hot loop. That order is the whole practical answer.</text>
+<text x="250.0" y="172.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Keras is the high-level API over TF; Lightning is the equivalent convention layer over PyTorch.</text>
+</svg></div>
 </section>

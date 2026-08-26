@@ -67,6 +67,35 @@
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you handle feature selection when you have 500 features?" — Answer: (1) remove near-zero variance features; (2) remove features with correlation &gt;0.95 (keep one from each correlated cluster); (3) use SHAP importance on a trained model to rank remaining features; (4) iteratively remove bottom-SHAP features and check CV metric — stop when metric drops. This is more principled than RFE and faster than Boruta for &gt;100 features.</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">The highest-leverage tabular feature, and its trap</div>
+<svg viewBox="0 0 500 158" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">target encoding: the same feature, computed two ways</text>
+<rect x="20" y="24" width="216" height="104" rx="6" fill="#1a1f2e" stroke="#f06767"/>
+<text x="128.0" y="40.0" fill="#f06767" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">in-fold mean  (leaks)</text>
+<rect x="32" y="50" width="192" height="13" rx="2" fill="#f06767" opacity=".18"/>
+<text x="128.0" y="60.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 1 encoding includes row 1 label</text>
+<rect x="32" y="67" width="192" height="13" rx="2" fill="#f06767" opacity=".18"/>
+<text x="128.0" y="77.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 2 encoding includes row 2 label</text>
+<rect x="32" y="84" width="192" height="13" rx="2" fill="#f06767" opacity=".18"/>
+<text x="128.0" y="94.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 3 encoding includes row 3 label</text>
+<rect x="32" y="101" width="192" height="13" rx="2" fill="#f06767" opacity=".18"/>
+<text x="128.0" y="111.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 4 encoding includes row 4 label</text>
+<text x="128.0" y="122.0" fill="#f06767" font-size="8.3" text-anchor="middle" font-family="DM Sans">CV score looks excellent, production does not</text>
+<rect x="264" y="24" width="216" height="104" rx="6" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="372.0" y="40.0" fill="#22d3a0" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">out-of-fold mean  (correct)</text>
+<rect x="276" y="50" width="192" height="13" rx="2" fill="#22d3a0" opacity=".14"/>
+<text x="372.0" y="60.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 1 encoded from the other 4 folds</text>
+<rect x="276" y="67" width="192" height="13" rx="2" fill="#22d3a0" opacity=".14"/>
+<text x="372.0" y="77.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 2 encoded from the other 4 folds</text>
+<rect x="276" y="84" width="192" height="13" rx="2" fill="#22d3a0" opacity=".14"/>
+<text x="372.0" y="94.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 3 encoded from the other 4 folds</text>
+<rect x="276" y="101" width="192" height="13" rx="2" fill="#22d3a0" opacity=".14"/>
+<text x="372.0" y="111.0" fill="#8e97b8" font-size="8" text-anchor="middle" font-family="DM Sans">row 4 encoded from the other 4 folds</text>
+<text x="372.0" y="122.0" fill="#22d3a0" font-size="8.3" text-anchor="middle" font-family="DM Sans">CV score is lower and honest</text>
+<text x="250.0" y="148.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="JetBrains Mono">smoothed:  (mean · n + prior · k) / (n + k)   — so a category seen twice does not get a confident number</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Target encoding is the highest-leverage tabular feature and the easiest way to leak. The out-of-fold version is the only one that belongs in production.</div>
 <pre class="language-python"><code class="language-python">import numpy as np, pandas as pd

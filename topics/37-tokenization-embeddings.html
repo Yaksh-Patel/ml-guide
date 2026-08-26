@@ -51,6 +51,56 @@ Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does BPE tokenization work?" — Answer: start with character vocabulary. Repeatedly find the most frequent adjacent byte pair and merge it into a new token. Repeat for V iterations (V = vocabulary size target). Result: common words become single tokens; rare words are split into frequent subword pieces. This gives good coverage without OOV and keeps vocabulary size manageable (~50K tokens for most LLMs).</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">Byte-pair encoding, four merges in</div>
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">BPE learns its vocabulary by merging the most frequent adjacent pair</text>
+<rect x="150" y="30" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="162.5" y="43.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">l</text>
+<rect x="181" y="30" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="193.5" y="43.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">o</text>
+<rect x="212" y="30" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="224.5" y="43.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">w</text>
+<rect x="243" y="30" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="255.5" y="43.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">e</text>
+<rect x="274" y="30" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="286.5" y="43.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">r</text>
+<text x="140.0" y="44.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">characters only</text>
+<rect x="150" y="60" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="162.5" y="73.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">l</text>
+<rect x="181" y="60" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="193.5" y="73.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">o</text>
+<rect x="212" y="60" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="224.5" y="73.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">w</text>
+<rect x="243" y="60" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="255.5" y="73.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">e</text>
+<rect x="274" y="60" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="286.5" y="73.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">r</text>
+<text x="140.0" y="74.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">merge (e,r)</text>
+<rect x="150" y="90" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="162.5" y="103.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">l</text>
+<rect x="181" y="90" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="193.5" y="103.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">o</text>
+<rect x="212" y="90" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="224.5" y="103.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">w</text>
+<rect x="243" y="90" width="34" height="21" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="260.0" y="103.7" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">er</text>
+<text x="140.0" y="104.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">merge (l,o)</text>
+<rect x="150" y="120" width="34" height="21" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="167.0" y="133.7" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">lo</text>
+<rect x="190" y="120" width="25" height="21" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
+<text x="202.5" y="133.7" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">w</text>
+<rect x="221" y="120" width="34" height="21" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="238.0" y="133.7" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">er</text>
+<text x="140.0" y="134.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">merge (lo,w)</text>
+<rect x="150" y="150" width="43" height="21" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="171.5" y="163.7" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">low</text>
+<rect x="199" y="150" width="34" height="21" rx="4" fill="#1a1f2e" stroke="#22d3a0"/>
+<text x="216.0" y="163.7" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">er</text>
+<text x="140.0" y="164.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">final</text>
+<text x="250.0" y="190.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">No word is ever out-of-vocabulary, and &quot;low&quot; is now shared with &quot;lower&quot;, &quot;slow&quot;, &quot;flow&quot;.</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">BPE merges learned from a tiny corpus, so the algorithm is visible rather than described — then the three properties of embeddings that interviews actually test.</div>
 <pre class="language-python"><code class="language-python">import re

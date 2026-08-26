@@ -43,6 +43,114 @@ d_{\text{cosine}}(\mathbf{a},\mathbf{b}) &= 1 - \dfrac{\mathbf{a}\cdot\mathbf{b}
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you scale KNN to 100 million items?" — Answer: build an HNSW index (e.g., via Faiss or hnswlib); it gives approximate but extremely fast results (sub-millisecond at scale). Trade recall for speed — HNSW at ef=200 gets 99%+ recall at ~1ms latency.</p>
 </div>
 
+<div class="anim-wrap"><div class="anim-title">How the decision boundary changes as k grows</div>
+<svg viewBox="0 0 500 178" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">k is the bias–variance dial, drawn — same 30 points, three values of k</text>
+<rect x="22" y="22" width="140" height="118" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<path d="M28.0,84.0 L32.4,99.0 L36.8,81.4 L41.2,84.6 L45.7,106.6 L50.1,95.0 L54.5,85.7 L58.9,107.5 L63.3,106.0 L67.7,87.2 L72.1,101.8 L76.6,110.8 L81.0,88.9 L85.4,91.4 L89.8,108.0 L94.2,90.1 L98.6,79.6 L103.0,98.1 L107.4,89.9 L111.9,69.7 L116.3,83.8 L120.7,87.9 L125.1,64.4 L129.5,69.3 L133.9,84.1 L138.3,64.9 L142.8,58.8 L147.2,79.3 L151.6,70.7 L156.0,55.5" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"/>
+<circle cx="90.11317156787543" cy="90.13860429156662" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="91.64777410633778" cy="85.25707966785347" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="59.154122163377934" cy="85.63941206992972" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="129.49984553820732" cy="46.36760488554654" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="48.2851409555563" cy="113.62658623051468" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="42.643042097808994" cy="129.84618155508514" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="113.41960177785332" cy="95.38289423038565" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="39.53468522085231" cy="87.187839020025" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="59.795683509952525" cy="60.262643284530185" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="91.44938109586062" cy="78.92992496572575" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="97.83151263131784" cy="97.70742054440264" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="114.40566386780218" cy="80.50900887035841" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="153.16896302155106" cy="131.11501431568274" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="119.65110463002287" cy="67.15605839946168" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="71.22457950741433" cy="44.121008958633034" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="84.10223344077431" cy="117.09886045683079" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="148.58802120710322" cy="117.16711869046361" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="62.05172183933223" cy="123.08556124179304" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="151.16870795739516" cy="74.87789247945243" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="110.59016605074255" cy="110.70002071560516" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="47.87735509744495" cy="68.78304879355471" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="125.45980538515826" cy="48.61121786543777" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="49.484995167753375" cy="43.14997987646121" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="58.346698744859054" cy="90.09374331137711" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="59.85074578417793" cy="106.31805627714893" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="112.23921690595935" cy="48.47175083813232" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="62.4157864267711" cy="62.880727855916234" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="130.70650621641073" cy="66.10964408787302" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="62.16653000667857" cy="74.5818158847731" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="112.02187532812086" cy="46.95127870528499" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<text x="92.0" y="154.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">k = 1</text>
+<text x="92.0" y="168.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">wraps every noisy point</text>
+<rect x="180" y="22" width="140" height="118" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<path d="M186.0,84.0 L190.4,86.7 L194.8,89.3 L199.2,91.8 L203.7,94.0 L208.1,96.0 L212.5,97.6 L216.9,98.8 L221.3,99.6 L225.7,100.0 L230.1,99.9 L234.6,99.3 L239.0,98.3 L243.4,96.9 L247.8,95.1 L252.2,93.0 L256.6,90.6 L261.0,88.0 L265.4,85.4 L269.9,82.7 L274.3,80.0 L278.7,77.4 L283.1,75.1 L287.5,72.9 L291.9,71.1 L296.3,69.7 L300.8,68.7 L305.2,68.1 L309.6,68.0 L314.0,68.4" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"/>
+<circle cx="248.11317156787544" cy="90.13860429156662" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="249.64777410633778" cy="85.25707966785347" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="217.15412216337793" cy="85.63941206992972" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="287.4998455382073" cy="46.36760488554654" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="206.2851409555563" cy="113.62658623051468" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="200.643042097809" cy="129.84618155508514" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="271.4196017778533" cy="95.38289423038565" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="197.5346852208523" cy="87.187839020025" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="217.79568350995254" cy="60.262643284530185" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="249.44938109586062" cy="78.92992496572575" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="255.83151263131782" cy="97.70742054440264" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="272.40566386780216" cy="80.50900887035841" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="311.16896302155106" cy="131.11501431568274" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="277.65110463002287" cy="67.15605839946168" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="229.22457950741432" cy="44.121008958633034" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="242.1022334407743" cy="117.09886045683079" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="306.5880212071032" cy="117.16711869046361" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="220.05172183933223" cy="123.08556124179304" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="309.16870795739516" cy="74.87789247945243" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="268.59016605074254" cy="110.70002071560516" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="205.87735509744496" cy="68.78304879355471" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="283.45980538515823" cy="48.61121786543777" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="207.48499516775337" cy="43.14997987646121" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="216.34669874485905" cy="90.09374331137711" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="217.85074578417795" cy="106.31805627714893" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="270.2392169059593" cy="48.47175083813232" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="220.4157864267711" cy="62.880727855916234" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="288.70650621641073" cy="66.10964408787302" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="220.16653000667856" cy="74.5818158847731" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="270.02187532812087" cy="46.95127870528499" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<text x="250.0" y="154.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">k = 15</text>
+<text x="250.0" y="168.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">recovers the true boundary</text>
+<rect x="338" y="22" width="140" height="118" rx="6" fill="#1a1f2e" stroke="#2e3a58"/>
+<path d="M344.0,76.0 L472.0,76.0" fill="none" stroke="#f5a623" stroke-width="2" stroke-linecap="round"/>
+<circle cx="406.11317156787544" cy="90.13860429156662" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="407.6477741063378" cy="85.25707966785347" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="375.1541221633779" cy="85.63941206992972" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="445.4998455382073" cy="46.36760488554654" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="364.2851409555563" cy="113.62658623051468" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="358.643042097809" cy="129.84618155508514" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="429.4196017778533" cy="95.38289423038565" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="355.53468522085234" cy="87.187839020025" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="375.79568350995254" cy="60.262643284530185" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="407.44938109586064" cy="78.92992496572575" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="413.8315126313178" cy="97.70742054440264" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="430.40566386780216" cy="80.50900887035841" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="469.16896302155106" cy="131.11501431568274" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="435.65110463002287" cy="67.15605839946168" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="387.2245795074143" cy="44.121008958633034" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="400.1022334407743" cy="117.09886045683079" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="464.5880212071032" cy="117.16711869046361" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="378.05172183933223" cy="123.08556124179304" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="467.16870795739516" cy="74.87789247945243" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="426.59016605074254" cy="110.70002071560516" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="363.87735509744493" cy="68.78304879355471" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="441.45980538515823" cy="48.61121786543777" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="365.48499516775337" cy="43.14997987646121" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="374.34669874485905" cy="90.09374331137711" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="375.85074578417795" cy="106.31805627714893" r="2.5" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.6"/>
+<circle cx="428.2392169059593" cy="48.47175083813232" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="378.4157864267711" cy="62.880727855916234" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="446.70650621641073" cy="66.10964408787302" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="378.16653000667856" cy="74.5818158847731" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<circle cx="428.02187532812087" cy="46.95127870528499" r="2.5" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.6"/>
+<text x="408.0" y="154.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">k = n</text>
+<text x="408.0" y="168.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">one class everywhere</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">k-NN has no training step, so all the engineering is in the distance metric and the scaling. Skip the scaler and the largest-range feature silently becomes the only feature.</div>
 <pre class="language-python"><code class="language-python">import numpy as np

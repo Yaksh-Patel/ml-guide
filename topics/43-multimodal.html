@@ -267,6 +267,52 @@ for batch in domain_dataloader:
 </div>
 
 
+<div class="anim-wrap"><div class="anim-title">Contrastive training: the batch supplies its own negatives</div>
+<svg viewBox="0 0 500 196" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">one shared space, learned from the batch itself</text>
+<rect x="28" y="30" width="88" height="28" rx="5" fill="#1a1f2e" stroke="#5ba4fb"/>
+<text x="72.0" y="47.2" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">image enc</text>
+<rect x="28" y="68" width="88" height="28" rx="5" fill="#1a1f2e" stroke="#b97cf8"/>
+<text x="72.0" y="85.2" fill="#b97cf8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">text enc</text>
+<line x1="118" y1="44" x2="148" y2="58" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<line x1="118" y1="82" x2="148" y2="68" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="176.0" y="66.0" fill="#4e5a7a" font-size="8.3" text-anchor="middle" font-family="DM Sans">unit sphere</text>
+<rect x="250" y="28" width="26" height="18" rx="3" fill="#22d3a0" opacity="0.75" stroke="#2e3a58"/>
+<rect x="280" y="28" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="310" y="28" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="340" y="28" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="370" y="28" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="250" y="50" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="280" y="50" width="26" height="18" rx="3" fill="#22d3a0" opacity="0.75" stroke="#2e3a58"/>
+<rect x="310" y="50" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="340" y="50" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="370" y="50" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="250" y="72" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="280" y="72" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="310" y="72" width="26" height="18" rx="3" fill="#22d3a0" opacity="0.75" stroke="#2e3a58"/>
+<rect x="340" y="72" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="370" y="72" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="250" y="94" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="280" y="94" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="310" y="94" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="340" y="94" width="26" height="18" rx="3" fill="#22d3a0" opacity="0.75" stroke="#2e3a58"/>
+<rect x="370" y="94" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="250" y="116" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="280" y="116" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="310" y="116" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="340" y="116" width="26" height="18" rx="3" fill="#5ba4fb" opacity="0.16" stroke="#2e3a58"/>
+<rect x="370" y="116" width="26" height="18" rx="3" fill="#22d3a0" opacity="0.75" stroke="#2e3a58"/>
+<text x="325.0" y="152.0" fill="#4e5a7a" font-size="8.3" text-anchor="middle" font-family="DM Sans">similarity matrix (batch × batch)</text>
+<text x="325.0" y="22.0" fill="#4e5a7a" font-size="8" text-anchor="middle" font-family="DM Sans">text →</text>
+<text x="240.0" y="76.0" fill="#4e5a7a" font-size="8" text-anchor="end" font-family="DM Sans">img</text>
+<text x="120.0" y="122.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">the diagonal is the</text>
+<text x="120.0" y="136.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">only correct pairing;</text>
+<text x="120.0" y="150.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">every off-diagonal cell</text>
+<text x="120.0" y="164.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">is a free negative.</text>
+<text x="250.0" y="186.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Which is why CLIP needs very large batches: the batch size IS the number of negatives per step.</text>
+</svg></div>
+
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">CLIP-style contrastive training, which is the idea behind most multimodal systems: two encoders, one shared space, a symmetric loss over the similarity matrix.</div>
 <pre class="language-python"><code class="language-python">import torch, torch.nn as nn, torch.nn.functional as F
