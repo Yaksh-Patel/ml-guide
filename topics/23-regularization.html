@@ -51,4 +51,29 @@ z_i &= \text{activation} \times \frac{\text{Bernoulli}(1-p)}{1-p} \quad \text{(i
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I set dropout=0.5 based on the original paper." — 0.5 was optimal for large fully-connected layers in 2012 AlexNet. Modern transformer layers typically use 0.1. Always tune dropout rate; it's dataset and architecture dependent.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does L1 produce sparse solutions but L2 doesn't?" — Answer: the L1 penalty has a constant subgradient of ±1 regardless of weight magnitude. Even a tiny weight gets pushed by the full ±λ gradient — it reaches zero and stays there (no gradient to push it off zero). L2's gradient is proportional to the weight: as weight → 0, the gradient → 0, so the update force vanishes before reaching zero. L1 has a "sharp corner" at zero in the penalty geometry; L2 has a smooth bowl.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">L1, L2 and elastic net on correlated features, which is the case that separates them: L2 shares the coefficient, L1 picks one arbitrarily.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.linear_model import Ridge, Lasso, ElasticNet
+from sklearn.preprocessing import StandardScaler
+
+rng = np.random.default_rng(0)
+x = rng.normal(size=1000)
+X = np.column_stack([x, x + .01*rng.normal(size=1000), rng.normal(size=1000)])
+X = StandardScaler().fit_transform(X)         # never regularise unscaled features
+y = 3*X[:, 0] + rng.normal(0, .5, 1000)       # only feature 0 (and its twin) matter
+
+for name, m in [(&#x27;ridge  L2&#x27;, Ridge(alpha=10)),
+                (&#x27;lasso  L1&#x27;, Lasso(alpha=.1)),
+                (&#x27;elastic  &#x27;, ElasticNet(alpha=.1, l1_ratio=.5))]:
+    print(f&quot;{name}&quot;, m.fit(X, y).coef_.round(3))
+# ridge   -&gt; [1.5, 1.5, 0.0]  splits the weight across the correlated pair
+# lasso   -&gt; [3.0, 0.0, 0.0]  keeps one, zeroes the other; which one is arbitrary
+# elastic -&gt; between the two, which is why it is the safe default
+
+# Early stopping and dropout are regularisers too — same job, different mechanism
+print(&quot;\nlasso path (features surviving as alpha grows):&quot;)
+for a in (.01, .05, .1, .5, 1.0):
+    print(f&quot;  alpha={a:&lt;5} nonzero={np.count_nonzero(Lasso(alpha=a).fit(X, y).coef_)}&quot;)</code></pre></div>
 </section>

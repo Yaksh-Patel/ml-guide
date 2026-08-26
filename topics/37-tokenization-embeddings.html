@@ -50,4 +50,38 @@ Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used the [CLS] token embedding from BERT for sentence similarity." — [CLS] without fine-tuning is a poor sentence representation. SBERT's mean-pooled embeddings consistently outperform raw [CLS] for semantic similarity — a well-known empirical finding.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does BPE tokenization work?" — Answer: start with character vocabulary. Repeatedly find the most frequent adjacent byte pair and merge it into a new token. Repeat for V iterations (V = vocabulary size target). Result: common words become single tokens; rare words are split into frequent subword pieces. This gives good coverage without OOV and keeps vocabulary size manageable (~50K tokens for most LLMs).</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">BPE merges learned from a tiny corpus, so the algorithm is visible rather than described — then the three properties of embeddings that interviews actually test.</div>
+<pre class="language-python"><code class="language-python">import re
+from collections import Counter
+
+# Byte-pair encoding: start from characters, repeatedly merge the most
+# frequent adjacent pair. That is the entire algorithm.
+corpus = {&#x27;low&#x27;: 5, &#x27;lower&#x27;: 2, &#x27;newest&#x27;: 6, &#x27;widest&#x27;: 3}
+vocab = {&#x27; &#x27;.join(w) + &#x27; &lt;/w&gt;&#x27;: c for w, c in corpus.items()}
+
+for step in range(4):
+    pairs = Counter()
+    for word, freq in vocab.items():
+        sym = word.split()
+        for a, b in zip(sym, sym[1:]):
+            pairs[(a, b)] += freq
+    if not pairs: break
+    best = max(pairs, key=pairs.get)
+    print(f&quot;merge {step+1}: {best} (count {pairs[best]})&quot;)
+    bigram = re.escape(&#x27; &#x27;.join(best))
+    vocab = {re.sub(rf&#x27;(?&lt;!\S){bigram}(?!\S)&#x27;, &#x27;&#x27;.join(best), w): c
+             for w, c in vocab.items()}
+print(list(vocab)[:4])
+
+# Why subwords: no OOV token ever, and morphology is shared.
+# &quot;tokenization&quot; -&gt; [&quot;token&quot;, &quot;ization&quot;] reuses both pieces elsewhere.
+
+# Embeddings: three facts worth knowing
+# 1. cosine, not euclidean -- magnitude encodes frequency, not meaning
+# 2. analogies work because differences are roughly linear in the space
+# 3. a static embedding gives one vector per token; BERT gives one per context
+import numpy as np
+cos = lambda a, b: a @ b / (np.linalg.norm(a) * np.linalg.norm(b))</code></pre></div>
 </section>

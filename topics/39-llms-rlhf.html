@@ -211,4 +211,36 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to update its knowledge." — Fine-tuning teaches behavioural patterns, not reliable factual knowledge. Injected facts hallucinate on paraphrase. Knowledge should live in a retrieval system (RAG), not in model weights.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you choose DPO over PPO?" — Answer: DPO for most fine-tuning use cases — no reward model to train and maintain, offline optimisation from existing preference pairs, single GPU feasible. PPO when you need to generate new rollouts online (the model can improve on trajectories it generates itself), when the reward signal is complex (multi-dimensional), or when you need maximum alignment performance at frontier scale where online RL signal drives the last 5–10% of quality.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Decoding controls — the settings that change output quality far more than model choice — and the RLHF objective written out so the KL term is not a mystery.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+def softmax(x):
+    x = x - x.max(); e = np.exp(x); return e / e.sum()
+
+logits = np.array([3.2, 2.9, 2.1, 1.0, 0.4, -0.8])
+
+# Temperature rescales BEFORE softmax. T&lt;1 sharpens, T&gt;1 flattens, T-&gt;0 = greedy.
+for T in (0.2, 0.7, 1.0, 1.5):
+    print(f&quot;T={T:&lt;4}&quot;, softmax(logits / T).round(3))
+
+# Top-k keeps k tokens; top-p (nucleus) keeps the smallest set whose mass
+# exceeds p, so the candidate count adapts to how confident the model is.
+def top_p(probs, p=0.9):
+    idx = probs.argsort()[::-1]
+    keep = idx[:np.searchsorted(np.cumsum(probs[idx]), p) + 1]
+    out = np.zeros_like(probs); out[keep] = probs[keep]
+    return out / out.sum()
+print(&quot;top_p(0.9)&quot;, top_p(softmax(logits)).round(3))
+
+# RLHF / PPO objective:  maximise  r(x,y) - beta * KL(pi || pi_ref)
+# The KL leash is the whole safety mechanism: without it the policy drifts to
+# whatever degenerate text the reward model happens to score highly.
+def rlhf_objective(reward, logp_policy, logp_ref, beta=0.1):
+    return reward - beta * (logp_policy - logp_ref)      # per-token KL estimate
+
+print(&quot;with leash   &quot;, round(rlhf_objective(2.0, -1.2, -1.3), 3))
+print(&quot;policy drifted&quot;, round(rlhf_objective(2.4, -0.2, -3.0), 3))   # reward up, penalised
+# DPO removes the reward model entirely and optimises preferences directly.</code></pre></div>
 </section>

@@ -44,4 +44,29 @@ P(y \mid x_1,\ldots,x_n) &\propto P(y) \times \prod_i P(x_i \mid y) \\
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "Naive Bayes is too simple for serious use." — It's one of the few models that works well with very small labeled datasets, and is still production-relevant for real-time text classification where latency matters more than 1–2% accuracy.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does Naive Bayes work well despite the independence assumption being wrong?" — Answer: even when feature probabilities are wrong in absolute terms, the ranking of P(class|features) across classes is often correct. Classification only needs the right class to win the argmax, not accurate individual probabilities. The model is miscalibrated but correctly ordered.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The "naive" assumption is wrong on essentially every real dataset, and the classifier still works. This shows why: the decision only needs the argmax to be right, not the probabilities.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import fetch_20newsgroups
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import accuracy_score
+
+cats = [&#x27;sci.space&#x27;, &#x27;rec.autos&#x27;]
+tr = fetch_20newsgroups(subset=&#x27;train&#x27;, categories=cats, remove=(&#x27;headers&#x27;,&#x27;quotes&#x27;))
+te = fetch_20newsgroups(subset=&#x27;test&#x27;,  categories=cats, remove=(&#x27;headers&#x27;,&#x27;quotes&#x27;))
+
+# alpha is Laplace smoothing: without it one unseen word zeroes the whole product
+model = make_pipeline(CountVectorizer(min_df=2), MultinomialNB(alpha=1.0)).fit(tr.data, tr.target)
+print(&quot;accuracy&quot;, accuracy_score(te.target, model.predict(te.data)).round(4))
+
+# Words are obviously not independent given the class (&quot;space shuttle&quot;),
+# yet the argmax survives because errors in the product tend to cancel.
+vec, nb = model.named_steps[&#x27;countvectorizer&#x27;], model.named_steps[&#x27;multinomialnb&#x27;]
+vocab = np.array(vec.get_feature_names_out())
+llr = nb.feature_log_prob_[1] - nb.feature_log_prob_[0]
+print(&quot;most sci.space :&quot;, vocab[llr.argsort()[-6:]][::-1])
+print(&quot;most rec.autos :&quot;, vocab[llr.argsort()[:6]])</code></pre></div>
 </section>

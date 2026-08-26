@@ -44,4 +44,41 @@
 </div>
 <div class="card"><div class="card-title">Data Problem Diagnostic Checklist</div>
 <ul class="bul"><li><span style="color:var(--green)">✅</span> <strong>Class imbalance?</strong> → PR-AUC metric, class weights or SMOTE, threshold tuning</li><li><span style="color:var(--green)">✅</span> <strong>High cardinality categoricals?</strong> → target encoding with CV, embeddings, count encoding</li><li><span style="color:var(--green)">✅</span> <strong>Missing data?</strong> → add missingness indicator + impute; XGBoost handles NaN natively</li><li><span style="color:var(--green)">✅</span> <strong>Multicollinearity?</strong> → check VIF, use Ridge or PCA before linear models</li><li><span style="color:var(--green)">✅</span> <strong>Outliers?</strong> → Huber loss for regression; robust scalers; Winsorize at 1st/99th percentile</li><li><span style="color:var(--green)">✅</span> <strong>Data leakage?</strong> → features collected after prediction time; always check temporal ordering</li><li><span style="color:var(--green)">✅</span> <strong>Label noise?</strong> → label smoothing, robust loss functions, confidence learning (cleanlab)</li><li><span style="color:var(--green)">✅</span> <strong>Distribution shift at serving?</strong> → PSI monitoring, trigger retraining when PSI &gt; 0.1</li></ul></div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">A decision procedure rather than a table: what to reach for first given the shape of the data, and the honest note that a tuned GBM wins most tabular problems.</div>
+<pre class="language-python"><code class="language-python">def pick_model(n_rows, n_features, data_type, needs_explanation=False,
+               latency_ms=None, labels=&#x27;plenty&#x27;):
+    &quot;&quot;&quot;A defensible starting point. Not a law -- but say this out loud in an
+    interview and you will be right far more often than a hunch.&quot;&quot;&quot;
+    if data_type == &#x27;tabular&#x27;:
+        if needs_explanation:
+            return &#x27;logistic regression / scorecard, or a GBM with monotone constraints + SHAP&#x27;
+        if n_rows &lt; 1_000:
+            return &#x27;regularised linear or SVM -- a GBM will overfit this&#x27;
+        return &#x27;gradient boosting (XGBoost/LightGBM) -- the tabular default&#x27;
+    if data_type == &#x27;text&#x27;:
+        return (&#x27;TF-IDF + linear (fast, strong baseline)&#x27; if n_rows &lt; 10_000
+                else &#x27;fine-tuned encoder (BERT family), or an API LLM if labels are scarce&#x27;)
+    if data_type == &#x27;image&#x27;:
+        return &#x27;fine-tune a pretrained CNN/ViT -- training from scratch needs ~1M+ images&#x27;
+    if data_type == &#x27;sequence&#x27;:
+        return &#x27;temporal features + GBM first; transformer only if the baseline loses&#x27;
+    if data_type == &#x27;graph&#x27;:
+        return &#x27;graph features + GBM first; GNN when structure carries the signal&#x27;
+    return &#x27;start with the simplest thing that could work&#x27;
+
+cases = [
+    dict(n_rows=50_000, n_features=80, data_type=&#x27;tabular&#x27;),
+    dict(n_rows=50_000, n_features=80, data_type=&#x27;tabular&#x27;, needs_explanation=True),
+    dict(n_rows=600,    n_features=20, data_type=&#x27;tabular&#x27;),
+    dict(n_rows=5_000,  n_features=1,  data_type=&#x27;text&#x27;),
+    dict(n_rows=20_000, n_features=1,  data_type=&#x27;image&#x27;),
+]
+for c in cases:
+    print(f&quot;{c[&#x27;data_type&#x27;]:8} n={c[&#x27;n_rows&#x27;]:&lt;7} -&gt; {pick_model(**c)}&quot;)
+
+# Two rules that survive every fashion cycle:
+#   1. a baseline you can ship beats a model you cannot explain to your manager
+#   2. more/better features beat a better model, until they don&#x27;t -- measure</code></pre></div>
 </section>

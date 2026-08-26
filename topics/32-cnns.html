@@ -132,4 +132,35 @@ F(x) \text{ learns the residual (correction), not the full mapping}
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I trained a CNN from scratch on my 10K image dataset." — With ImageNet pretrained weights, you'd achieve better accuracy in a fraction of the time. Training from scratch on small datasets is almost never the right approach.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between a CNN and a Vision Transformer?" — Answer: CNNs have strong locality and translation equivariance as inductive biases baked into the architecture. ViTs have no such bias — they learn spatial relationships purely from data via self-attention. CNNs are more data-efficient (good for small datasets); ViTs scale better with massive data and compute. At scale (&gt;100M images), ViTs dominate; at smaller scale, CNNs remain competitive.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">A convolution done by hand, then the output-size formula that every CNN interview asks for, then the same layer in PyTorch so the shapes line up.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+# 2D convolution from scratch — correlation, really; frameworks skip the flip
+def conv2d(x, k, stride=1, pad=0):
+    x = np.pad(x, pad)
+    kh, kw = k.shape
+    oh = (x.shape[0] - kh) // stride + 1
+    ow = (x.shape[1] - kw) // stride + 1
+    return np.array([[np.sum(x[i*stride:i*stride+kh, j*stride:j*stride+kw] * k)
+                      for j in range(ow)] for i in range(oh)])
+
+img = np.arange(36, dtype=float).reshape(6, 6)
+sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=float)
+print(&quot;out shape&quot;, conv2d(img, sobel_x, stride=1, pad=1).shape)   # 6x6, &#x27;same&#x27;
+
+# The formula: floor((W - K + 2P) / S) + 1.  Memorise this one.
+size = lambda W, K, P, S: (W - K + 2*P) // S + 1
+print(&quot;224 -&gt; &quot;, size(224, 7, 3, 2), &quot;-&gt; &quot;, size(size(224,7,3,2), 3, 1, 2))  # ResNet stem
+
+# Parameter count is independent of input size — the whole point of weight sharing
+Cin, Cout, K = 64, 128, 3
+print(&quot;conv params&quot;, Cin*Cout*K*K + Cout, &quot;vs dense on 56x56:&quot;, 56*56*Cin*Cout)
+
+import torch, torch.nn as nn
+block = nn.Sequential(nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),
+                      nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+                      nn.MaxPool2d(3, stride=2, padding=1))
+print(&quot;torch out&quot;, block(torch.randn(1, 3, 224, 224)).shape)   # [1, 64, 56, 56]</code></pre></div>
 </section>

@@ -266,4 +266,38 @@ for batch in domain_dataloader:
 <p style="margin-top:8px"><strong>Multimodal retrieval in production?</strong> "Embed all images with CLIP and index in a vector DB. At query time, embed the text query with CLIP's text encoder — the shared embedding space means the query vector is directly comparable to image vectors. Run ANN search to find the top-k visually matching images. This is how Pinterest Lens, Google Shopping, and most e-commerce visual search works. CLIP's zero-shot generalisation means you don't need to label training data for each new category — the pre-trained space already understands 'red floral dress' vs 'blue striped shirt'."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">CLIP-style contrastive training, which is the idea behind most multimodal systems: two encoders, one shared space, a symmetric loss over the similarity matrix.</div>
+<pre class="language-python"><code class="language-python">import torch, torch.nn as nn, torch.nn.functional as F
+
+class CLIPLoss(nn.Module):
+    &quot;&quot;&quot;Pull matched image-text pairs together, push every other pair in the
+    batch apart. The negatives come free from the batch, which is why CLIP
+    needs very large batches to work well.&quot;&quot;&quot;
+    def __init__(self, temperature=0.07):
+        super().__init__()
+        self.logit_scale = nn.Parameter(torch.tensor(1 / temperature).log())
+
+    def forward(self, img_emb, txt_emb):
+        img = F.normalize(img_emb, dim=-1)          # unit sphere -&gt; dot == cosine
+        txt = F.normalize(txt_emb, dim=-1)
+        logits = self.logit_scale.exp() * img @ txt.T          # (B, B)
+        target = torch.arange(len(img), device=img.device)     # diagonal is correct
+        # symmetric: image-&gt;text AND text-&gt;image
+        return (F.cross_entropy(logits, target) +
+                F.cross_entropy(logits.T, target)) / 2
+
+B, D = 8, 512
+loss = CLIPLoss()
+print(&quot;random init loss&quot;, loss(torch.randn(B, D), torch.randn(B, D)).item().__round__(3))
+# ln(B) = 2.08 is the chance-level baseline for B=8
+
+# Zero-shot classification falls out for free: encode the class names as text
+# and take the nearest one. No classifier head is trained at all.
+def zero_shot(img_emb, class_prompts_emb):
+    return (F.normalize(img_emb, dim=-1) @ F.normalize(class_prompts_emb, dim=-1).T).argmax(-1)
+
+# Fusion choices: late (two towers, cheap, retrieval) vs early cross-attention
+# (expensive, needed for VQA and captioning where grounding must be fine-grained).</code></pre></div>
 </section>

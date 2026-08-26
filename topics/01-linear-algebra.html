@@ -86,4 +86,27 @@ V^T\text{: right singular vectors } (n \times n)
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "AB = BA." — Matrix multiplication is generally not commutative. The order of operations in a neural network forward pass matters; transposing weight matrices at the wrong point produces a shape that looks correct but computes something entirely different.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is SVD preferred over eigendecomposition for PCA in practice?" — Answer: eigendecomposition of X^TX requires explicitly computing the covariance matrix (numerically expensive and can amplify floating-point errors for wide matrices). SVD of X directly gives the principal components without forming X^TX — more numerically stable, especially when n &lt; d (more features than samples). scipy.linalg.svd with full_matrices=False is the standard implementation.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Everything in ML reduces to these four operations. Note that <strong>eigenvectors of the covariance matrix</strong> are exactly what PCA returns — the same object, two names.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+X = np.random.randn(200, 5)                 # 200 samples, 5 features
+
+# 1. Projection: least-squares solution via the normal equations
+y = X @ np.array([2., -1., 0.5, 0., 3.]) + 0.1 * np.random.randn(200)
+beta = np.linalg.solve(X.T @ X, X.T @ y)    # never invert; solve
+
+# 2. Eigendecomposition of the covariance = PCA directions
+C = np.cov(X, rowvar=False)                 # 5x5, symmetric PSD
+vals, vecs = np.linalg.eigh(C)              # eigh for symmetric: faster, stable
+order = vals.argsort()[::-1]
+vals, vecs = vals[order], vecs[:, order]
+
+# 3. SVD: works even when X.T @ X is singular
+U, S, Vt = np.linalg.svd(X, full_matrices=False)
+assert np.allclose(vals, S**2 / (len(X) - 1))   # same spectrum, better conditioned
+
+# 4. Rank and conditioning tell you when a solve will misbehave
+print(np.linalg.matrix_rank(X), np.linalg.cond(X).round(2))</code></pre></div>
 </section>

@@ -89,4 +89,37 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use BERT for text generation." — BERT is encoder-only with bidirectional attention; it cannot autoregressively generate text. BERT: classification, NER, embeddings. GPT-style decoders: generation. T5/BART: seq2seq tasks with a structured output sequence.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why do modern LLMs use Pre-LN instead of the original Post-LN?" — Answer: Post-LN (original Transformer) applies LayerNorm after the residual addition: output = LayerNorm(x + F(x)). This means the residual path accumulates unnormalised values — gradients through early layers can explode or vanish, requiring careful warmup. Pre-LN: output = x + F(LayerNorm(x)) — the normalised input to each sublayer keeps gradients stable regardless of depth, enabling training without warmup and at higher learning rates.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">A full pre-norm transformer block. The two details that matter in practice are the residual placement and where the parameters actually live — the FFN, not attention.</div>
+<pre class="language-python"><code class="language-python">import torch, torch.nn as nn
+
+class Block(nn.Module):
+    &quot;&quot;&quot;Pre-norm block, as used by GPT-2 onward. Post-norm (the 2017 paper)
+    needs learning-rate warmup to train at depth; pre-norm mostly does not.&quot;&quot;&quot;
+    def __init__(self, d_model=768, n_heads=12, mlp_ratio=4, p=0.1):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(d_model)
+        self.attn = nn.MultiheadAttention(d_model, n_heads, dropout=p, batch_first=True)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.mlp = nn.Sequential(nn.Linear(d_model, mlp_ratio*d_model),
+                                 nn.GELU(),
+                                 nn.Linear(mlp_ratio*d_model, d_model),
+                                 nn.Dropout(p))
+    def forward(self, x, mask=None):
+        h = self.ln1(x)
+        x = x + self.attn(h, h, h, attn_mask=mask, need_weights=False)[0]
+        x = x + self.mlp(self.ln2(x))        # residual around each sublayer
+        return x
+
+blk = Block()
+x = torch.randn(2, 128, 768)
+causal = torch.triu(torch.ones(128, 128, dtype=torch.bool), diagonal=1)
+print(&quot;out&quot;, blk(x, mask=causal).shape)
+
+# Where the parameters are: the FFN holds twice what attention does
+attn_p = sum(p.numel() for p in blk.attn.parameters())
+mlp_p  = sum(p.numel() for p in blk.mlp.parameters())
+print(f&quot;attn {attn_p/1e6:.2f}M   mlp {mlp_p/1e6:.2f}M   ratio {mlp_p/attn_p:.1f}x&quot;)
+# 12 layers of this is roughly GPT-2 small (124M with embeddings)</code></pre></div>
 </section>

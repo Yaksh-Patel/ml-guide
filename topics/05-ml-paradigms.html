@@ -47,4 +47,30 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'd use reinforcement learning for this recommendation problem." — RL is sample-inefficient and complex to productionise. Unless the problem is explicitly sequential with delayed rewards (multi-step user journey optimisation), supervised or bandit approaches are simpler and more reliable. Reach for RL only when you can't define a direct supervised signal.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between online and offline reinforcement learning?" — Answer: online RL collects experience by interacting with the environment during training (AlphaGo, RLHF with PPO rollouts) — expensive but can explore to improve. Offline RL (also called batch RL) trains entirely from a fixed logged dataset of past interactions (e.g., historical user trajectories) without further environment interaction — safer for production but can't explore beyond the data distribution. DPO is effectively offline RL for LLM alignment.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The three paradigms on one dataset, so the difference is in the code rather than in prose: labels used, labels ignored, and reward observed.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import make_blobs
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score, adjusted_rand_score
+
+X, y = make_blobs(n_samples=600, centers=3, cluster_std=1.6, random_state=0)
+
+# SUPERVISED — labels are the target
+clf = RandomForestClassifier(random_state=0).fit(X[:400], y[:400])
+print(&quot;supervised acc  &quot;, accuracy_score(y[400:], clf.predict(X[400:])).round(3))
+
+# UNSUPERVISED — same X, labels never seen; scored against them only to inspect
+km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(X)
+print(&quot;cluster ARI     &quot;, adjusted_rand_score(y, km.labels_).round(3))
+
+# SELF-SUPERVISED — the label is manufactured from the input itself
+mask = np.random.default_rng(0).random(X.shape) &lt; 0.3
+X_corrupt = np.where(mask, 0.0, X)
+# task: reconstruct X from X_corrupt. No human labels involved at all.
+
+# REINFORCEMENT — no labels, only reward for an action taken
+def reward(action, state): return 1.0 if action == np.argmax(state) else -0.1</code></pre></div>
 </section>

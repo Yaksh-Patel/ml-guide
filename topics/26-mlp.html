@@ -112,4 +112,39 @@ h^2 = activation(W^2h^1 + b^2) \\
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use a neural network for this tabular dataset." — Without benchmarking against XGBoost first, this signals unfamiliarity with where neural nets actually win. On tabular data, always establish tree model baselines before reaching for neural nets.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does depth help more than width?" — Answer: a deep network can represent exponentially more functions with the same parameter count as a shallow wide network. Each layer composes functions learned by previous layers — depth enables hierarchical feature reuse. Width at a single layer grows the function class linearly; depth grows it exponentially.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">A two-layer network built with nothing but NumPy — forward pass, loss, manual backward pass, update. Every framework is this with more bookkeeping.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(500, 4))
+y = (X[:, 0] * X[:, 1] &gt; 0).astype(float)[:, None]   # XOR-ish: needs a hidden layer
+
+# He initialisation for ReLU: variance 2/fan_in keeps activations alive
+W1 = rng.normal(0, np.sqrt(2/4), (4, 16)); b1 = np.zeros(16)
+W2 = rng.normal(0, np.sqrt(2/16), (16, 1)); b2 = np.zeros(1)
+lr = 0.05
+
+for epoch in range(2001):
+    # forward
+    z1 = X @ W1 + b1
+    a1 = np.maximum(0, z1)                 # ReLU
+    z2 = a1 @ W2 + b2
+    p = 1 / (1 + np.exp(-z2))              # sigmoid
+    loss = -np.mean(y*np.log(p+1e-9) + (1-y)*np.log(1-p+1e-9))
+
+    # backward — dL/dz2 collapses to (p - y) for sigmoid + BCE, which is
+    # the reason that pairing is the default
+    dz2 = (p - y) / len(X)
+    dW2, db2 = a1.T @ dz2, dz2.sum(0)
+    da1 = dz2 @ W2.T
+    dz1 = da1 * (z1 &gt; 0)                   # ReLU derivative is a mask
+    dW1, db1 = X.T @ dz1, dz1.sum(0)
+
+    for p_, g in ((W1, dW1), (b1, db1), (W2, dW2), (b2, db2)):
+        p_ -= lr * g
+
+    if epoch % 500 == 0:
+        print(f&quot;epoch {epoch:4d}  loss {loss:.4f}  acc {((p&gt;.5)==y).mean():.3f}&quot;)</code></pre></div>
 </section>

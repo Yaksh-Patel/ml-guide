@@ -54,4 +54,40 @@ Target: predict "cat" from all other tokens
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I use BERT base on our 512-character financial documents." — First check token length; 512 characters ≠ 512 tokens. Financial jargon often tokenises to 1.5–2× more tokens than general English. Documents may silently truncate. Always tokenise and check the actual length distribution of your corpus.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between BERT and RoBERTa?" — Answer: RoBERTa is BERT trained better: 10× more data, no NSP objective (NSP was found to hurt), dynamic masking (different masks each epoch vs static), larger batches, longer training. RoBERTa consistently outperforms BERT on GLUE benchmarks. Choose RoBERTa over BERT-base as the default pretrained checkpoint; use domain-specific BERT variants when domain vocabulary is very different from Wikipedia.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Masked language modelling set up by hand — the 80/10/10 corruption rule is the part people misremember — plus the pooling choice that decides sentence-embedding quality.</div>
+<pre class="language-python"><code class="language-python">import torch
+from transformers import AutoTokenizer, AutoModel
+
+tok = AutoTokenizer.from_pretrained(&#x27;bert-base-uncased&#x27;)
+model = AutoModel.from_pretrained(&#x27;bert-base-uncased&#x27;)
+
+# MLM corruption: of the 15% chosen positions, 80% become [MASK],
+# 10% become a random token, 10% are left alone. The last two exist so the
+# model cannot assume &quot;a token I must predict is always [MASK]&quot; -- fine-tuning
+# never shows it a [MASK] at all.
+def corrupt(ids, mask_id, vocab_size, p=0.15, gen=None):
+    labels = ids.clone()
+    sel = torch.rand(ids.shape, generator=gen) &lt; p
+    labels[~sel] = -100                                   # ignored by the loss
+    r = torch.rand(ids.shape, generator=gen)
+    ids[sel &amp; (r &lt; 0.8)] = mask_id
+    rnd = sel &amp; (r &gt;= 0.8) &amp; (r &lt; 0.9)
+    ids[rnd] = torch.randint(vocab_size, (int(rnd.sum()),))
+    return ids, labels
+
+batch = tok([&quot;the model learns from context&quot;, &quot;encoders see both directions&quot;],
+            return_tensors=&#x27;pt&#x27;, padding=True)
+out = model(**batch).last_hidden_state
+print(&quot;hidden&quot;, out.shape)                                # [2, T, 768]
+
+# Sentence embedding: MEAN POOLING over real tokens beats [CLS] unless the
+# model was explicitly trained with a [CLS] objective (SBERT does this).
+m = batch[&#x27;attention_mask&#x27;].unsqueeze(-1)
+mean_pooled = (out * m).sum(1) / m.sum(1)                  # mask out padding
+cls = out[:, 0]
+print(&quot;mean&quot;, mean_pooled.shape, &quot;| cls&quot;, cls.shape)
+# Encoder-only: bidirectional, great for classification/NER/retrieval,
+# cannot generate. That is the whole BERT-vs-GPT distinction.</code></pre></div>
 </section>

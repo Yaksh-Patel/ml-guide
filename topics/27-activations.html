@@ -70,4 +70,35 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used softmax for multi-label classification." — Softmax forces outputs to sum to 1, implying mutual exclusion. Multi-label needs independent sigmoid per class — each output is an independent binary decision.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the dying ReLU problem and how do you fix it?" — Answer: a ReLU neuron dies when its pre-activation is always negative, making output=0 and gradient=0 — the neuron can never recover. Causes: high learning rate pushing weights negative, bad initialisation. Fixes: He initialisation (prevents initial negative activations), BatchNorm (keeps pre-activations centred), Leaky ReLU (α=0.01 preserves a small gradient even for negative inputs), or monitoring and resetting dead neurons.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Every activation in the comparison table, implemented and differentiated, plus the saturation check that explains why sigmoid stopped being used in hidden layers.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+def sigmoid(x): return 1 / (1 + np.exp(-x))
+def tanh(x):    return np.tanh(x)
+def relu(x):    return np.maximum(0, x)
+def leaky(x, a=0.01): return np.where(x &gt;= 0, x, a * x)
+def elu(x, a=1.0):    return np.where(x &gt;= 0, x, a * (np.exp(x) - 1))
+def gelu(x):    return 0.5 * x * (1 + np.tanh(np.sqrt(2/np.pi) * (x + 0.044715 * x**3)))
+def swish(x):   return x * sigmoid(x)
+def softmax(x):
+    x = x - x.max(-1, keepdims=True)          # subtract max or exp() overflows
+    e = np.exp(x)
+    return e / e.sum(-1, keepdims=True)
+
+# Derivatives — this column is what decides whether depth trains
+d_sigmoid = lambda x: sigmoid(x) * (1 - sigmoid(x))     # max 0.25 at x=0
+d_tanh    = lambda x: 1 - np.tanh(x) ** 2               # max 1.0 at x=0
+d_relu    = lambda x: (x &gt; 0).astype(float)             # exactly 1 or 0
+
+# Why sigmoid kills deep nets: chain 10 layers of gradient &lt;= 0.25
+print(&quot;sigmoid grad at |x|=4:&quot;, d_sigmoid(np.array([4.0]))[0].round(6))
+print(&quot;10 stacked layers    :&quot;, (0.25 ** 10))           # 9.5e-07, gone
+
+# Dying ReLU: a unit whose pre-activation is always negative gets zero
+# gradient forever. Leaky/ELU/GELU exist to keep a small slope alive.
+z = np.array([-3., -1., 0., 1., 3.])
+for f in (relu, leaky, elu, gelu, swish):
+    print(f&quot;{f.__name__:6}&quot;, np.round(f(z), 3))</code></pre></div>
 </section>

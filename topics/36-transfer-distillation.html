@@ -231,4 +231,38 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to teach it new facts." — Fine-tuning encodes behavioural patterns, not reliable factual knowledge. Facts change and fine-tuned knowledge becomes stale. Use RAG for dynamic knowledge; fine-tune only for style, format, and task-specific reasoning patterns.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between LoRA and full fine-tuning?" — Answer: full fine-tuning updates all parameters (billions of gradients, requires huge GPU memory). LoRA freezes the pretrained weights and adds low-rank update matrices ΔW = AB where rank r ≪ min(d,k). Only A and B are trained — typically 0.1–1% of original parameters. The pretrained weights are unchanged so general capabilities are preserved; the adapters capture task-specific adjustments. LoRA can be merged at inference (W + AB) so there's zero latency overhead.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Freeze, then unfreeze with a lower learning rate, then distil. The discriminative learning rates in the middle step are what separate a working fine-tune from a destroyed one.</div>
+<pre class="language-python"><code class="language-python">import torch, torch.nn as nn, torch.nn.functional as F
+from torchvision import models
+
+# STAGE 1 — freeze the backbone, train only the new head.
+# The head starts random; letting its large gradients reach pretrained
+# weights is what &quot;catastrophic forgetting&quot; actually means.
+net = models.resnet18(weights=&#x27;IMAGENET1K_V1&#x27;)
+for p in net.parameters():
+    p.requires_grad = False
+net.fc = nn.Linear(512, 10)                  # new head, trainable by default
+opt = torch.optim.AdamW(net.fc.parameters(), lr=1e-3)
+
+# STAGE 2 — unfreeze, but with layer-wise learning rates: early layers hold
+# generic edges/textures and should barely move.
+for p in net.parameters():
+    p.requires_grad = True
+opt = torch.optim.AdamW([
+    {&#x27;params&#x27;: net.layer1.parameters(), &#x27;lr&#x27;: 1e-5},
+    {&#x27;params&#x27;: net.layer2.parameters(), &#x27;lr&#x27;: 3e-5},
+    {&#x27;params&#x27;: net.layer3.parameters(), &#x27;lr&#x27;: 1e-4},
+    {&#x27;params&#x27;: net.layer4.parameters(), &#x27;lr&#x27;: 3e-4},
+    {&#x27;params&#x27;: net.fc.parameters(),     &#x27;lr&#x27;: 1e-3},
+])
+
+# DISTILLATION — the student matches the teacher&#x27;s full distribution, which
+# carries more information per example than the one-hot label.
+def distill_loss(student_logits, teacher_logits, y, T=4.0, alpha=0.7):
+    soft = F.kl_div(F.log_softmax(student_logits / T, -1),
+                    F.softmax(teacher_logits / T, -1),
+                    reduction=&#x27;batchmean&#x27;) * T * T      # T^2 restores grad scale
+    return alpha * soft + (1 - alpha) * F.cross_entropy(student_logits, y)</code></pre></div>
 </section>

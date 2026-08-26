@@ -53,4 +53,27 @@ F_\beta          &= (1+\beta^2) \cdot P \cdot R \;/\; (\beta^2 \cdot P + R)
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use accuracy." — Unless you can demonstrate class balance and that all errors have equal cost, accuracy signals a lack of ML maturity. Almost always start with AUC-ROC or PR-AUC.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is AUC-ROC optimistic on imbalanced data?" — Answer: AUC-ROC includes True Negatives in the denominator (specificity = TN/(TN+FP)). When negatives dominate, the model can have poor recall while still scoring well on specificity, inflating AUC-ROC. PR-AUC uses only positives and predicted positives — it's blind to the large TN pool and gives a truthful picture of minority-class detection.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Pick the metric before you fit anything. This prints the whole panel at once so the trade-off is visible rather than argued about.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.metrics import (accuracy_score, precision_recall_fscore_support,
+                             roc_auc_score, average_precision_score, brier_score_loss)
+
+rng = np.random.default_rng(0)
+y = (rng.random(10_000) &lt; 0.03).astype(int)          # 3% positives
+p = np.clip(rng.beta(2, 8, 10_000) + 0.5 * y, 0, 1)  # scores, mildly informative
+
+# Accuracy is useless here: predicting all-zero already scores 0.97
+print(&quot;all-zero accuracy&quot;, accuracy_score(y, np.zeros_like(y)).round(4))
+
+for thr in (0.5, 0.3, 0.15):
+    pr, rc, f1, _ = precision_recall_fscore_support(y, (p &gt; thr).astype(int),
+                                                    average=&#x27;binary&#x27;, zero_division=0)
+    print(f&quot;thr={thr:&lt;5} precision={pr:.3f} recall={rc:.3f} f1={f1:.3f}&quot;)
+
+# Threshold-free: ROC-AUC flatters imbalance, PR-AUC does not
+print(&quot;roc_auc &quot;, roc_auc_score(y, p).round(4))
+print(&quot;pr_auc  &quot;, average_precision_score(y, p).round(4))   # baseline = prevalence
+print(&quot;brier   &quot;, brier_score_loss(y, p).round(4))          # calibration, not ranking</code></pre></div>
 </section>

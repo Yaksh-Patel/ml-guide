@@ -253,4 +253,43 @@
 <p style="margin-top:8px"><strong>RAG vs fine-tuning?</strong> "RAG for knowledge — facts, current information, sourced answers. Fine-tune for behaviour — style, format, persona, task-specific patterns. The combination is the best of both worlds: LoRA shapes how the model communicates, RAG provides what it knows."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The retrieval half done properly: chunking with overlap, hybrid dense plus BM25, then reciprocal-rank fusion and a reranker. Most RAG failures are retrieval failures.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from rank_bm25 import BM25Okapi
+
+docs = [&quot;Gradient boosting fits each tree to the residual of the ensemble so far.&quot;,
+        &quot;Random forests average deep decorrelated trees to cut variance.&quot;,
+        &quot;PSI above 0.25 signals a population shift worth investigating.&quot;,
+        &quot;Vector databases index embeddings with HNSW for approximate search.&quot;]
+
+# 1. CHUNKING — overlap so a fact spanning a boundary is not lost
+def chunk(text, size=200, overlap=40):
+    step = size - overlap
+    return [text[i:i+size] for i in range(0, max(1, len(text)-overlap), step)]
+
+# 2. TWO RETRIEVERS. Dense catches paraphrase, BM25 catches exact terms
+#    (identifiers, error codes, &quot;PSI&quot;) that embeddings smear away.
+rng = np.random.default_rng(0)
+emb = rng.normal(size=(len(docs), 384))
+emb /= np.linalg.norm(emb, axis=1, keepdims=True)
+bm25 = BM25Okapi([d.lower().split() for d in docs])
+
+query = &quot;what does a PSI of 0.3 mean&quot;
+q_emb = rng.normal(size=384); q_emb /= np.linalg.norm(q_emb)
+dense_rank = (emb @ q_emb).argsort()[::-1]
+sparse_rank = np.argsort(bm25.get_scores(query.lower().split()))[::-1]
+
+# 3. RECIPROCAL RANK FUSION — combines rankings without needing comparable scores
+def rrf(rankings, k=60):
+    s = {}
+    for r in rankings:
+        for pos, doc in enumerate(r):
+            s[doc] = s.get(doc, 0) + 1 / (k + pos + 1)
+    return sorted(s, key=s.get, reverse=True)
+print(&quot;fused order&quot;, rrf([dense_rank, sparse_rank]))
+
+# 4. RERANK the top ~50 with a cross-encoder, then send ~5 to the model.
+#    Retrieve wide, rerank hard, generate narrow.</code></pre></div>
 </section>

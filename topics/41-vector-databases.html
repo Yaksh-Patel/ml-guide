@@ -236,4 +236,39 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 <p style="margin-top:8px"><strong>Common follow-up — filtered search:</strong> "Filtered ANN is non-trivial — pre-filtering with HNSW on selective filters breaks graph connectivity and collapses recall. Best approach: Qdrant's payload-indexed HNSW that applies filters during graph traversal, or over-fetch with post-filtering. Always benchmark recall on your actual filter distributions."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Why exact search stops working, what HNSW trades away, and the recall/latency measurement you must run before trusting an index.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, time
+
+rng = np.random.default_rng(0)
+N, D = 200_000, 384
+X = rng.normal(size=(N, D)).astype(&#x27;float32&#x27;)
+X /= np.linalg.norm(X, axis=1, keepdims=True)     # normalise -&gt; cosine == dot
+q = X[7] + 0.01 * rng.normal(size=D).astype(&#x27;float32&#x27;)
+q /= np.linalg.norm(q)
+
+t0 = time.perf_counter()
+exact = (X @ q).argsort()[::-1][:10]
+brute_ms = (time.perf_counter() - t0) * 1000
+print(f&quot;brute force {brute_ms:.1f} ms over {N:,} vectors -- O(N*D), does not scale&quot;)
+
+import hnswlib
+index = hnswlib.Index(space=&#x27;cosine&#x27;, dim=D)
+# M        = edges per node: higher = better recall, more memory
+# ef_construction = build-time search width: higher = better graph, slower build
+index.init_index(max_elements=N, ef_construction=200, M=16)
+index.add_items(X, np.arange(N))
+
+# ALWAYS measure recall against exact search before shipping an ANN index.
+for ef in (10, 50, 200):
+    index.set_ef(ef)                              # query-time width; ef &gt;= k
+    t0 = time.perf_counter()
+    ids, _ = index.knn_query(q, k=10)
+    ms = (time.perf_counter() - t0) * 1000
+    recall = len(set(ids[0]) &amp; set(exact)) / 10
+    print(f&quot;  ef={ef:&lt;4} recall@10={recall:.2f}  {ms:.2f} ms&quot;)
+
+# Filtered search is the real-world trap: a metadata filter applied AFTER the
+# ANN search can return far fewer than k rows. Use the index&#x27;s native filter.</code></pre></div>
 </section>

@@ -84,4 +84,29 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I scaled all my features, then ran cross-validation." — This is data leakage. Validation fold statistics bled into the scaler. The correct answer is always: Pipeline wraps everything.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between k-fold CV and a simple train/validation/test split?" — Answer: k-fold uses all data for both training and validation (across k iterations), giving a lower-variance generalisation estimate. A single validation split wastes data and its estimate has high variance. Test set is separate in both cases — it's the final unbiased evaluation, not a validation tool.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The three splitters that matter, and the one mistake that inflates every score you report: fitting the scaler before the split.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.model_selection import (KFold, StratifiedKFold, TimeSeriesSplit,
+                                     cross_val_score)
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(500, 8)); y = (X[:, 0] + rng.normal(size=500) &gt; 0).astype(int)
+
+# WRONG — the scaler sees the validation fold, so the score is optimistic
+X_scaled = StandardScaler().fit_transform(X)
+print(&quot;leaky   &quot;, cross_val_score(LogisticRegression(), X_scaled, y, cv=5).mean().round(4))
+
+# RIGHT — the pipeline refits the scaler inside every fold
+pipe = make_pipeline(StandardScaler(), LogisticRegression())
+print(&quot;clean   &quot;, cross_val_score(pipe, X, y, cv=5).mean().round(4))
+
+# Which splitter: stratify for imbalance, never shuffle time
+print(&quot;stratified&quot;, cross_val_score(pipe, X, y, cv=StratifiedKFold(5, shuffle=True,
+                                                                  random_state=0)).mean().round(4))
+print(&quot;temporal  &quot;, cross_val_score(pipe, X, y, cv=TimeSeriesSplit(5)).mean().round(4))</code></pre></div>
 </section>

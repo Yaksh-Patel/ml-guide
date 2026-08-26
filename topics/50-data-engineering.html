@@ -373,4 +373,41 @@ if not results.success:
 <p style="margin-top:8px"><strong>Why Delta Lake instead of plain parquet?</strong> "Plain parquet is immutable — you can't update rows, and concurrent writes corrupt data. Delta Lake adds ACID transactions (safe concurrent writes), time travel (reproduce any historical snapshot for debugging or reproducing training data), schema enforcement (upstream changes don't silently corrupt downstream), and DML operations (UPDATE, DELETE, MERGE). For ML specifically: time travel is critical for dataset reproducibility, and MERGE is essential for feature store upserts."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The two patterns that matter — idempotent partitioned writes, and point-in-time correct joins. The second is where most training/serving skew is born.</div>
+<pre class="language-python"><code class="language-python">import pandas as pd
+
+# 1. IDEMPOTENT WRITES. A rerun of yesterday must REPLACE yesterday, not append
+#    to it. Partition by date and overwrite the partition.
+def write_partition(df, root, dt):
+    df.to_parquet(f&quot;{root}/dt={dt}/part.parquet&quot;, index=False)   # overwrite, not append
+
+# 2. POINT-IN-TIME CORRECT JOIN -- the most common cause of a model that scores
+#    brilliantly offline and fails in production.
+labels = pd.DataFrame({&#x27;user&#x27;: [1, 1, 2],
+                       &#x27;event_ts&#x27;: pd.to_datetime([&#x27;2026-03-01&#x27;,&#x27;2026-05-01&#x27;,&#x27;2026-04-01&#x27;]),
+                       &#x27;y&#x27;: [0, 1, 1]})
+features = pd.DataFrame({&#x27;user&#x27;: [1, 1, 1, 2, 2],
+                         &#x27;valid_from&#x27;: pd.to_datetime([&#x27;2026-01-01&#x27;,&#x27;2026-04-01&#x27;,
+                                        &#x27;2026-06-01&#x27;,&#x27;2026-01-01&#x27;,&#x27;2026-05-01&#x27;]),
+                         &#x27;score&#x27;: [610, 655, 700, 580, 640]})
+
+# WRONG: latest value per user -- leaks the future into the past
+wrong = labels.merge(features.sort_values(&#x27;valid_from&#x27;).groupby(&#x27;user&#x27;).last(), on=&#x27;user&#x27;)
+
+# RIGHT: as-of join, backwards only
+right = pd.merge_asof(labels.sort_values(&#x27;event_ts&#x27;),
+                      features.sort_values(&#x27;valid_from&#x27;),
+                      left_on=&#x27;event_ts&#x27;, right_on=&#x27;valid_from&#x27;,
+                      by=&#x27;user&#x27;, direction=&#x27;backward&#x27;)
+print(right[[&#x27;user&#x27;,&#x27;event_ts&#x27;,&#x27;score&#x27;,&#x27;y&#x27;]].to_string(index=False))
+# user 1 at 2026-03-01 must see 610, never 700
+
+# 3. Schema contracts fail loudly at the boundary, not silently downstream
+def validate(df, spec):
+    missing = set(spec) - set(df.columns)
+    assert not missing, f&quot;missing columns: {missing}&quot;
+    for c, t in spec.items():
+        assert df[c].dtype == t, f&quot;{c}: expected {t}, got {df[c].dtype}&quot;</code></pre></div>
 </section>

@@ -60,4 +60,37 @@ y(t) = \text{trend}(t) + \text{seasonality}(t) + \text{holidays}(t) + \text{nois
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I split the time series randomly 80/20." — This is temporal leakage. Future data trains the model; validation metrics are meaningless. Always: train = past, validation = future, test = most recent period.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you create features for a time series ML model?" — Answer: lag features (y at t-1, t-7, t-28), rolling statistics (mean/std over past 7/30/90 days), calendar features (hour, day-of-week, month, is_holiday), and target-encoded categorical context (store_id, product_category). All features must use only past data relative to the prediction point — no future leakage. Lag features implicitly encode autocorrelation that ARIMA models explicitly; ML models discover this from data.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The three things that make time series different: you must not shuffle, you must test for stationarity, and your baseline is harder to beat than you think.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from sklearn.model_selection import TimeSeriesSplit
+
+rng = np.random.default_rng(0)
+n = 730
+t = pd.date_range(&#x27;2024-01-01&#x27;, periods=n, freq=&#x27;D&#x27;)
+y = pd.Series(50 + 0.05*np.arange(n) + 8*np.sin(2*np.pi*np.arange(n)/365)
+              + rng.normal(0, 2, n), index=t)
+
+# 1. STATIONARITY -- ARIMA and friends assume it. Test, then difference.
+print(&quot;level  ADF p =&quot;, round(adfuller(y)[1], 4))          # &gt;0.05: has a unit root
+print(&quot;diff   ADF p =&quot;, round(adfuller(y.diff().dropna())[1], 6))
+
+# 2. FEATURES must only look backwards. shift() before rolling, every time.
+df = pd.DataFrame({&#x27;y&#x27;: y})
+df[&#x27;lag_1&#x27;]   = df.y.shift(1)
+df[&#x27;lag_7&#x27;]   = df.y.shift(7)
+df[&#x27;roll_28&#x27;] = df.y.shift(1).rolling(28).mean()           # shift FIRST
+df[&#x27;dow&#x27;]     = df.index.dayofweek
+# df.y.rolling(28).mean() would include today -&gt; leakage, and a beautiful CV score
+
+# 3. VALIDATION is forward-chaining. Never KFold.
+for i, (tr, va) in enumerate(TimeSeriesSplit(4).split(df)):
+    print(f&quot;  fold {i}: train {len(tr):4d} -&gt; validate {len(va)}  &quot;
+          f&quot;({df.index[tr[-1]].date()} | {df.index[va[0]].date()})&quot;)
+
+# 4. BASELINE: seasonal naive. Publishing a model that loses to this is common.
+print(f&quot;seasonal naive MAE = {(df.y - df.y.shift(7)).abs().mean():.3f}&quot;
+      &quot;  -- beat this before claiming anything&quot;)</code></pre></div>
 </section>

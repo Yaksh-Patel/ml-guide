@@ -48,4 +48,35 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I averaged predictions from two XGBoost models with different seeds." — Two nearly-identical models have highly correlated errors; averaging barely helps. Diversity (different model families) is what drives ensemble gains.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does ensembling reduce variance?" — Answer: if base model errors are uncorrelated with variance σ², averaging k models reduces variance to σ²/k. In practice, errors are partially correlated, so the reduction is (1 + (k−1)ρ)·σ²/k where ρ is the average pairwise error correlation. Minimizing ρ (diversity) is equivalent to maximizing variance reduction — this is why diverse model types are critical.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Bagging, boosting and stacking express three different bets about where the error comes from. Stacking with out-of-fold predictions is the only version that does not leak.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.ensemble import (BaggingClassifier, GradientBoostingClassifier,
+                              StackingClassifier, VotingClassifier)
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import cross_val_score
+
+X, y = make_classification(4000, n_features=20, random_state=0)
+cv = lambda m: cross_val_score(m, X, y, cv=5).mean().round(4)
+
+# Bagging attacks VARIANCE: many high-variance models, averaged
+print(&quot;bagging &quot;, cv(BaggingClassifier(DecisionTreeClassifier(), n_estimators=200,
+                                       random_state=0, n_jobs=-1)))
+# Boosting attacks BIAS: many weak models, each fixing the last one&#x27;s mistakes
+print(&quot;boosting&quot;, cv(GradientBoostingClassifier(random_state=0)))
+
+# Voting: cheap, only helps if the members make DIFFERENT mistakes
+print(&quot;voting  &quot;, cv(VotingClassifier([(&#x27;lr&#x27;, LogisticRegression(max_iter=1000)),
+                                       (&#x27;dt&#x27;, DecisionTreeClassifier(max_depth=6)),
+                                       (&#x27;sv&#x27;, SVC(probability=True))], voting=&#x27;soft&#x27;)))
+
+# Stacking: a model learns how to combine them. sklearn uses out-of-fold
+# predictions internally — hand-rolled stacking that skips this leaks badly.
+print(&quot;stacking&quot;, cv(StackingClassifier(
+    [(&#x27;dt&#x27;, DecisionTreeClassifier(max_depth=6)), (&#x27;sv&#x27;, SVC(probability=True))],
+    final_estimator=LogisticRegression(), cv=5)))</code></pre></div>
 </section>

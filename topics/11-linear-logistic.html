@@ -56,4 +56,30 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The model with the highest coefficient is the most important feature." — Coefficients are scale-dependent. Always standardize first, or use permutation importance / SHAP for fair comparison.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is logistic regression called 'regression' if it's a classifier?" — Answer: it models the log-odds as a linear regression (linear combination of features), then applies the sigmoid to map to probability. The regression is on the log-odds scale; classification is a downstream thresholding decision.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The two workhorses side by side. The key line is the last one: logistic regression coefficients are log-odds, and exponentiating them is the only way to state them honestly.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+rng = np.random.default_rng(0)
+X = rng.normal(size=(1000, 3))
+scaler = StandardScaler().fit(X)            # scaling matters once you regularise
+Xs = scaler.transform(X)
+
+# Linear: closed form exists, and sklearn uses it
+y = 2*X[:,0] - 1.5*X[:,1] + rng.normal(0, .5, 1000)
+lin = LinearRegression().fit(Xs, y)
+print(&quot;linear coefs &quot;, lin.coef_.round(3))
+
+# Logistic: no closed form; it is convex, so IRLS/lbfgs converges reliably
+z = 1.2*X[:,0] - 0.8*X[:,2]
+yb = (rng.random(1000) &lt; 1/(1+np.exp(-z))).astype(int)
+log = LogisticRegression(C=1.0, max_iter=1000).fit(Xs, yb)
+
+print(&quot;log-odds     &quot;, log.coef_[0].round(3))
+print(&quot;odds ratios  &quot;, np.exp(log.coef_[0]).round(3))
+# &quot;a 1-sd increase in feature 0 multiplies the odds by ~3.3&quot; -- the only
+# statement about a logistic coefficient that is actually true</code></pre></div>
 </section>

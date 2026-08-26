@@ -68,4 +68,33 @@ F(x) = F_0 + \eta \cdot \sum_m h_m(x)
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I tune n_estimators in a grid search." — This signals you don't know early stopping. Always say early stopping instead.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost differ from vanilla gradient boosting?" — Answer: second-order Taylor approximation of the loss (uses curvature, not just gradient), built-in L1/L2 regularization on leaf weights, and column/row subsampling per tree. These together make it more regularized and faster to converge than sklearn GradientBoostingClassifier.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Gradient boosting in fifteen lines, so the "fit the next tree to the residual" claim stops being a slogan. The final loop shows the learning-rate / n_estimators trade.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
+
+rng = np.random.default_rng(0)
+X = rng.uniform(-3, 3, (500, 1))
+y = np.sin(X[:, 0]) + 0.2 * rng.normal(size=500)
+
+# Boosting from scratch: each tree fits the gradient of the loss so far.
+# For squared error the gradient IS the residual, which is the whole trick.
+pred = np.full_like(y, y.mean())
+trees, lr = [], 0.1
+for _ in range(200):
+    residual = y - pred                       # negative gradient of MSE/2
+    t = DecisionTreeRegressor(max_depth=3).fit(X, residual)
+    pred += lr * t.predict(X)
+    trees.append(t)
+print(&quot;scratch mse&quot;, mean_squared_error(y, pred).round(4))
+
+# lr and n_estimators are one hyperparameter wearing two hats: halve the
+# learning rate and you need roughly twice the trees for the same fit.
+from sklearn.ensemble import GradientBoostingRegressor
+for lr, n in [(0.3, 100), (0.1, 300), (0.03, 1000)]:
+    m = GradientBoostingRegressor(learning_rate=lr, n_estimators=n,
+                                  max_depth=3, random_state=0).fit(X, y)
+    print(f&quot;  lr={lr:&lt;5} n={n:&lt;5} mse={mean_squared_error(y, m.predict(X)):.4f}&quot;)</code></pre></div>
 </section>

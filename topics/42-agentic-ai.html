@@ -270,4 +270,44 @@ response = client.messages.create(
 <p style="margin-top:8px"><strong>When not to use an agent?</strong> "If the task is a single retrieval + generation (use RAG), a single classification (use a fine-tuned model), or a fixed deterministic workflow (use a traditional pipeline). Agents add real complexity and failure modes. Only reach for agents when the task genuinely requires multi-step reasoning with dynamic tool selection."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The agent loop with the two controls that keep it from running away: a step budget and a tool allow-list. Tool schemas plus a terminal condition is most of what an agent is.</div>
+<pre class="language-python"><code class="language-python">import json
+
+TOOLS = {
+    &#x27;search&#x27;:   {&#x27;desc&#x27;: &#x27;Search the docs&#x27;, &#x27;args&#x27;: {&#x27;query&#x27;: &#x27;str&#x27;}},
+    &#x27;calculate&#x27;:{&#x27;desc&#x27;: &#x27;Evaluate arithmetic&#x27;, &#x27;args&#x27;: {&#x27;expr&#x27;: &#x27;str&#x27;}},
+}
+
+def calculate(expr):
+    import ast, operator as op
+    ops = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul, ast.Div: op.truediv}
+    def ev(n):
+        if isinstance(n, ast.Constant): return n.value
+        if isinstance(n, ast.BinOp):    return ops[type(n.op)](ev(n.left), ev(n.right))
+        raise ValueError(&#x27;unsupported&#x27;)
+    return ev(ast.parse(expr, mode=&#x27;eval&#x27;).body)      # never eval() a model&#x27;s output
+
+def agent(task, llm, max_steps=6):
+    &quot;&quot;&quot;ReAct: think, act, observe, repeat. The step cap is not optional --
+    without it a confused model loops on the same tool until you run out of money.&quot;&quot;&quot;
+    scratch = []
+    for step in range(max_steps):
+        prompt = f&quot;Task: {task}\nHistory: {json.dumps(scratch)}\nTools: {list(TOOLS)}&quot;
+        action = llm(prompt)                            # -&gt; {&quot;tool&quot;:..,&quot;args&quot;:..} or {&quot;final&quot;:..}
+        if &#x27;final&#x27; in action:
+            return action[&#x27;final&#x27;], scratch
+        if action[&#x27;tool&#x27;] not in TOOLS:                 # allow-list, always
+            scratch.append({&#x27;error&#x27;: f&quot;unknown tool {action[&#x27;tool&#x27;]}&quot;})
+            continue
+        try:
+            obs = calculate(**action[&#x27;args&#x27;]) if action[&#x27;tool&#x27;] == &#x27;calculate&#x27; else &#x27;...&#x27;
+        except Exception as e:
+            obs = f&quot;tool error: {e}&quot;                    # errors go back as observations
+        scratch.append({&#x27;step&#x27;: step, &#x27;action&#x27;: action, &#x27;observation&#x27;: obs})
+    return &#x27;step budget exhausted&#x27;, scratch
+
+# Failure modes to design against: loops, hallucinated tool names, and
+# unbounded cost. Log every step -- an agent you cannot replay is undebuggable.</code></pre></div>
 </section>

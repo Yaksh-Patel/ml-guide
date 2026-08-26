@@ -135,4 +135,29 @@
 </script>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The decomposition made concrete: fit the same model family at increasing capacity and watch bias fall while variance climbs. The U-shape in test error is the whole lesson.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+
+rng = np.random.default_rng(0)
+f = lambda x: np.sin(2 * np.pi * x)
+x_test = np.linspace(0, 1, 200)
+
+for degree in [1, 3, 9, 15]:
+    preds = []
+    for _ in range(100):                     # 100 independent training sets
+        x = rng.uniform(0, 1, 25)
+        y = f(x) + rng.normal(0, 0.3, 25)
+        m = make_pipeline(PolynomialFeatures(degree), LinearRegression())
+        preds.append(m.fit(x[:, None], y).predict(x_test[:, None]))
+    P = np.array(preds)
+
+    bias2 = ((P.mean(0) - f(x_test)) ** 2).mean()   # avg model vs truth
+    var   = P.var(0).mean()                          # spread across datasets
+    print(f&quot;degree {degree:2d}   bias^2={bias2:.4f}  variance={var:.4f}  &quot;
+          f&quot;sum={bias2 + var:.4f}&quot;)</code></pre></div>
 </section>

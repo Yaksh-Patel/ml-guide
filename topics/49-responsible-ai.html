@@ -243,4 +243,34 @@ print("DPD:", demographic_parity_difference(
 <p style="margin-top:8px"><strong>Common follow-up — 'What's disparate impact?'</strong> "Disparate impact is when a facially neutral policy disproportionately disadvantages a protected group, regardless of intent. In ML: the disparate impact ratio is the positive prediction rate for the minority group divided by the rate for the majority group. Below 0.8 triggers the US 4/5ths rule — presumptive evidence of illegal discrimination under Title VII and ECOA."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Fairness metrics computed side by side — the honest presentation, because with unequal base rates they provably cannot all hold at once.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+
+rng = np.random.default_rng(0)
+n = 20_000
+group = rng.choice([&#x27;A&#x27;, &#x27;B&#x27;], n)
+# Unequal base rates between groups: the source of every fairness trade-off
+y = (rng.random(n) &lt; np.where(group == &#x27;A&#x27;, 0.30, 0.15)).astype(int)
+score = np.clip(0.5*y + rng.normal(0.3, 0.25, n), 0, 1)
+df = pd.DataFrame(dict(group=group, y=y, pred=(score &gt; 0.5).astype(int)))
+
+rows = []
+for g, d in df.groupby(&#x27;group&#x27;):
+    tp = ((d.pred==1)&amp;(d.y==1)).sum(); fp = ((d.pred==1)&amp;(d.y==0)).sum()
+    fn = ((d.pred==0)&amp;(d.y==1)).sum(); tn = ((d.pred==0)&amp;(d.y==0)).sum()
+    rows.append(dict(group=g,
+        selection_rate=d.pred.mean(),        # demographic parity
+        tpr=tp/max(tp+fn,1),                 # equal opportunity
+        fpr=fp/max(fp+tn,1),                 # equalised odds (with tpr)
+        ppv=tp/max(tp+fp,1)))                # predictive parity
+t = pd.DataFrame(rows).set_index(&#x27;group&#x27;)
+print(t.round(3).to_string())
+
+print(&quot;\ndemographic parity gap&quot;, round(abs(t.selection_rate.diff().iloc[-1]), 3))
+print(&quot;equal opportunity gap &quot;, round(abs(t.tpr.diff().iloc[-1]), 3))
+# IMPOSSIBILITY RESULT: with unequal base rates you cannot equalise selection
+# rate, TPR and PPV simultaneously. Pick the one your domain can defend, say so
+# explicitly, and report the others anyway.</code></pre></div>
 </section>

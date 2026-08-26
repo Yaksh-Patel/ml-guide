@@ -39,4 +39,32 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I applied SMOTE before train/test split." — This is data leakage. Synthetic minority examples generated from test data contaminate training. SMOTE must happen inside the CV loop, after splitting.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does SMOTE work?" — Answer: for each minority example, find its k nearest minority-class neighbours. Pick one at random, then generate a new synthetic example by interpolating along the line between the original point and its neighbour: x_new = x + λ·(x_neighbour − x) where λ ~ Uniform(0,1). Creates new examples in the minority manifold rather than duplicating existing ones.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Four responses to imbalance, ranked. The last one — leaving the data alone and moving the threshold — is usually the best and is almost always skipped.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import average_precision_score, precision_recall_curve
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import make_pipeline as imb_pipeline
+
+X, y = make_classification(20_000, n_features=20, weights=[.98], random_state=0)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=.3, stratify=y, random_state=0)
+score = lambda m: average_precision_score(yte, m.predict_proba(Xte)[:, 1])
+
+print(&quot;baseline       &quot;, round(score(LogisticRegression(max_iter=1000).fit(Xtr, ytr)), 4))
+print(&quot;class_weight   &quot;, round(score(LogisticRegression(class_weight=&#x27;balanced&#x27;,
+                                                       max_iter=1000).fit(Xtr, ytr)), 4))
+# SMOTE must sit INSIDE the pipeline, or it synthesises from validation rows
+print(&quot;SMOTE (in cv)  &quot;, round(score(imb_pipeline(SMOTE(random_state=0),
+                          LogisticRegression(max_iter=1000)).fit(Xtr, ytr)), 4))
+
+# Usually best: touch nothing, then choose the operating point deliberately
+m = LogisticRegression(max_iter=1000).fit(Xtr, ytr)
+pr, rc, thr = precision_recall_curve(yte, m.predict_proba(Xte)[:, 1])
+f1 = 2 * pr * rc / (pr + rc + 1e-12)
+print(f&quot;best threshold {thr[f1.argmax()]:.3f} -&gt; precision {pr[f1.argmax()]:.3f}, &quot;
+      f&quot;recall {rc[f1.argmax()]:.3f}&quot;)</code></pre></div>
 </section>

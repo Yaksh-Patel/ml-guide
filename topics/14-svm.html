@@ -62,6 +62,8 @@ K(\mathbf{x},\mathbf{z}) &= \varphi(\mathbf{x})^T\varphi(\mathbf{z}) \quad \text
 <div class="card-body" style="margin-top:6px"><strong>RBF kernel:</strong> effectively infinite-dimensional feature space. γ controls radius of influence (high γ = narrow, overfits; low γ = wide, underfits).</div></div>
 <div class="card"><div class="card-title">C Parameter (Soft Margin)</div>
 <ul class="bul"><li><strong>High C:</strong> small margin, few misclassifications — overfits</li><li><strong>Low C:</strong> large margin, allows more errors — underfits</li><li>C is the regularization trade-off: margin size vs misclassification penalty</li><li>Tune C and γ via grid search with cross-validation</li></ul>
+</div>
+</div>
 <div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
 <ul class="bul">
   <li><strong>Not scaling features before SVM</strong> — SVM is the most scale-sensitive model: the margin calculation depends on Euclidean distances. Un-scaled features completely distort the decision boundary. Always StandardScaler</li>
@@ -84,4 +86,31 @@ K(\mathbf{x},\mathbf{z}) &= \varphi(\mathbf{x})^T\varphi(\mathbf{z}) \quad \text
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "SVM outputs probabilities." — It doesn't natively. probability=True in sklearn adds costly Platt scaling. If you need calibrated probabilities, logistic regression is a better starting point.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What are support vectors?" — Answer: the subset of training points that lie on or within the margin boundary. Only these points determine the decision boundary — all other training points could be removed without changing it. The model's complexity is O(n_sv), not O(n), which is why SVMs generalise well: sparse representation of the decision boundary.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The margin, the kernel trick, and the one hyperparameter interaction that decides whether an SVM works: C against gamma.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import make_circles
+from sklearn.svm import SVC
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+
+X, y = make_circles(500, factor=.4, noise=.12, random_state=0)
+
+# Linear kernel cannot separate concentric circles; RBF lifts them apart
+for kernel in (&#x27;linear&#x27;, &#x27;rbf&#x27;):
+    m = make_pipeline(StandardScaler(), SVC(kernel=kernel)).fit(X, y)
+    print(f&quot;{kernel:7} train acc {m.score(X, y):.3f}&quot;)
+
+# C trades margin width against violations; gamma sets the kernel&#x27;s reach.
+# They fight each other, so they must be tuned jointly, never one at a time.
+grid = GridSearchCV(make_pipeline(StandardScaler(), SVC()),
+                    {&#x27;svc__C&#x27;: [0.1, 1, 10, 100], &#x27;svc__gamma&#x27;: [0.01, 0.1, 1, 10]},
+                    cv=5).fit(X, y)
+print(&quot;best&quot;, grid.best_params_, round(grid.best_score_, 4))
+
+# Only the support vectors matter — the rest of the data could be deleted
+svc = grid.best_estimator_.named_steps[&#x27;svc&#x27;]
+print(f&quot;support vectors: {svc.n_support_.sum()} of {len(X)}&quot;)</code></pre></div>
 </section>

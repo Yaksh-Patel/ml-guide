@@ -204,6 +204,7 @@ ate = model.ate(X_test)          # scalar: average treatment effect
 print(f"ATE: {ate:.4f}")
 # Target top quartile of ITE for marketing campaign</pre>
 
+</div>
 <div class="card" style="margin-top:13px"><div class="card-title">Uplift Evaluation — Qini Curve &amp; AUUC</div>
 <div class="g2">
 <div>
@@ -316,4 +317,34 @@ print(refute)</pre>
 <p style="margin-top:8px"><strong>When can't you run an A/B test?</strong> "When randomisation is infeasible — policy changes affecting everyone, historical analysis, marketplace interventions. Then I'd use: DiD if there's a control group and parallel trends holds, RDD if there's a threshold with arbitrary assignment near it, IV if there's a valid instrument, or synthetic control for a single treated unit. Each requires explicit assumptions that must be stated and tested."</p>
 </div>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Correlation, the confounded estimate, and the adjusted estimate on data where the true effect is known. Simpson&rsquo;s paradox in eight lines.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+import statsmodels.formula.api as smf
+
+rng = np.random.default_rng(0)
+n = 20_000
+# Confounder: severity drives BOTH treatment and outcome
+severity = rng.normal(size=n)
+treated = (rng.random(n) &lt; 1/(1+np.exp(-1.5*severity))).astype(int)   # sicker -&gt; treated
+outcome = 2.0*treated - 3.0*severity + rng.normal(0, 1, n)            # TRUE effect = +2.0
+df = pd.DataFrame(dict(y=outcome, t=treated, sev=severity))
+
+print(&quot;naive difference     &quot;, round(df[df.t==1].y.mean() - df[df.t==0].y.mean(), 3))
+print(&quot;adjusted (regression)&quot;, round(smf.ols(&#x27;y ~ t + sev&#x27;, df).fit().params[&#x27;t&#x27;], 3))
+# The naive number is NEGATIVE despite a positive true effect: the treatment
+# looks harmful only because it is given to sicker people.
+
+# A/B testing: fix the sample size BEFORE looking, or peeking pushes the
+# false-positive rate well past 5%.
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
+n_needed = NormalIndPower().solve_power(
+    effect_size=proportion_effectsize(0.10, 0.11),      # 10% -&gt; 11%
+    alpha=0.05, power=0.80, alternative=&#x27;two-sided&#x27;)
+print(f&quot;n per arm for a +1pp lift: {int(np.ceil(n_needed)):,}&quot;)
+
+# When randomisation was impossible, difference-in-differences:
+#   effect = (treat_after - treat_before) - (control_after - control_before)</code></pre></div>
 </section>

@@ -51,4 +51,37 @@ W \sim Uniform(-\sqrt{6/n_{in}}, \sqrt{6/n_{in}})
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I initialised all weights to zero to start from a neutral state." — This causes complete symmetry: every neuron receives the same gradient and learns the same feature forever. Random initialisation is not about starting at a "good" point — it's about breaking symmetry so neurons can specialise.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why do we care about variance preservation in initialisation?" — Answer: if variance grows through layers, activations explode; if it shrinks, activations vanish to zero and gradients disappear. He and Xavier init are designed so that the variance of activations equals the variance of inputs at each layer in expectation — keeping signals in a sensible range throughout the forward and backward passes.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Initialisation decided in one line, verified by measuring activation variance layer by layer. If the variance collapses or explodes across depth, nothing else you do will help.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+rng = np.random.default_rng(0)
+x = rng.normal(size=(1000, 128))
+
+def propagate(scale_fn, act, depth=12, width=128):
+    a = x.copy()
+    stds = []
+    for _ in range(depth):
+        W = rng.normal(0, scale_fn(width), (a.shape[1], width))
+        a = act(a @ W)
+        stds.append(a.std())
+    return np.round(stds, 4)
+
+relu = lambda z: np.maximum(0, z)
+tanh = np.tanh
+
+# Too small: signal dies. Too big: it explodes. Both are unrecoverable.
+print(&quot;naive 0.01 + relu &quot;, propagate(lambda n: 0.01, relu)[:6], &quot;...&quot;)
+print(&quot;naive 1.00 + relu &quot;, propagate(lambda n: 1.00, relu)[:6], &quot;...&quot;)
+
+# He/Kaiming: var = 2/fan_in, because ReLU zeroes half the distribution
+print(&quot;He + relu         &quot;, propagate(lambda n: np.sqrt(2/n), relu)[:6], &quot;...&quot;)
+
+# Xavier/Glorot: var = 1/fan_in for symmetric activations like tanh
+print(&quot;Xavier + tanh     &quot;, propagate(lambda n: np.sqrt(1/n), tanh)[:6], &quot;...&quot;)
+
+# Rule: He for ReLU family, Xavier for tanh/sigmoid, zeros for biases only.
+# Never initialise weights to zero -- every unit computes the same thing and
+# receives the same gradient, so the layer never breaks symmetry.</code></pre></div>
 </section>

@@ -411,4 +411,42 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 })();
 </script>
 
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Scaled dot-product attention in eight lines, then multi-head, then the causal mask. This is the entire mechanism — everything else in a transformer is plumbing.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+def softmax(x, axis=-1):
+    x = x - x.max(axis, keepdims=True)
+    e = np.exp(x)
+    return e / e.sum(axis, keepdims=True)
+
+def attention(Q, K, V, mask=None):
+    d_k = Q.shape[-1]
+    scores = Q @ K.swapaxes(-1, -2) / np.sqrt(d_k)   # sqrt(d_k) or softmax saturates
+    if mask is not None:
+        scores = np.where(mask, scores, -1e9)
+    A = softmax(scores)
+    return A @ V, A
+
+rng = np.random.default_rng(0)
+T, d_model, n_heads = 6, 32, 4
+d_head = d_model // n_heads
+x = rng.normal(size=(T, d_model))
+
+# Multi-head = the same op on n_heads slices, concatenated
+Wq, Wk, Wv, Wo = (rng.normal(0, .1, (d_model, d_model)) for _ in range(4))
+Q, K, V = (x @ W for W in (Wq, Wk, Wv))
+split = lambda t: t.reshape(T, n_heads, d_head).transpose(1, 0, 2)
+out, A = attention(split(Q), split(K), split(V))
+out = out.transpose(1, 0, 2).reshape(T, d_model) @ Wo
+print(&quot;output&quot;, out.shape, &quot;| attention&quot;, A.shape)     # (6,32) | (4,6,6)
+
+# Causal mask: position t may only see &lt;= t. Lower triangular, nothing more.
+causal = np.tril(np.ones((T, T), dtype=bool))
+_, A_causal = attention(Q, K, V, mask=causal)
+print(&quot;row 2 attends to:&quot;, A_causal[2].round(2))       # zeros after index 2
+
+# Cost is O(T^2 d) in both time and memory -- the reason context length is expensive
+print(&quot;scores for T=4096:&quot;, 4096**2 * 2 / 1e9, &quot;GB per head at fp16&quot;)</code></pre></div>
 </section>

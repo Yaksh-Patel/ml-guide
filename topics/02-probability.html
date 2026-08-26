@@ -61,4 +61,26 @@ E[X] = \sum x_i P(x_i) \quad \text{(discrete)} \\
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "KL divergence is symmetric." — KL(P||Q) ≠ KL(Q||P). The direction matters: forward KL (used in VI) is mean-seeking (fits a distribution covering all modes); reverse KL is mode-seeking (fits the highest-probability mode only). In practice, RLHF's KL penalty uses KL(π_new || π_ref) to keep the fine-tuned policy close to the reference policy.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between MLE and MAP estimation?" — Answer: MLE maximises P(data|θ) — no prior on θ, purely data-driven. MAP maximises P(θ|data) ∝ P(data|θ)·P(θ) — includes a prior on θ. For a Gaussian prior on weights, MAP is equivalent to L2 (Ridge) regularisation. For a Laplace prior, MAP is equivalent to L1 (Lasso). Regularisation is Bayesian reasoning in disguise.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The Bayes computation everyone gets wrong in interviews, done numerically — then verified by simulation, which is the fastest way to check any probability claim.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+# Rare-disease trap: 1% prevalence, 99% sensitivity, 99% specificity
+prior, sens, spec = 0.01, 0.99, 0.99
+evidence = sens * prior + (1 - spec) * (1 - prior)
+posterior = sens * prior / evidence
+print(f&quot;P(sick | positive) = {posterior:.3f}&quot;)      # 0.500, not 0.99
+
+# Verify by simulation — always do this before trusting the algebra
+rng = np.random.default_rng(0)
+sick = rng.random(1_000_000) &lt; prior
+positive = np.where(sick, rng.random(1_000_000) &lt; sens,
+                          rng.random(1_000_000) &lt; 1 - spec)
+print(f&quot;empirical        = {sick[positive].mean():.3f}&quot;)
+
+# Law of total expectation, the same idea for continuous variables
+mu = np.where(sick, 8.0, 2.0)
+x = rng.normal(mu, 1.0)
+print(f&quot;E[x] = {x.mean():.3f}  vs  {prior*8 + (1-prior)*2:.3f}&quot;)</code></pre></div>
 </section>

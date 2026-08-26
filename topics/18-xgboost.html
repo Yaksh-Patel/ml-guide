@@ -56,4 +56,36 @@ G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I grid-searched n_estimators." — This shows unfamiliarity with early stopping, which is the correct approach. Always say: early stopping with eval_set determines tree count automatically.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost handle missing values?" — Answer: during training, XGBoost tries both directions (left and right child) for missing values at each split and picks whichever gives better gain. This learned default direction is stored in the model and applied at inference — no imputation needed.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The three things XGBoost adds over plain gradient boosting — second-order gradients, structural regularisation, and early stopping on a real validation set.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+import xgboost as xgb
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
+
+X, y = make_classification(20_000, n_features=30, weights=[.95], random_state=0)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=.25, stratify=y, random_state=0)
+
+model = xgb.XGBClassifier(
+    n_estimators=2000,          # deliberately too many; early stopping picks the point
+    learning_rate=0.05,
+    max_depth=5,
+    min_child_weight=5,         # min sum of hessian in a leaf, not a row count
+    subsample=0.8, colsample_bytree=0.8,
+    reg_lambda=1.0, reg_alpha=0.0,
+    gamma=0.0,                  # min loss reduction to make a split
+    scale_pos_weight=(ytr == 0).sum() / (ytr == 1).sum(),   # imbalance, not resampling
+    eval_metric=&#x27;aucpr&#x27;,        # PR-AUC for a 5% positive rate
+    early_stopping_rounds=50,
+    tree_method=&#x27;hist&#x27;,
+)
+model.fit(Xtr, ytr, eval_set=[(Xte, yte)], verbose=False)
+
+print(&quot;best iteration&quot;, model.best_iteration, &quot;of 2000&quot;)
+print(&quot;test PR-AUC   &quot;, roc_auc_score(yte, model.predict_proba(Xte)[:, 1]).round(4))
+
+# Monotone constraints: the feature that makes XGBoost defensible in credit risk
+mono = xgb.XGBClassifier(n_estimators=200, monotone_constraints=&#x27;(1,&#x27; + &#x27;0,&#x27;*28 + &#x27;0)&#x27;)</code></pre></div>
 </section>

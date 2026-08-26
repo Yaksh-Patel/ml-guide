@@ -54,4 +54,30 @@ IG = H(\text{parent}) - \sum_i w_i \cdot H(\text{child}_i) \\
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll grow the tree until leaves are pure, then prune." — This is expensive and often leads to over-pruning. Prefer setting max_depth and min_samples_leaf directly, or use cost-complexity pruning (ccp_alpha) tuned via CV.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does a decision tree have high variance?" — Answer: greedy recursive splitting is unstable — a slightly different training set can produce a completely different top split, leading to an entirely different tree. Ensembles (bagging, boosting) address this by averaging over many such trees.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">A tree fitted and then read back as rules. The impurity drop at each split is the feature-importance number, which is exactly why those importances are biased toward high-cardinality features.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier, export_text
+
+X, y = load_iris(return_X_y=True)
+names = load_iris().feature_names
+
+tree = DecisionTreeClassifier(max_depth=3, min_samples_leaf=5,
+                              criterion=&#x27;gini&#x27;, random_state=0).fit(X, y)
+print(export_text(tree, feature_names=names, decimals=2))
+
+# Gini impurity of a node, by hand
+def gini(counts):
+    p = np.asarray(counts) / sum(counts)
+    return 1 - (p ** 2).sum()
+print(&quot;gini([50,50,50]) =&quot;, round(gini([50, 50, 50]), 4))   # 0.6667, max for 3 classes
+print(&quot;gini([0,49,5])   =&quot;, round(gini([0, 49, 5]), 4))     # nearly pure
+
+# Importance = total weighted impurity decrease attributable to each feature.
+# High-cardinality features get more chances to split, so they score higher
+# whether or not they generalise. Use permutation importance to check.
+for n, imp in sorted(zip(names, tree.feature_importances_), key=lambda t: -t[1]):
+    print(f&quot;  {n:22} {imp:.3f}&quot;)</code></pre></div>
 </section>

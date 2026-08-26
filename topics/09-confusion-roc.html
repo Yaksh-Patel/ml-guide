@@ -163,4 +163,24 @@ F_1                &= 2 \cdot TP \;/\; (2 \cdot TP + FP + FN)
   update(50);
 })();
 </script>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Building the matrix by hand once fixes the axis confusion for good, then sweeping the threshold shows why one number can never describe a classifier.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+
+y = np.array([0,0,0,0,1,1,1,0,1,0])
+p = np.array([.1,.2,.6,.3,.9,.45,.8,.05,.55,.35])
+
+tn, fp, fn, tp = confusion_matrix(y, (p &gt;= .5).astype(int)).ravel()
+print(f&quot;TP={tp} FP={fp} FN={fn} TN={tn}&quot;)
+print(f&quot;recall/TPR = TP/(TP+FN) = {tp/(tp+fn):.2f}&quot;)
+print(f&quot;precision  = TP/(TP+FP) = {tp/(tp+fp):.2f}&quot;)
+print(f&quot;FPR        = FP/(FP+TN) = {fp/(fp+tn):.2f}&quot;)   # ROC&#x27;s x-axis
+
+# The ROC curve is just this matrix recomputed at every threshold
+fpr, tpr, thr = roc_curve(y, p)
+for f, t, th in zip(fpr, tpr, thr):
+    print(f&quot;thr={th:&gt;5.2f}  FPR={f:.2f}  TPR={t:.2f}&quot;)
+print(&quot;AUC =&quot;, round(auc(fpr, tpr), 3))</code></pre></div>
 </section>

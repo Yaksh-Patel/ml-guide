@@ -44,4 +44,32 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I set max_depth=5 in Random Forest to prevent overfitting." — RF doesn't overfit via depth the way single trees do. Reducing max_depth hurts accuracy without meaningful variance reduction benefit. Let trees grow deep.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you choose Random Forest over XGBoost?" — Answer: when you want a robust out-of-the-box model with minimal tuning, when OOB error is convenient, when training must run fully in parallel, or as a fast ensemble base. XGBoost usually wins accuracy contests but requires careful hyperparameter tuning and early stopping setup.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Two independent sources of decorrelation — bootstrap rows and random feature subsets — plus the out-of-bag estimate, which gives you validation for free.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import permutation_importance
+from sklearn.model_selection import train_test_split
+
+X, y = load_breast_cancer(return_X_y=True)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=.25, random_state=0)
+
+rf = RandomForestClassifier(n_estimators=500, max_features=&#x27;sqrt&#x27;,
+                            oob_score=True, n_jobs=-1, random_state=0).fit(Xtr, ytr)
+print(f&quot;oob  {rf.oob_score_:.4f}   test {rf.score(Xte, yte):.4f}&quot;)
+# OOB uses the ~37% of rows each tree never saw: a free validation set
+
+# max_features is the knob that actually matters. 1.0 = bagged trees, all
+# correlated; sqrt(p) decorrelates them and is why a forest beats bagging.
+for mf in (&#x27;sqrt&#x27;, &#x27;log2&#x27;, 0.5, 1.0):
+    m = RandomForestClassifier(300, max_features=mf, oob_score=True,
+                               n_jobs=-1, random_state=0).fit(Xtr, ytr)
+    print(f&quot;  max_features={str(mf):5} oob={m.oob_score_:.4f}&quot;)
+
+# Prefer permutation importance: impurity importance is biased by cardinality
+perm = permutation_importance(rf, Xte, yte, n_repeats=10, random_state=0)
+top = perm.importances_mean.argsort()[::-1][:5]
+print(&quot;top by permutation:&quot;, [load_breast_cancer().feature_names[i] for i in top])</code></pre></div>
 </section>

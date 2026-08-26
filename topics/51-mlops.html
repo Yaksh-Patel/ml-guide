@@ -264,4 +264,42 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "MLOps is just deploying the model." — The hard part is the full closed loop: monitoring → drift detection → automated retraining trigger → CI/CD pipeline → evaluation gate → canary deploy → monitor again. Each step requires automation and SLAs.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you serve a 70B LLM in production at low latency?" — Tensor parallelism across 4–8 A100s (model sharded across GPUs); vLLM with PagedAttention for efficient KV cache management (no fragmentation waste); INT4/AWQ quantisation to cut memory 4×; speculative decoding with a 3B draft model to reduce autoregressive decode steps by 2–4×. Expect P50 latency 200–500ms at reasonable cost on 4×A100 for 70B.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The four things that make a model a service: a pinned artifact, a schema-validated endpoint, a drift monitor, and a rollback you have actually tested.</div>
+<pre class="language-python"><code class="language-python">import mlflow, numpy as np, pandas as pd
+from pydantic import BaseModel, Field
+from scipy.stats import ks_2samp
+
+# 1. ARTIFACT + LINEAGE. An un-versioned model is not deployable, it is a file.
+with mlflow.start_run() as run:
+    mlflow.log_params({&#x27;max_depth&#x27;: 5, &#x27;lr&#x27;: 0.05})
+    mlflow.log_metrics({&#x27;val_auc&#x27;: 0.831, &#x27;val_pr_auc&#x27;: 0.412})
+    mlflow.set_tags({&#x27;git_sha&#x27;: &#x27;a1b2c3d&#x27;, &#x27;train_data&#x27;: &#x27;s3://.../dt=2026-08-01&#x27;})
+    # mlflow.xgboost.log_model(model, &#x27;model&#x27;, signature=signature)
+
+# 2. CONTRACT AT THE EDGE. Reject bad input at the boundary with a clear error,
+#    rather than silently scoring a null and returning a confident number.
+class ScoreRequest(BaseModel):
+    user_id: int
+    utilisation: float = Field(ge=0, le=1)
+    n_accounts: int = Field(ge=0, le=100)
+
+# 3. DRIFT: compare live features against the training distribution, per feature.
+def drift_report(train: pd.DataFrame, live: pd.DataFrame, alpha=0.01):
+    out = {}
+    for c in train.columns:
+        stat, p = ks_2samp(train[c], live[c])
+        out[c] = {&#x27;ks&#x27;: round(stat, 4), &#x27;p&#x27;: round(p, 6), &#x27;alert&#x27;: bool(p &lt; alpha)}
+    return out
+
+rng = np.random.default_rng(0)
+train = pd.DataFrame({&#x27;utilisation&#x27;: rng.beta(2, 5, 10_000)})
+live  = pd.DataFrame({&#x27;utilisation&#x27;: rng.beta(2.6, 5, 3_000)})     # shifted
+print(drift_report(train, live))
+
+# 4. ROLLBACK. Shadow the new model first, compare on live traffic, then shift
+#    traffic in steps. Keep the previous version warm and switchable by config,
+#    not by redeploy -- an untested rollback is not a rollback.
+ROUTING = {&#x27;champion&#x27;: 0.9, &#x27;challenger&#x27;: 0.1}</code></pre></div>
 </section>

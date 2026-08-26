@@ -66,4 +66,33 @@
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I target-encoded the city column using the full dataset mean." — This is classic leakage. Target encoding must be computed within CV folds (fit on training fold, apply to validation fold).</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you handle feature selection when you have 500 features?" — Answer: (1) remove near-zero variance features; (2) remove features with correlation &gt;0.95 (keep one from each correlated cluster); (3) use SHAP importance on a trained model to rank remaining features; (4) iteratively remove bottom-SHAP features and check CV metric — stop when metric drops. This is more principled than RFE and faster than Boruta for &gt;100 features.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Target encoding is the highest-leverage tabular feature and the easiest way to leak. The out-of-fold version is the only one that belongs in production.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+from sklearn.model_selection import KFold
+
+rng = np.random.default_rng(0)
+df = pd.DataFrame({&#x27;city&#x27;: rng.choice(list(&#x27;ABCDEFGH&#x27;), 5000),
+                   &#x27;y&#x27;: rng.random(5000) &lt; .2})
+
+# WRONG: the mean of a row&#x27;s own target leaks straight into its feature
+df[&#x27;te_leaky&#x27;] = df.groupby(&#x27;city&#x27;)[&#x27;y&#x27;].transform(&#x27;mean&#x27;)
+
+# RIGHT: out-of-fold, so a row&#x27;s encoding never sees its own label,
+# with smoothing toward the global mean for rare categories
+prior, k = df.y.mean(), 20
+df[&#x27;te&#x27;] = np.nan
+for tr, va in KFold(5, shuffle=True, random_state=0).split(df):
+    stats = df.iloc[tr].groupby(&#x27;city&#x27;)[&#x27;y&#x27;].agg([&#x27;mean&#x27;, &#x27;count&#x27;])
+    smooth = (stats[&#x27;mean&#x27;] * stats[&#x27;count&#x27;] + prior * k) / (stats[&#x27;count&#x27;] + k)
+    df.loc[df.index[va], &#x27;te&#x27;] = df.iloc[va][&#x27;city&#x27;].map(smooth).fillna(prior)
+
+print(df.groupby(&#x27;city&#x27;)[[&#x27;te_leaky&#x27;, &#x27;te&#x27;]].mean().round(4))
+
+# Other staples: cyclical time, ratios, and winsorising instead of dropping
+t = pd.Series(rng.integers(0, 24, 5000))
+df[&#x27;hour_sin&#x27;], df[&#x27;hour_cos&#x27;] = np.sin(2*np.pi*t/24), np.cos(2*np.pi*t/24)
+x = pd.Series(rng.lognormal(size=5000))
+df[&#x27;x_clipped&#x27;] = x.clip(x.quantile(.01), x.quantile(.99))</code></pre></div>
 </section>

@@ -55,4 +55,38 @@ WOE encoding converts ordinal/nominal to a numeric scale ordered by default risk
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used AUC-ROC as my primary credit model metric." — KS statistic is the credit industry standard for single-threshold model quality; Gini coefficient (= 2×AUC - 1) is standard for overall discrimination. AUC-ROC is used but rarely stated as the primary metric in credit contexts — signalling familiarity with KS/Gini shows domain knowledge.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between PD, LGD, and EAD?" — PD (probability of default): likelihood the borrower defaults in the performance window. LGD (loss given default): fraction of the exposure lost if they do default (1 − recovery rate). EAD (exposure at default): outstanding balance at the time of default (for revolving credit, this includes undrawn commitments). Expected Loss = PD × LGD × EAD. IFRS 9 requires lifetime expected loss for Stage 2/3 accounts, not just 12-month EL.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Weight of evidence, information value and the PSI monitor — the three calculations a scorecard actually runs on, plus the constraint that makes a GBM defensible to a regulator.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+
+rng = np.random.default_rng(0)
+df = pd.DataFrame({&#x27;score&#x27;: rng.normal(600, 80, 20_000).clip(300, 850)})
+df[&#x27;bad&#x27;] = (rng.random(20_000) &lt; 1/(1+np.exp((df.score-600)/60))).astype(int)
+
+# WEIGHT OF EVIDENCE: ln(%good / %bad) per bin. Monotonic WoE is the point --
+# a bin ordering that zig-zags means the binning is wrong, not the feature.
+df[&#x27;bin&#x27;] = pd.qcut(df.score, 10)
+g = df.groupby(&#x27;bin&#x27;, observed=True)[&#x27;bad&#x27;].agg([&#x27;count&#x27;, &#x27;sum&#x27;])
+g[&#x27;good&#x27;] = g[&#x27;count&#x27;] - g[&#x27;sum&#x27;]
+g[&#x27;woe&#x27;] = np.log((g.good / g.good.sum()) / (g[&#x27;sum&#x27;] / g[&#x27;sum&#x27;].sum()))
+g[&#x27;iv&#x27;]  = (g.good/g.good.sum() - g[&#x27;sum&#x27;]/g[&#x27;sum&#x27;].sum()) * g.woe
+print(g[[&#x27;count&#x27;, &#x27;sum&#x27;, &#x27;woe&#x27;]].round(3).to_string())
+print(f&quot;Information Value = {g.iv.sum():.3f}&quot;)
+# IV &lt; 0.02 useless | 0.1-0.3 medium | &gt; 0.5 suspiciously strong, check for leakage
+
+# POPULATION STABILITY INDEX: the production drift alarm
+def psi(expected, actual, bins=10):
+    cuts = np.percentile(expected, np.linspace(0, 100, bins+1))
+    cuts[0], cuts[-1] = -np.inf, np.inf
+    e = np.histogram(expected, cuts)[0] / len(expected) + 1e-6
+    a = np.histogram(actual,   cuts)[0] / len(actual)   + 1e-6
+    return float(((a - e) * np.log(a / e)).sum())
+
+print(&quot;psi same dist&quot;, round(psi(df.score, df.score.sample(5000, random_state=1)), 4))
+print(&quot;psi shifted  &quot;, round(psi(df.score, df.score + 40), 4))
+# &lt; 0.1 stable | 0.1-0.25 investigate | &gt; 0.25 rebuild
+
+# Monotonic constraints keep a GBM auditable: risk must not rise as score rises
+# xgb.XGBClassifier(monotone_constraints={&#x27;score&#x27;: -1})</code></pre></div>
 </section>

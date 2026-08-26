@@ -191,4 +191,41 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'd train a neural network on user clicks." — Clicks have position bias (users click what's shown prominently regardless of preference). You need inverse propensity weighting or randomisation experiments to get unbiased labels. Naive click training creates a feedback loop.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you handle position bias in a recommendation system?" — Answer: (1) Inverse propensity weighting — weight each training example by 1/P(item shown at that position); items shown prominently get down-weighted. (2) Position-aware features — include the impression position as a feature at training time, then set it to a neutral value (e.g., position 1) at serving time; model learns to remove the bias. (3) Randomisation — occasionally inject random items at random positions; these clicks are unbiased ground truth for training.</p>
 </div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The answer skeleton for an ML system design round, written as the latency budget it has to fit inside — because that budget is what forces every architectural choice.</div>
+<pre class="language-python"><code class="language-python"># ---- Requirements first, always -------------------------------------------
+REQ = dict(qps_peak=8_000, p99_latency_ms=120, catalogue=50_000_000,
+           freshness=&#x27;features &lt; 5 min old&#x27;, offline_metric=&#x27;recall@50&#x27;)
+
+# ---- Latency budget: allocate it before designing anything -----------------
+BUDGET_MS = {
+    &#x27;network_in&#x27;:        5,
+    &#x27;feature_fetch&#x27;:    25,   # online store, p99 -- the usual bottleneck
+    &#x27;candidate_gen&#x27;:    30,   # ANN over 50M -&gt; ~1000
+    &#x27;ranking&#x27;:          40,   # GBM/DNN over 1000 candidates, batched
+    &#x27;business_rules&#x27;:   10,   # dedupe, diversity, blocklists
+    &#x27;network_out&#x27;:       5,
+}
+assert sum(BUDGET_MS.values()) &lt;= REQ[&#x27;p99_latency_ms&#x27;], &#x27;redesign, do not optimise&#x27;
+print(&quot;budget&quot;, sum(BUDGET_MS.values()), &quot;of&quot;, REQ[&#x27;p99_latency_ms&#x27;], &quot;ms&quot;)
+
+# ---- Two-stage retrieval is forced by the budget --------------------------
+# Scoring 50M items with a ranker at 40ms is impossible, so:
+#   stage 1  cheap + high recall  : ANN over embeddings, 50M -&gt; 1000
+#   stage 2  expensive + precise  : full-feature ranker,  1000 -&gt; 50
+# Getting this decomposition out loud early is most of the interview.
+
+# ---- Training/serving skew is the failure everyone hits -------------------
+# One transformation implementation, shared by both paths. If the offline job
+# computes a feature in SQL and the service recomputes it in Python, they WILL
+# diverge, and the model will quietly degrade.
+
+# ---- What to monitor (in priority order) ---------------------------------
+MONITOR = [&#x27;p99 latency&#x27;, &#x27;feature null rate&#x27;, &#x27;prediction distribution&#x27;,
+           &#x27;feature drift (PSI/KS)&#x27;, &#x27;business metric vs holdback&#x27;, &#x27;label delay&#x27;]
+
+# ---- Capacity ------------------------------------------------------------
+print(f&quot;replicas needed ~ {REQ[&#x27;qps_peak&#x27;] * 0.04 / 0.7:.0f}&quot;
+      &quot;   (qps * service_seconds / target_utilisation)&quot;)</code></pre></div>
 </section>
