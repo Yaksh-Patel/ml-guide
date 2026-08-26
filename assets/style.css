@@ -659,6 +659,12 @@ svg [fill="#f5a623"]                        { fill: var(--amber) !important; }
 svg [fill="#f06767"]                        { fill: var(--red) !important; }
 svg [fill="#b97cf8"]                        { fill: var(--purple) !important; }
 
+/* The diagrams also name fonts that this build no longer loads (DM Sans,
+   Syne, Inter) — every label was falling back to the browser default serif.
+   CSS beats SVG presentation attributes, so one rule fixes all of them. */
+svg text, svg tspan { font-family: var(--font-body); }
+svg text[font-family*="Mono"], svg tspan[font-family*="Mono"] { font-family: var(--font-mono); }
+
 svg [stroke="#2e3a58"] { stroke: var(--border2) !important; }
 svg [stroke="#242d45"] { stroke: var(--border) !important; }
 svg [stroke="#0b0d12"] { stroke: var(--bg) !important; }

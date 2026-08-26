@@ -81,7 +81,7 @@ R &\approx U \cdot V^T \quad U \in \mathbb{R}^{|U|\times k},\; V \in \mathbb{R}^
 <tr><td>Assignment problem</td><td>Minimize total cost of matching</td><td>Hungarian algorithm: O(n³)</td></tr>
 <tr><td>Is graph bipartite?</td><td>Can we 2-color the graph?</td><td>BFS/DFS coloring: O(V+E)</td></tr>
 <tr><td>Recommendation</td><td>User-item interaction matrix</td><td>Matrix factorization, GNN</td></tr></table>
-<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql"># Check if graph is bipartite (BFS 2-coloring)
+<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-python"><code class="language-python"># Check if graph is bipartite (BFS 2-coloring)
 from collections import deque
 def is_bipartite(graph, n):
     color = [-1] * n

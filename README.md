@@ -1,8 +1,13 @@
-# ML/DS Master Study Guide
+# ML Atlas
 
-A 55-topic machine learning and data science reference — maths foundations through
-classical ML, neural networks, deep learning, NLP, the LLM era, specialised domains and
-production system design. Static site, no build step, hosted on GitHub Pages.
+A field guide to machine learning and data science in 55 topics — maths foundations
+through classical ML, neural networks, deep learning, NLP, the LLM era, specialised
+domains, and production. Static site, no build step, hosted on GitHub Pages.
+
+Reading order and numbering are defined by the order of `assets/js/topics.js`. The eleven
+groups run foundations → thinking → algorithms → engineering → networks → architectures →
+NLP → LLM era → domains → production → reference, and file names carry the same number as
+the topic's position.
 
 **Live:** https://yaksh-patel.github.io/ml-guide/
 

@@ -53,10 +53,14 @@ const MATH_DELIMS = [
   { left: '$',  right: '$',  display: false },
 ];
 
-/* Cheap pre-check: only pull ~300KB of KaTeX if the fragment plausibly
-   contains math. Two dollar signs on one line is the signal. */
+/* Cheap pre-check: only pull KaTeX if the fragment plausibly contains maths.
+   Display maths ($$…$$) routinely spans many lines — \begin{aligned} blocks
+   always do — so newlines must be allowed. An earlier version of this check
+   required both delimiters on one line, which silently left every topic whose
+   maths was display-only rendering as raw LaTeX. */
 export function looksLikeMath(html) {
-  return /\$[^$\n]{1,200}\$/.test(html);
+  return /\$\$[\s\S]{1,20000}?\$\$/.test(html)   // display:  $$ … $$
+      || /\$[^\n$]{1,300}\$/.test(html);           // inline:   $x$
 }
 
 const loadKatex = () => once('katex', async () => {
