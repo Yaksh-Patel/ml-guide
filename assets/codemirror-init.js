@@ -1,6 +1,7 @@
 /* =============================================================
    codemirror-init.js  —  CodeMirror 6 IDE editor for ML Guide
-   Loaded as <script type="module"> so ES imports work fine.
+   Loaded on demand by assets/js/lazy.js — only the 2 topics with a
+   code runner ever pay for it.
    No build step, no npm — pure CDN via esm.sh
    ============================================================= */
 
@@ -15,7 +16,7 @@ import { bracketMatching, indentOnInput }
 import { autocompletion, closeBrackets }
                                 from 'https://esm.sh/@codemirror/autocomplete@6.16.0';
 
-// Map runnerId → EditorView instance so nav.js can read/write them
+// Map runnerId → EditorView instance so app.js can read/write them
 window.__cmEditors = {};
 
 function mountEditor(runner) {
@@ -69,7 +70,7 @@ function mountEditor(runner) {
     parent: runner, // mount inside the runner div, after the textarea
   });
 
-  // Register globally for nav.js access
+  // Register globally so app.js can read/write the editor
   window.__cmEditors[runnerId] = view;
 
   // Hide the raw textarea, show CM
@@ -92,10 +93,16 @@ function mountAll_one(runner) {
   mountEditor(runner);
 }
 
-// Initial mount
-document.addEventListener('DOMContentLoaded', mountAll);
+// Initial mount. This module is now loaded lazily (on first sight of a
+// .code-runner), by which point DOMContentLoaded has long since fired —
+// so run immediately unless the document really is still parsing.
+function whenReady(fn) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+  else fn();
+}
+whenReady(mountAll);
 
-// Watch for topic HTML injected dynamically via nav.js fetch
+// Watch for topic HTML injected dynamically by the router
 const observer = new MutationObserver(mutations => {
   mutations.forEach(m => {
     m.addedNodes.forEach(node => {
@@ -111,13 +118,13 @@ const observer = new MutationObserver(mutations => {
   });
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+whenReady(() => {
   const container = document.getElementById('topic-container');
   if (container) observer.observe(container, { childList: true, subtree: true });
 });
 
 // Re-sync theme when toggleTheme() fires (CM reads CSS classes, so just force a redraw)
-// We expose a helper nav.js can call
+// Helper app.js calls after a theme switch
 window.__cmSyncTheme = () => {
   Object.values(window.__cmEditors).forEach(view => view.requestMeasure());
 };

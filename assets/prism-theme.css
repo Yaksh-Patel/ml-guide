@@ -44,8 +44,8 @@ pre[class*="language-"] {
 /* ── DARK THEME tokens ────────────────────────────────────────── */
 [data-theme="dark"] pre[class*="language-"],
 [data-theme="dark"] code[class*="language-"] {
-  background: #0b0d12;
-  color: #e6e9f4;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* Comments — muted, italic */
@@ -53,84 +53,84 @@ pre[class*="language-"] {
 [data-theme="dark"] .token.prolog,
 [data-theme="dark"] .token.doctype,
 [data-theme="dark"] .token.cdata {
-  color: #4e5a7a;
+  color: var(--text3);
   font-style: italic;
 }
 
 /* Strings */
 [data-theme="dark"] .token.string,
 [data-theme="dark"] .token.attr-value {
-  color: #f5a623;
+  color: var(--amber);
 }
 
 /* Numbers */
 [data-theme="dark"] .token.number,
 [data-theme="dark"] .token.integer,
 [data-theme="dark"] .token.float {
-  color: #34d4e8;
+  color: var(--cyan);
 }
 
 /* Keywords: def, class, for, if, import, return, lambda, with, as, in, not, and, or */
 [data-theme="dark"] .token.keyword {
-  color: #b97cf8;
+  color: var(--purple);
   font-weight: 500;
 }
 
 /* Built-in functions: print, len, range, type, super, None, True, False */
 [data-theme="dark"] .token.builtin {
-  color: #38c9b9;
+  color: var(--accent);
 }
 
 /* Boolean / None */
 [data-theme="dark"] .token.boolean,
 [data-theme="dark"] .token.constant,
 [data-theme="dark"] .token.null {
-  color: #34d4e8;
+  color: var(--cyan);
 }
 
 /* Function / class names at definition site */
 [data-theme="dark"] .token.function,
 [data-theme="dark"] .token.class-name {
-  color: #5ba4fb;
+  color: var(--blue);
   font-weight: 500;
 }
 
 /* Operators: =, +, -, *, /, @, %, ==, != */
 [data-theme="dark"] .token.operator {
-  color: #f06767;
+  color: var(--red);
 }
 
 /* Punctuation: ( ) [ ] { } , . : */
 [data-theme="dark"] .token.punctuation {
-  color: #8e97b8;
+  color: var(--text2);
 }
 
 /* Decorator: @torch.no_grad() */
 [data-theme="dark"] .token.decorator,
 [data-theme="dark"] .token.annotation {
-  color: #22d3a0;
+  color: var(--green);
 }
 
 /* Variable names / identifiers */
 [data-theme="dark"] .token.variable {
-  color: #e6e9f4;
+  color: var(--text);
 }
 
 /* Module / namespace import names */
 [data-theme="dark"] .token.namespace,
 [data-theme="dark"] .token.module {
-  color: #8e97b8;
+  color: var(--text2);
 }
 
 /* SQL-specific */
 [data-theme="dark"] .token.keyword.sql-keyword {
-  color: #b97cf8;
+  color: var(--purple);
 }
 
 /* Regex / special */
 [data-theme="dark"] .token.regex,
 [data-theme="dark"] .token.important {
-  color: #f5a623;
+  color: var(--amber);
 }
 
 /* Selection highlight */
@@ -140,82 +140,82 @@ pre[class*="language-"] {
 
 /* Scrollbar */
 [data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar { height: 5px; }
-[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-track { background: #10131a; }
-[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: #242d45; border-radius: 3px; }
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-track { background: var(--bg2); }
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 
 /* ── LIGHT THEME tokens ───────────────────────────────────────── */
 [data-theme="light"] pre[class*="language-"],
 [data-theme="light"] code[class*="language-"] {
-  background: #eef1f8;
-  color: #1a1d2e;
+  background: var(--bg3);
+  color: var(--text);
 }
 
 [data-theme="light"] .token.comment,
 [data-theme="light"] .token.prolog,
 [data-theme="light"] .token.doctype,
 [data-theme="light"] .token.cdata {
-  color: #8892b4;
+  color: var(--text3);
   font-style: italic;
 }
 
 [data-theme="light"] .token.string,
 [data-theme="light"] .token.attr-value {
-  color: #d4820a;
+  color: var(--amber);
 }
 
 [data-theme="light"] .token.number,
 [data-theme="light"] .token.integer,
 [data-theme="light"] .token.float {
-  color: #0a9fb5;
+  color: var(--cyan);
 }
 
 [data-theme="light"] .token.keyword {
-  color: #7b40d6;
+  color: var(--purple);
   font-weight: 500;
 }
 
 [data-theme="light"] .token.builtin {
-  color: #0fa89a;
+  color: var(--accent);
 }
 
 [data-theme="light"] .token.boolean,
 [data-theme="light"] .token.constant,
 [data-theme="light"] .token.null {
-  color: #0a9fb5;
+  color: var(--cyan);
 }
 
 [data-theme="light"] .token.function,
 [data-theme="light"] .token.class-name {
-  color: #2e6fe8;
+  color: var(--blue);
   font-weight: 500;
 }
 
 [data-theme="light"] .token.operator {
-  color: #d94040;
+  color: var(--red);
 }
 
 [data-theme="light"] .token.punctuation {
-  color: #4a5278;
+  color: var(--text2);
 }
 
 [data-theme="light"] .token.decorator,
 [data-theme="light"] .token.annotation {
-  color: #0fa875;
+  color: var(--green);
 }
 
 [data-theme="light"] .token.variable {
-  color: #1a1d2e;
+  color: var(--text);
 }
 
 [data-theme="light"] .token.namespace,
 [data-theme="light"] .token.module {
-  color: #4a5278;
+  color: var(--text2);
 }
 
 [data-theme="light"] .token.regex,
 [data-theme="light"] .token.important {
-  color: #d4820a;
+  color: var(--amber);
 }
 
 [data-theme="light"] pre[class*="language-"] ::selection {
@@ -223,8 +223,8 @@ pre[class*="language-"] {
 }
 
 [data-theme="light"] pre[class*="language-"]::-webkit-scrollbar { height: 5px; }
-[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-track { background: #f4f6fb; }
-[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: #c2cbea; border-radius: 3px; }
+[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-track { background: var(--bg); }
+[data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
 
 /* ── .formula wrapper that holds language-tagged <pre> ─────────── */
