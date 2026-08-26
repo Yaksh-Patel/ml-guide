@@ -21,13 +21,17 @@ function once(key, fn) {
   return cache.get(key);
 }
 
+const LOAD_TIMEOUT = 20000;
+
 function loadScript(src, { module = false } = {}) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
     if (module) s.type = 'module';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Failed to load ' + src));
+    // A hung CDN must not leave this promise pending for the whole session.
+    const timer = setTimeout(() => reject(new Error('Timed out loading ' + src)), LOAD_TIMEOUT);
+    s.onload = () => { clearTimeout(timer); resolve(); };
+    s.onerror = () => { clearTimeout(timer); reject(new Error('Failed to load ' + src)); };
     document.head.appendChild(s);
   });
 }
@@ -38,6 +42,7 @@ function loadCSS(href) {
     l.rel = 'stylesheet';
     l.href = href;
     l.onload = l.onerror = resolve;   // never block rendering on a stylesheet
+    setTimeout(resolve, LOAD_TIMEOUT);
     document.head.appendChild(l);
   });
 }

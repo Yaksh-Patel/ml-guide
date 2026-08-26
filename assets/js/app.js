@@ -355,9 +355,11 @@ async function loadTopic(id) {
     });
 
     if (id === 'home') buildHome();
-    await highlight(section);
-    if (looksLikeMath(html)) await renderMath(section);
-    if (section.querySelector('.code-runner')) initRunners(section);
+
+    // Progressive enhancement, deliberately NOT awaited: the topic must be
+    // readable the moment its HTML lands. Waiting on KaTeX or Prism here
+    // would put a third-party CDN in front of the content.
+    enhance(section, html);
   } catch (err) {
     container.insertAdjacentHTML('beforeend', `
       <section class="section" id="sec-${id}">
@@ -368,6 +370,14 @@ async function loadTopic(id) {
       </section>`);
     loaded.add(id);
   }
+}
+
+/* Syntax highlighting, maths and editors are applied after the topic is
+   already on screen. Each is independently lazy and independently failable. */
+function enhance(section, html) {
+  highlight(section).catch(() => {});
+  if (looksLikeMath(html)) renderMath(section).catch(() => {});
+  if (section.querySelector('.code-runner')) initRunners(section);
 }
 
 async function go(id, { push = true, scroll = true } = {}) {
