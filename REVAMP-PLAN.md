@@ -37,7 +37,7 @@ Ordered thinnest-and-most-foundational first, since those are read most and
 are currently weakest. One chunk per session-batch; commit after each.
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
-- [ ] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
+- [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
 - [ ] C3  08 eval-metrics · 09 confusion-roc · 10 calibration
 - [ ] C4  11 linear-logistic · 12 knn · 13 naive-bayes
 - [ ] C5  14 svm · 15 decision-trees · 16 random-forest
@@ -56,6 +56,18 @@ are currently weakest. One chunk per session-batch; commit after each.
 - [ ] C18 48 causal-inference · 49 responsible-ai
 - [ ] C19 50 data-engineering · 51 mlops · 52 system-design
 - [ ] C20 53 python-sql-dsa · 54 model-cheatsheet · 55 tf-keras-pytorch
+
+## Asset retention
+
+Rewrites must not drop working assets. Two helpers live in /tmp during a
+session and are worth recreating: one walks div depth to extract every
+`anim-wrap` / `code-runner` block (a naive regex misses wrappers that carry a
+style attribute, which is how an interactive explorer nearly got dropped from
+06), and one diffs asset counts against the pre-revamp commit:
+
+    anim / svg / script / code-runner / table / pre   before vs after
+
+Any count going DOWN is a lost asset, not a simplification.
 
 ## Invariants to re-check after every chunk
 

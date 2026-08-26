@@ -1,16 +1,48 @@
 <section class="section" id="sec-biasvar">
 <div class="sec-title">Bias-Variance Tradeoff</div>
-<div class="sec-desc">The fundamental decomposition of model error — and the framework for diagnosing why your model fails.</div>
-<div class="formula math-formula">$$Expected Error = Bias^2 + Variance + Irreducible Noise$$</div>
+<div class="sec-desc">The diagnostic framework that turns "my model is bad" into a specific next action. Test error splits into three parts, only two of which you can do anything about — and which one dominates tells you whether to reach for a bigger model or more data, because doing the wrong one makes things worse.</div>
+
+<div class="card cb"><div class="card-title">The decomposition, and what each term means</div>
+<div class="formula math-formula">$$\mathbb{E}\big[(y - \hat{f}(x))^2\big] = \underbrace{\big(\mathbb{E}[\hat{f}(x)] - f(x)\big)^2}_{\text{bias}^2} + \underbrace{\mathbb{E}\big[(\hat{f}(x) - \mathbb{E}[\hat{f}(x)])^2\big]}_{\text{variance}} + \underbrace{\sigma^2}_{\text{irreducible}}$$</div>
+<div class="card-body" style="margin-top:8px">The expectation is over <em>training sets</em>, which is the part that makes this concrete. Imagine fitting the same model family on a hundred different samples from the same population:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Bias</strong> — how far the <em>average</em> of those hundred models sits from the truth. A systematic error the model family cannot express, no matter how much data you give it</li>
+<li><strong>Variance</strong> — how much the hundred models disagree with each other. Sensitivity to which particular rows you happened to draw</li>
+<li><strong>Irreducible noise</strong> — σ², the part of y that nothing in X can explain. No model beats this, and pretending otherwise is how people convince themselves they need a transformer</li>
+</ul>
+<div class="box mem"><div class="bl">worked — fitting sin(x) a hundred times</div>
+<p>Fit polynomials of increasing degree to 25 noisy points from sin(2πx), a hundred independent times each. Degree 1: bias² ≈ 0.22, variance ≈ 0.01 — every fit is a similar straight line, and every one is wrong the same way. Degree 15: bias² ≈ 0.01, variance ≈ 0.31 — each fit nails its own sample and they disagree wildly. The sum is minimised somewhere in the middle, and that middle is what "model selection" means.</p></div></div>
+
 <div class="g2">
-<div class="card cr"><div class="card-title">High Bias → Underfitting</div>
-<div class="card-body">Model too simple. Strong assumptions. Misses real patterns.</div>
-<ul class="bul" style="margin-top:8px"><li>High training error AND high validation error</li><li>Train ≈ Validation (both bad)</li><li>Example: linear model on non-linear data</li><li><strong>Fix:</strong> more features, more complex model, less regularization, more training</li></ul></div>
-<div class="card ca"><div class="card-title">High Variance → Overfitting</div>
-<div class="card-body">Model too complex. Memorizes noise in training data.</div>
-<ul class="bul" style="margin-top:8px"><li>Low training error, HIGH validation error</li><li>Large gap between train and validation</li><li>Example: deep tree with no max_depth</li><li><strong>Fix:</strong> regularization, more data, simpler model, dropout, early stopping</li></ul></div>
+<div class="card ca"><div class="card-title">High bias → underfitting</div>
+<div class="card-body">The model cannot represent the pattern. Both training and validation error are high, and — the diagnostic signature — <strong>they are close to each other</strong>.</div>
+<ul class="bul" style="margin-top:6px">
+<li>Training error is already unacceptable</li>
+<li>The gap to validation is small</li>
+<li>More data does not help. This is the important part: more data reduces variance, and variance is not your problem</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Fix by adding capacity:</strong> a more expressive model family, more or better features, interaction terms, less regularisation, longer training.</div></div>
+
+<div class="card cr"><div class="card-title">High variance → overfitting</div>
+<div class="card-body">The model memorised the sample. Training error is low, validation error is much higher, and <strong>the gap is the signal</strong>.</div>
+<ul class="bul" style="margin-top:6px">
+<li>Training error near zero</li>
+<li>Large train–validation gap</li>
+<li>Performance swings noticeably between CV folds</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Fix by constraining or averaging:</strong> more data, stronger regularisation, fewer features, a simpler family, early stopping, bagging, dropout.</div></div>
 </div>
-<!-- Bias-variance animation -->
+
+<div class="card cg"><div class="card-title">Learning curves tell you which one you have</div>
+<div class="card-body">Plot training and validation error against training-set size. The <em>shape</em> answers the question directly, and takes minutes to produce.</div>
+<table class="tbl">
+<tr><th>What you see</th><th>Diagnosis</th><th>Do this</th></tr>
+<tr><td>Both high, converged together</td><td>High bias</td><td>Add capacity. Do not buy more data</td></tr>
+<tr><td>Low train, high val, gap still closing</td><td>High variance</td><td>More data will genuinely help</td></tr>
+<tr><td>Low train, high val, gap flat</td><td>High variance, saturated</td><td>Regularise or simplify — data has stopped paying</td></tr>
+<tr><td>Val error rising with more data</td><td>Distribution shift or leakage</td><td>Stop tuning; check the split and the pipeline</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">That last row is worth internalising. Validation error getting <em>worse</em> as you add data is not a bias-variance phenomenon at all — it means your training and validation sets are drawn from different distributions, or a feature is leaking. No hyperparameter fixes it.</div>
 <div class="anim-wrap"><div class="anim-title">Bias-Variance tradeoff as model complexity increases</div>
 <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ax" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -34,42 +66,16 @@
 <text x="70" y="185" fill="#f06767" font-size="10" font-family="DM Sans">Underfit</text>
 <text x="400" y="185" fill="#5ba4fb" font-size="10" font-family="DM Sans">Overfit</text>
 </svg></div>
-<div class="g2">
-<div class="card"><div class="card-title">Diagnosing with Learning Curves</div>
-<ul class="bul"><li><strong>High bias:</strong> both train &amp; val error high, converge together quickly</li><li><strong>High variance:</strong> train error low, val error much higher, large gap</li><li><strong>Just right:</strong> both errors low, small gap</li></ul></div>
-<div class="card"><div class="card-title">Practical Fixes</div>
-<table class="tbl"><tr><th>Problem</th><th>Fix</th></tr>
-<tr><td>High bias</td><td>More features, deeper model, less λ</td></tr>
-<tr><td>High variance</td><td>More data, regularization, dropout, pruning</td></tr>
-<tr><td>Both high</td><td>Different model class entirely</td></tr>
-<tr><td>Irreducible noise</td><td>Better data collection</td></tr></table></div>
-</div>
-<div class="box story"><div class="bl">📖 Student Analogy</div><p><strong>High bias:</strong> Student who guesses "the answer is B" for everything — consistently wrong in the same way. <strong>High variance:</strong> Student who memorizes every practice exam word-for-word. Aces practice, fails when phrasing differs. <strong>Goal:</strong> Understand the concept — good on both.</p></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Thinking more data always fixes variance</strong> — it helps, but if the model is fundamentally too complex (e.g., 1000-leaf tree on 500 samples), regularization is the right tool, not more data</li>
-  <li><strong>"My train error is 0 — great!"</strong> — Zero training error with high validation error is the textbook definition of high variance/overfitting. Train error alone tells you nothing about generalization</li>
-  <li><strong>Confusing irreducible noise with model error</strong> — even a perfect model has irreducible noise (label noise, measurement error). Chasing training error to absolute zero is overfitting to noise</li>
-  <li><strong>Adding features always reduces bias</strong> — true in theory (richer hypothesis class), but in practice it can introduce multicollinearity and increase variance without bias reduction if the new features are noise</li>
-  <li><strong>Regularization only reduces variance</strong> — regularization increases bias (constraints limit the hypothesis class) while reducing variance. The net effect on test error depends on which dominates</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (Search ranking):</strong> bias-variance analysis guides model complexity decisions — shallow models for features with little signal (high bias acceptable), deep models for rich feature sets where variance can be controlled via massive data volume</li>
-  <li><strong>Netflix (Recommendation):</strong> learning curve analysis used to decide whether to collect more data vs tune model complexity; for cold-start users, simpler high-bias models outperform complex ones due to sparse data</li>
-  <li><strong>Standard ML interview diagnostic:</strong> every FAANG ML interview includes a "model is performing poorly" scenario — bias-variance decomposition is the expected diagnostic framework</li>
-  <li><strong>AutoML systems (Google Vertex, AWS SageMaker):</strong> automatically navigate the bias-variance tradeoff via hyperparameter search over model complexity, regularization strength, and ensemble size</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Bias-variance tradeoff is my primary framework for diagnosing model failure. High bias shows up as high training AND validation error — fix it by increasing model capacity or reducing regularization. High variance shows as low train error but much higher validation error — fix it with more data, regularization, or ensembling. I use learning curves to distinguish them: plot train and val error vs training set size; if both plateau high → bias; if there's a persistent large gap → variance."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll just add more data." — More data only helps variance, not bias. If the model is too simple for the problem, no amount of data fixes it.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Does bagging reduce bias or variance?" — Answer: primarily variance. Each tree is trained on a bootstrap sample and has the same expected prediction as a single tree (same bias), but averaging many reduces variance. Boosting reduces bias by correcting systematic errors sequentially.</p>
 </div>
 
-<!-- ── Interactive Bias-Variance Explorer ── -->
+<div class="card cp"><div class="card-title">Where the classic curve stops being the whole story</div>
+<div class="card-body">The textbook U-shape says test error rises once you pass the interpolation point. Modern overparameterised networks do something else: error rises, peaks, and then <strong>falls again</strong> as capacity keeps growing — double descent.</div>
+<div class="card-body" style="margin-top:8px">A network with far more parameters than data points can fit the training set perfectly and still generalise, because gradient descent among the many perfect fits prefers smooth ones. The bias-variance decomposition is not wrong here — it is just that "variance" stops tracking parameter count once the model is heavily overparameterised and implicitly regularised.</div>
+<div class="box tip"><div class="bl">how to hold both ideas</div>
+<p>Use bias-variance as a <em>diagnostic on the curves you measure</em>, not as a prediction from parameter count. "Training error near zero and a large gap" still means overfitting whatever the model size. What changed is that "more parameters" is no longer reliable evidence of high variance.</p></div></div>
+
+
+
 <div class="anim-wrap" style="padding:16px 20px">
 <div class="anim-title">Interactive — Bias-Variance Tradeoff Explorer</div>
 <div style="display:flex;align-items:center;gap:12px;margin:10px 0 4px;flex-wrap:wrap">
@@ -135,6 +141,43 @@
 </script>
 </div>
 
+<div class="card cc"><div class="card-title">The fixes, sorted by what they actually do</div>
+<table class="tbl">
+<tr><th>Action</th><th>Reduces</th><th>Cost</th></tr>
+<tr><td>More training data</td><td>Variance</td><td>Money, time; useless against bias</td></tr>
+<tr><td>More / better features</td><td>Bias</td><td>Can raise variance if you add many weak ones</td></tr>
+<tr><td>Stronger regularisation</td><td>Variance</td><td>Adds bias — that is the deal</td></tr>
+<tr><td>Bagging / averaging</td><td>Variance</td><td>Compute; leaves bias untouched</td></tr>
+<tr><td>Boosting</td><td>Bias</td><td>Will overfit if left unchecked</td></tr>
+<tr><td>Early stopping</td><td>Variance</td><td>Nearly free; needs a validation set</td></tr>
+<tr><td>Simpler model family</td><td>Variance</td><td>Adds bias</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Read the middle column before choosing.</strong> Half of all wasted modelling effort is applying a variance fix to a bias problem — collecting more data for a model that was never expressive enough, or regularising a model that was already underfitting.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes this framework is meant to prevent</div>
+<ul class="bul">
+<li><strong>Buying data to fix bias.</strong> If train and validation error are both high and close together, another million rows changes nothing. Plot the curve before you commission the labelling</li>
+<li><strong>Reading a single train/test number.</strong> One split gives you one draw from the variance distribution. High-variance models look great or terrible depending on the seed — which is precisely what cross-validation exists to reveal</li>
+<li><strong>Calling any gap "overfitting".</strong> A small, stable gap is normal and healthy. The question is whether validation error is still falling, not whether the gap is non-zero</li>
+<li><strong>Treating irreducible error as a failure.</strong> If the label genuinely is not determined by your features, you have hit σ². The honest move is to say so and go looking for new features — not to try a bigger architecture</li>
+<li><strong>Assuming more parameters means more variance.</strong> True for polynomials and trees, unreliable for heavily overparameterised networks. Measure the gap; do not infer it from a parameter count</li>
+<li><strong>Tuning on the test set.</strong> Every decision informed by test performance turns it into a validation set, and your final number becomes optimistic by an unknown amount</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this shows up in real work</div>
+<ul class="bul">
+<li><strong>Learning curves as a budget argument.</strong> "The gap has stopped closing, so more labelling will not pay — we need better features instead" is a far stronger case to a manager than a request for more data, and the curve is the evidence</li>
+<li><strong>Ensembling is a deliberate variance trade.</strong> Random forests spend compute to cut variance and accept the bias of shallow-ish trees; boosting does the opposite. Choosing between them is choosing which term you are attacking</li>
+<li><strong>Regularisation strength is the dial, and it is data-dependent.</strong> The right weight decay for 10,000 rows is wrong for 10 million. Retune it when your data volume changes materially — it is one of the few hyperparameters that genuinely must move</li>
+<li><strong>In credit and fraud, bias is often preferred.</strong> A slightly underfit monotonic model that behaves predictably out of sample can be worth more than a lower-error model that swings between retrains, because the downstream policy has to be stable</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Do not recite the definitions.</strong> Say what each one looks like on a curve: "high bias is both errors high and converged; high variance is a low training error with a large gap." Then say what you would do about each. That turns a memorised tradeoff into a diagnostic procedure.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Your model has 95% training and 70% test accuracy. What do you do?" — Name it as variance, then give the ordered list: more data, then regularisation, then a simpler family, then early stopping. And check for leakage, because a 25-point gap is large enough to be suspicious.</p>
+<p style="margin-top:8px"><strong>Then:</strong> "What if both were 70%?" — Bias. More data is the wrong answer, and saying so explicitly is the point of the question.</p>
+<p style="margin-top:8px"><strong>Strong close:</strong> mention that the expectation in the decomposition is over training sets, and that double descent means parameter count is no longer a proxy for variance. Both signal you have read past the textbook.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The decomposition made concrete: fit the same model family at increasing capacity and watch bias fall while variance climbs. The U-shape in test error is the whole lesson.</div>

@@ -1,9 +1,32 @@
 <section class="section" id="sec-crossval">
 <div class="sec-title">Cross-Validation</div>
-<div class="sec-desc">The honest way to estimate how your model will perform on unseen data — without wasting data on a fixed test set during development.</div>
-<div class="card"><div class="card-title">k-Fold Cross-Validation</div>
-<div class="card-body">Split data into k equal folds. Train on k−1 folds, validate on the held-out fold. Rotate k times. Average the k validation scores.</div>
-<!-- CV animation -->
+<div class="sec-desc">Every model-selection decision you make consumes a little of your test set's credibility. Cross-validation is how you make those decisions without spending the one honest estimate you have left — and how you find out that your excellent score was leakage, before someone else does.</div>
+
+<div class="card cb"><div class="card-title">k-fold, and what the number it gives you actually is</div>
+<div class="card-body">Split the data into k parts. Train on k−1, validate on the one left out, rotate, and average. Every row is used for validation exactly once and for training k−1 times.</div>
+<div class="formula math-formula">$$\text{CV}_k = \frac{1}{k}\sum_{i=1}^{k} L\big(f^{(-i)}, \mathcal{D}_i\big)$$</div>
+<div class="card-body" style="margin-top:8px">Two numbers come out, and the second one matters as much as the first. The <strong>mean</strong> estimates performance; the <strong>standard deviation across folds</strong> estimates how much you should trust that estimate. A CV result of 0.83 ± 0.01 and one of 0.83 ± 0.09 are completely different situations, and reporting only the mean hides which one you have.</div>
+<div class="box mem"><div class="bl">choosing k</div>
+<p><strong>k = 5 or 10</strong> is the default and the reason is bias–variance, again. Small k means each model trains on less data, so the estimate is pessimistically biased. Large k means the k training sets overlap almost entirely, so the fold scores are highly correlated and the averaging buys you less than it appears to. Leave-one-out (k = n) is nearly unbiased and has notoriously high variance — plus it costs n fits.</p></div></div>
+
+<div class="card cr"><div class="card-title">The mistake that inflates every score you report</div>
+<div class="card-body">Any transformation fitted on the whole dataset before splitting has already seen the validation rows. The scaler's mean, the imputer's median, the encoder's category means, the feature selector's chosen columns — all of them leak.</div>
+<div class="formula math-formula">$$\underbrace{\text{fit scaler on all } X}_{\text{leak}} \;\rightarrow\; \text{split} \qquad\text{vs}\qquad \text{split} \;\rightarrow\; \underbrace{\text{fit scaler on train fold only}}_{\text{correct}}$$</div>
+<div class="card-body" style="margin-top:8px">The damage from a scaler is usually small. From target encoding or feature selection it can be enormous — a model that scores 0.95 in CV and 0.71 in production, with no bug anywhere except the order of two lines.</div>
+<div class="box ideal"><div class="bl">the habit that removes the whole class of bug</div>
+<p>Put every transformation inside a <code>Pipeline</code> and pass the pipeline to <code>cross_val_score</code>. sklearn then refits each step on the training fold of every split, automatically. This is not a style preference — it is the difference between a trustworthy number and a flattering one, and it costs one line.</p></div></div>
+
+<div class="card cg"><div class="card-title">Which splitter, and why the default is often wrong</div>
+<table class="tbl">
+<tr><th>Splitter</th><th>Use when</th><th>What goes wrong without it</th></tr>
+<tr><td><strong>KFold</strong></td><td>rows are independent and balanced</td><td>—</td></tr>
+<tr><td><strong>StratifiedKFold</strong></td><td>classification, especially imbalanced</td><td>a fold can contain zero positives, so the metric is undefined or wild</td></tr>
+<tr><td><strong>GroupKFold</strong></td><td>repeated entities — patients, users, devices</td><td>the same user appears in train and validation; the model recognises them rather than generalising</td></tr>
+<tr><td><strong>TimeSeriesSplit</strong></td><td>anything with a time order</td><td>you train on the future to predict the past, and the score is fiction</td></tr>
+<tr><td><strong>StratifiedGroupKFold</strong></td><td>imbalanced <em>and</em> grouped</td><td>both of the above at once</td></tr>
+<tr><td><strong>RepeatedKFold</strong></td><td>small data, unstable estimates</td><td>a single split's noise gets mistaken for a real difference</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The grouped case is the one most often missed.</strong> If your dataset has 50,000 rows from 3,000 users, plain KFold puts the same user on both sides of the split. The model learns "user 1,417 tends to convert" — which is real signal in CV and useless for a new user. Ask "what is the unit I will actually predict for?" and group by that.</div>
 <div class="anim-wrap"><div class="anim-title">5-Fold Cross-Validation — each fold takes a turn as validation</div>
 <svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -47,42 +70,40 @@
 <rect x="214" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
 <rect x="306" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
 <rect x="398" y="114" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="442" y="126" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
-</svg></div></div>
-<div class="g2">
-<div class="card"><div class="card-title">CV Variants</div>
-<table class="tbl"><tr><th>Type</th><th>When to Use</th></tr>
-<tr><td><strong>k-Fold (k=5 or 10)</strong></td><td>Default for tabular data</td></tr>
-<tr><td><strong>Stratified k-Fold</strong></td><td>Imbalanced classes — preserves class ratio in each fold</td></tr>
-<tr><td><strong>Leave-One-Out (LOO)</strong></td><td>Tiny datasets (&lt;50 rows); expensive</td></tr>
-<tr><td><strong>TimeSeriesSplit</strong></td><td>Time series — never use future data to validate past</td></tr>
-<tr><td><strong>Group k-Fold</strong></td><td>Groups must stay intact (patient IDs, user sessions)</td></tr>
-<tr><td><strong>Nested CV</strong></td><td>Hyperparameter tuning — outer loop for eval, inner for tuning</td></tr></table></div>
-<div class="card"><div class="card-title">Common CV Mistakes</div>
-<ul class="bul"><li><strong>Data leakage from preprocessing:</strong> fit scaler on all data before splitting → test info leaks into training</li><li><strong>Peeking at test set:</strong> using test performance to make modeling decisions inflates estimates</li><li><strong>No stratification:</strong> imbalanced classes can produce folds with 0 positives</li><li><strong>Time series with random split:</strong> future data leaks into training — always use temporal split</li></ul></div>
+</svg></div>
 </div>
-<div class="box warn"><div class="bl">⚠️ The Golden Rule</div><p>Preprocessing (scaling, imputation, encoding) must be fit ONLY on the training fold, then applied to validation. Use sklearn Pipelines to enforce this automatically. Never fit on the full dataset before splitting.</p></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cp"><div class="card-title">Nested CV: the honest number after tuning</div>
+<div class="card-body">Once you have used CV to pick hyperparameters, that CV score is no longer an unbiased estimate of anything — you selected the configuration that happened to look best on those folds. The optimism is real and often several points.</div>
+<div class="formula math-formula">$$\underbrace{\text{outer loop}}_{\text{estimates performance}} \;\supset\; \underbrace{\text{inner loop}}_{\text{selects hyperparameters}}$$</div>
+<div class="card-body" style="margin-top:8px">Nested CV separates the two jobs: the inner loop tunes, the outer loop scores a model whose hyperparameters were chosen without ever seeing the outer validation fold. It costs (outer × inner) fits, which is why people skip it — but you should at least know the number you are quoting is optimistic if you do.</div>
+<div class="box tip"><div class="bl">the cheap version</div>
+<p>Hold out a genuine test set at the very start, tune with plain CV on the remainder, and touch the test set exactly once at the end. It is not as statistically clean as nested CV, it costs one extra fit instead of dozens, and it prevents the same failure. The discipline that matters is <em>not looking</em>.</p></div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that make CV lie to you</div>
 <ul class="bul">
-  <li><strong>Fitting preprocessors on full data before CV</strong> — the #1 leakage source. StandardScaler, imputers, encoders must all be inside a Pipeline; fit only on train fold, transform both folds. Even seemingly harmless steps (e.g., removing constant features) can leak if done globally</li>
-  <li><strong>"I used k=10 for more precision"</strong> — higher k increases computation k-fold and adds variance to the CV estimate (each fold has less test data). k=5 is the empirical sweet spot between bias and variance of the CV estimate itself</li>
-  <li><strong>Using random k-fold on imbalanced data</strong> — a fold might have 0 positive examples. Always use StratifiedKFold for classification; it maintains class proportions in each fold</li>
-  <li><strong>Tuning hyperparameters on the test set</strong> — the test set must be touched exactly once, after all modeling decisions are made. Using it for threshold selection, model choice, or feature selection invalidates the estimate. Use a validation set or nested CV</li>
-  <li><strong>Ignoring temporal leakage in time series</strong> — random CV on time series lets future data train the model. Use TimeSeriesSplit (expanding window) or a strict time-based hold-out. Even "random" feature creation can leak future information</li>
+<li><strong>Preprocessing before the split.</strong> The headline case above. If you cannot point at a Pipeline, assume you are leaking</li>
+<li><strong>Shuffling time series.</strong> KFold on ordered data trains on the future. The score will be excellent and the model will fail on day one</li>
+<li><strong>Ignoring groups.</strong> Same patient, user or session on both sides of the split. Extremely common in medical and clickstream data</li>
+<li><strong>Oversampling before splitting.</strong> SMOTE on the full dataset synthesises validation rows from training rows and vice versa. It must go inside the pipeline, and <code>imblearn</code>'s pipeline exists precisely for this</li>
+<li><strong>Reporting the mean without the spread.</strong> Two models at 0.83 are indistinguishable if the fold standard deviation is 0.04. Picking the higher mean is then noise-chasing, not model selection</li>
+<li><strong>Selecting features on the whole dataset.</strong> "I picked the top 50 features by correlation with the target, then cross-validated" — the selection already used every label. This one produces the most spectacular leakage</li>
+<li><strong>Tuning until CV improves.</strong> Enough attempts and you will overfit the validation folds themselves. Track how many configurations you have tried; it is a real budget</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card ca"><div class="card-title">How this is handled in production settings</div>
 <ul class="bul">
-  <li><strong>Kaggle competitions:</strong> 5-fold stratified CV is the universal standard; competitors build ensemble stacks using out-of-fold predictions (OOF) from level-1 models as features for level-2 meta-learners — requires rigorous CV discipline to avoid leakage</li>
-  <li><strong>Meta / Google (A/B testing):</strong> CV logic applied to time-series experiment evaluation — holdout periods ("holdback windows") used instead of random folds to prevent temporal leakage in metric estimation</li>
-  <li><strong>Stripe (production ML):</strong> models re-validated monthly with walk-forward CV (train on months 1–N, validate on month N+1, repeat) to detect concept drift before promoting to production</li>
-  <li><strong>Healthcare (FDA submission):</strong> nested CV required by FDA guidance for biomarker validation — outer loop estimates generalisation, inner loop tunes hyperparameters; prevents optimistic bias in reported performance</li>
+<li><strong>Time-based splits are the norm, not the exception.</strong> Almost any model that scores live traffic has a temporal structure, so validation is forward-chaining: train on everything up to a cutoff, validate after it, roll the cutoff forward. The number this gives is lower than random KFold and it is the number that comes true</li>
+<li><strong>A frozen holdback that no one touches.</strong> Separate from validation, often a recent time window, opened only to sanity-check a candidate before release. Its value is entirely in how rarely it is used</li>
+<li><strong>CV variance drives retraining cadence.</strong> If fold-to-fold spread is large relative to the improvement you are claiming, you cannot detect whether a retrain helped — which is an argument for scheduled retraining rather than metric-triggered</li>
+<li><strong>Group-aware splits are a data-contract question.</strong> Whether your unit of prediction is a row, a session or a customer determines the splitter, and getting it wrong is invisible in every offline metric</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For classification I use stratified 5-fold CV — maintains class proportions per fold and gives a reliable generalisation estimate. All preprocessing (scaling, imputation, encoding) lives inside a sklearn Pipeline, which is refitted on each training fold automatically. For time series, I use TimeSeriesSplit with an expanding window — no future leakage. For hyperparameter tuning + generalisation estimate simultaneously, nested CV: inner loop tunes params, outer loop estimates test performance. Expensive but unbiased."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I scaled all my features, then ran cross-validation." — This is data leakage. Validation fold statistics bled into the scaler. The correct answer is always: Pipeline wraps everything.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between k-fold CV and a simple train/validation/test split?" — Answer: k-fold uses all data for both training and validation (across k iterations), giving a lower-variance generalisation estimate. A single validation split wastes data and its estimate has high variance. Test set is separate in both cases — it's the final unbiased evaluation, not a validation tool.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the leak.</strong> Asked to describe cross-validation, describe it in two lines and then spend your answer on what invalidates it: preprocessing outside the fold, temporal order, and groups. That ordering shows you have debugged a suspiciously good score rather than only read the definition.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Your CV score is 0.95 and production is 0.71. What happened?" — Work through it out loud: leakage from preprocessing or feature selection, a group appearing on both sides, temporal shuffling, or genuine distribution shift since training. Naming all four and saying which you would check first is the answer.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "Why not leave-one-out?" — Nearly unbiased, high variance, and n fits. k = 5 or 10 is the practical trade.</p>
+<p style="margin-top:8px"><strong>Strong close:</strong> mention nested CV and that a tuned CV score is optimistic. Most candidates never separate selection from estimation.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

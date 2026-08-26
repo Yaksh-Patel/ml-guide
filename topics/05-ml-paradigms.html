@@ -1,51 +1,59 @@
 <section class="section" id="sec-mlconcepts">
 <div class="sec-title">ML Paradigms</div>
-<div class="sec-desc">How you frame the problem determines everything — the algorithm family, the data you need, the evaluation strategy, and the deployment architecture.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Supervised Learning</div>
-<div class="card-body">Learn a mapping f: X → y from labeled (input, output) pairs. The label is the signal.</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Classification:</strong> y is categorical (spam/not-spam, credit default)</li><li><strong>Regression:</strong> y is continuous (house price, revenue)</li><li><strong>Examples:</strong> logistic regression, decision trees, XGBoost, neural networks</li><li><strong>Key risk:</strong> label quality — garbage labels = garbage model</li></ul></div>
-<div class="card cg"><div class="card-title">Unsupervised Learning</div>
-<div class="card-body">Find structure in data without labels. No y — just X.</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Clustering:</strong> K-Means, DBSCAN, hierarchical — group similar points</li><li><strong>Dim reduction:</strong> PCA, t-SNE, UMAP — compress feature space</li><li><strong>Density estimation:</strong> GMMs, KDEs — model P(x)</li><li><strong>Anomaly detection:</strong> isolation forest, autoencoders</li></ul></div>
-</div>
-<div class="g2">
-<div class="card ca"><div class="card-title">Semi-Supervised Learning</div>
-<div class="card-body">Tiny labeled set + large unlabeled set. Labels are expensive; data is cheap.</div>
-<ul class="bul" style="margin-top:8px"><li>Self-training: label unlabeled data with your own model, retrain</li><li>Pseudo-labels + consistency regularization</li><li>BERT pretraining is semi-supervised (MLM on unlabeled text)</li></ul></div>
-<div class="card cp"><div class="card-title">Reinforcement Learning</div>
-<div class="card-body">Agent takes actions in an environment, receives reward signals, learns a policy π: state → action to maximize cumulative reward.</div>
-<ul class="bul" style="margin-top:8px"><li>No fixed dataset — agent generates its own data through interaction</li><li>Key challenge: credit assignment &amp; exploration vs exploitation</li><li>Used in RLHF (aligning LLMs), game playing, robotics, trading</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Self-Supervised Learning (the modern paradigm)</div>
-<div class="card-body">Create labels from the data itself — no human annotation needed. The model learns rich representations as a side-effect of solving a pretext task.</div>
+<div class="sec-desc">Before any algorithm choice, one decision dominates everything downstream: what your data actually brings with it. Labels, no labels, labels you manufacture, or a reward that arrives late. Get the framing wrong and no amount of model tuning recovers it — you will be solving a different problem well.</div>
+
+<div class="card cb"><div class="card-title">Supervised — you have the answers</div>
+<div class="card-body">Every row comes with the target. The model learns a mapping f(X) → y, and success is measured against held-out answers you already trust.</div>
+<div class="formula math-formula">$$\text{given } \{(x_i, y_i)\}_{i=1}^{n}, \quad \text{learn } f \text{ minimising } \frac{1}{n}\sum_i L(f(x_i), y_i)$$</div>
+<div class="card-body" style="margin-top:8px">This is the paradigm with the most mature tooling and the clearest evaluation story, which is why it should be your default when labels exist. It is also the one where <strong>the label definition is the real modelling decision</strong> and gets the least scrutiny.</div>
+<div class="box warn"><div class="bl">the question nobody asks early enough</div>
+<p>"Defaulted" — within 30 days or 90? "Churned" — cancelled, or stopped using? "Fraud" — confirmed by investigation, or flagged by a rule? A model is only as meaningful as its label, and label definitions drift silently when the team that set them moves on. Write the definition down, with the observation window, before you fit anything.</p></div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Classification:</strong> discrete target — default / no default, which of 40 categories</li>
+<li><strong>Regression:</strong> continuous target — expected loss, time to event, demand next week</li>
+<li><strong>Ranking:</strong> the target is an ordering, not a value. Optimising pointwise accuracy here is a classic mis-framing</li>
+</ul></div>
+
+<div class="card cg"><div class="card-title">Unsupervised — structure without answers</div>
+<div class="card-body">Only X. The model finds structure, and there is no ground truth to check it against — which is the defining difficulty, not a detail.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Clustering:</strong> group similar rows. k-means, DBSCAN, hierarchical</li>
+<li><strong>Dimensionality reduction:</strong> compress while keeping what matters. PCA, UMAP</li>
+<li><strong>Density estimation / anomaly detection:</strong> learn what normal looks like, flag what is not</li>
+</ul>
+<div class="box warn"><div class="bl">the evaluation problem</div>
+<p>Silhouette and inertia measure whether clusters are <em>geometrically tidy</em>, not whether they mean anything. A clustering can score beautifully and be useless to the business, and it can score poorly and be exactly the segmentation the marketing team needed. <strong>Unsupervised results need a human to validate them against a purpose</strong> — that step is the work, not an afterthought.</p></div>
+<div class="card-body" style="margin-top:8px">In practice, unsupervised methods most often earn their place as <em>feature generators</em> for a supervised model downstream — a cluster id, a PCA component, an anomaly score.</div></div>
+
+<div class="card cp"><div class="card-title">Self-supervised — manufacture the label from the input</div>
+<div class="card-body">The insight that produced the last decade of progress: you do not need humans to label data if the data can label itself. Hide part of the input, predict it from the rest, and you have a supervised problem with an unlimited supply of examples.</div>
+<div class="formula math-formula">$$\text{mask part of } x \;\longrightarrow\; \text{predict the masked part from the remainder}$$</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Masked language modelling</strong> (BERT): blank 15% of tokens, predict them</li>
+<li><strong>Next-token prediction</strong> (GPT): predict token t+1 from tokens ≤ t</li>
+<li><strong>Contrastive</strong> (CLIP, SimCLR): pull matched pairs together, push mismatched apart. The negatives come free from the batch</li>
+</ul>
 <table class="tbl" style="margin-top:10px"><tr><th>Pretext Task</th><th>Model</th><th>Representation Used For</th></tr>
 <tr><td>Predict next token</td><td>GPT</td><td>Language generation, reasoning</td></tr>
 <tr><td>Predict masked tokens</td><td>BERT</td><td>Text classification, NER, QA</td></tr>
 <tr><td>Contrastive (augmented views)</td><td>SimCLR, MoCo</td><td>Image representation</td></tr>
-<tr><td>Predict masked patches</td><td>MAE (ViT)</td><td>Vision representation</td></tr></table></div>
+<tr><td>Predict masked patches</td><td>MAE (ViT)</td><td>Vision representation</td></tr></table>
+<div class="card-body" style="margin-top:8px">The economics are the point. Human labelling costs money per example and caps out in the millions; self-supervision costs compute and scales to trillions of tokens. <strong>Pretrain self-supervised on everything, fine-tune supervised on the little labelled data you have</strong> — that recipe is now the default for text, images and increasingly tabular data.</div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>"Unsupervised learning is just clustering"</strong> — unsupervised encompasses clustering (K-Means, DBSCAN), dimensionality reduction (PCA, UMAP), density estimation (GMM, KDE), generative modelling (VAE, GAN, diffusion), and anomaly detection. Clustering is one small subfield</li>
-  <li><strong>Treating self-supervised and unsupervised as synonymous</strong> — self-supervised learning generates labels from the data structure itself (predict masked tokens, predict next frame, predict image rotation). The labels are automatic, not manually annotated. Unsupervised learning has no labels at all (clustering, PCA). Self-supervised typically produces better representations than unsupervised methods</li>
-  <li><strong>"More data always means supervised learning wins"</strong> — not when labels are expensive, noisy, or unavailable. Semi-supervised learning (few labels + much unlabeled data) and self-supervised pretraining + fine-tuning often outperform supervised-only approaches with limited labelled data. Label efficiency is a central concern in applied ML</li>
-  <li><strong>Applying reinforcement learning where supervised learning suffices</strong> — RL requires a reward signal, an environment, and many trial-and-error interactions — extremely sample-inefficient. If you can collect (input, desired output) pairs, supervised learning is almost always simpler, faster, and more reliable. RL is for sequential decision problems where the correct output can't be specified directly (game playing, robot control, LLM alignment)</li>
-  <li><strong>Ignoring the distribution shift between pretraining and fine-tuning</strong> — a model pretrained on web text and fine-tuned on medical notes faces distribution shift at both the vocabulary and semantic level. Domain-adaptive pretraining (continue MLM on domain corpus before task fine-tuning) bridges this gap and consistently improves downstream task performance</li>
+<div class="g2">
+<div class="card ca"><div class="card-title">Semi-supervised — a few labels, lots of data</div>
+<div class="card-body">The common real situation: 500 labelled rows and 500,000 unlabelled ones, because labelling requires an expert.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Pseudo-labelling:</strong> train on what you have, predict the rest, keep the confident predictions as labels, retrain. Cheap and effective — and it will happily amplify its own errors, so hold a clean validation set back</li>
+<li><strong>Consistency regularisation:</strong> require the model to give the same answer for two augmentations of the same unlabelled input</li>
+<li><strong>Active learning:</strong> spend your labelling budget on the examples the model is least sure about, rather than at random. Often the single highest-return option</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>OpenAI / Anthropic (self-supervised pretraining):</strong> next-token prediction on hundreds of billions of tokens — a self-supervised task that requires no human labels but forces the model to learn syntax, semantics, factual knowledge, and reasoning as side effects of predicting the next word; the foundation of all frontier LLMs</li>
-  <li><strong>Google (semi-supervised vision — FixMatch / SimCLR):</strong> ImageNet pre-training is fully self-supervised (contrastive views); fine-tuning on 1% of labelled ImageNet achieves near-full supervised performance — dramatic label efficiency gains from the pretrained representation</li>
-  <li><strong>DeepMind (RL — AlphaFold, AlphaCode):</strong> reinforcement learning from self-play used in AlphaGo/AlphaZero; RLHF (a hybrid) used in Gemini alignment; pure RL for protein folding via energy function reward. RL applied only where sequential decisions and delayed rewards make supervised approaches insufficient</li>
-  <li><strong>Tesla (Autopilot — weakly supervised):</strong> billions of miles of driving video with weak labels (auto-annotated by fleet data, not human review) used to train perception models; human annotation reserved only for the hardest edge cases; semi-supervised at automotive scale</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For a new problem I start with: do I have labels? If yes — supervised. If no — unsupervised or self-supervised. The most powerful paradigm today is self-supervised pretraining + fine-tuning: use massive unlabelled data to learn general representations (next-token prediction, masked image modelling), then fine-tune on a small labelled set. This is why BERT and GPT dominate NLP despite labelled data being scarce — they leverage internet-scale unlabelled data that supervised approaches can't exploit."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'd use reinforcement learning for this recommendation problem." — RL is sample-inefficient and complex to productionise. Unless the problem is explicitly sequential with delayed rewards (multi-step user journey optimisation), supervised or bandit approaches are simpler and more reliable. Reach for RL only when you can't define a direct supervised signal.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between online and offline reinforcement learning?" — Answer: online RL collects experience by interacting with the environment during training (AlphaGo, RLHF with PPO rollouts) — expensive but can explore to improve. Offline RL (also called batch RL) trains entirely from a fixed logged dataset of past interactions (e.g., historical user trajectories) without further environment interaction — safer for production but can't explore beyond the data distribution. DPO is effectively offline RL for LLM alignment.</p>
+<div class="card cr"><div class="card-title">Reinforcement — no labels, only consequences</div>
+<div class="card-body">An agent takes actions, the environment returns a reward, and the reward may arrive long after the action that earned it.</div>
+<div class="formula math-formula">$$\max_{\pi} \; \mathbb{E}\left[\sum_{t} \gamma^{t} r_t\right]$$</div>
+<div class="card-body" style="margin-top:8px">Two things make it hard: <strong>credit assignment</strong> (which of the last fifty moves caused the win?) and <strong>exploration</strong> (you only learn about actions you actually take). γ discounts the future, which is what makes the sum finite and encodes how patient the agent should be.</div>
+<div class="card-body" style="margin-top:8px">Genuinely the right frame for recommendations under long-term engagement, pricing, and RLHF. Genuinely the wrong frame for anything you could have labelled — it is far more expensive to get working.</div></div>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">Four paradigms, by what the data brings with it</div>
@@ -78,6 +86,33 @@
 <text x="366.0" y="147.4" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">act, observe reward</text>
 <text x="250.0" y="180.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Only the first row needs a human to have labelled anything.</text>
 </svg></div>
+
+
+
+<div class="card cr"><div class="card-title">Mis-framings that waste a quarter</div>
+<ul class="bul">
+<li><strong>Treating ranking as classification.</strong> Predicting click probability per item and sorting is not the same as optimising the ordering. If the metric is NDCG or recall@k, a pointwise classifier is leaving value on the table</li>
+<li><strong>Reaching for unsupervised because labels are inconvenient.</strong> Clustering is not a substitute for a target. If the business question has a right answer, find fifty labelled examples and start supervised — even a weak supervised baseline tells you more than a beautiful clustering</li>
+<li><strong>Using RL where a bandit would do.</strong> If the reward arrives immediately and actions do not change future state, you have a contextual bandit, not a full RL problem. Bandits are vastly simpler and actually converge</li>
+<li><strong>Believing self-supervised means "no labels needed".</strong> It means no <em>human</em> labels for pretraining. You still need labelled data to fine-tune and, non-negotiably, to evaluate</li>
+<li><strong>Ignoring that anomaly detection is usually one-class.</strong> With 0.01% positives, framing it as balanced classification produces a model that predicts "normal" forever and scores 99.99%</li>
+<li><strong>Letting the label leak.</strong> The most common failure across every paradigm: a feature computed after the label event. It shows up as an implausibly good CV score, which is the moment to get suspicious rather than pleased</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How the framing is chosen in practice</div>
+<ul class="bul">
+<li><strong>Recommenders are usually a hybrid.</strong> Self-supervised or contrastive pretraining for embeddings, supervised ranking on engagement labels, and increasingly a bandit or RL layer on top for long-term value. Three paradigms in one system, each doing what it is best at</li>
+<li><strong>Fraud and credit are supervised with a label-delay problem.</strong> You cannot label a default until the observation window closes, so your freshest data is unlabelled by construction. That drives everything from retraining cadence to how you evaluate</li>
+<li><strong>Foundation models made pretrain-then-finetune the default.</strong> For text and vision, training from scratch is now the unusual choice and needs justification</li>
+<li><strong>Active learning where labels are expensive.</strong> Medical imaging, document review, anything needing a specialist. Spending the budget on uncertain examples routinely beats labelling ten times as many at random</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>When handed a vague problem, frame it out loud before proposing a model.</strong> "What is the label, and when does it become available? How many labelled examples exist? Does an action change what happens next?" Those three questions choose the paradigm, and asking them is most of the signal being measured.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How would you build this with almost no labels?" — Pretrain self-supervised or start from a foundation model, fine-tune on what you have, and use active learning to spend the labelling budget where the model is least certain.</p>
+<p style="margin-top:8px"><strong>Also common:</strong> "When is reinforcement learning the right tool?" — When actions change future state and reward is delayed. If neither holds, say so and propose a bandit instead. Declining to over-reach reads as judgement, not ignorance.</p>
+<p style="margin-top:8px"><strong>Do not</strong> propose clustering for a problem that has a right answer.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The three paradigms on one dataset, so the difference is in the code rather than in prose: labels used, labels ignored, and reward observed.</div>
