@@ -1,48 +1,23 @@
 <section class="section" id="sec-knn">
 <div class="sec-title">k-Nearest Neighbors (KNN)</div>
-<div class="sec-desc">The laziest learner in ML — literally stores all training data and defers all computation to prediction time. No training phase, no parameters.</div>
-<div class="card"><div class="card-title">How It Works</div>
-<ol class="num"><li><strong>Store</strong> all training examples (X_train, y_train)</li><li><strong>At prediction:</strong> find the k nearest neighbors of query point x using a distance metric</li><li><strong>Vote:</strong> majority class (classification) or mean of k labels (regression)</li></ol>
-<div class="formula math-formula">$$\begin{aligned}
-d_{\text{euclidean}}(\mathbf{a},\mathbf{b}) &= \sqrt{\textstyle\sum_i (a_i - b_i)^2} \\
-d_{\text{manhattan}}(\mathbf{a},\mathbf{b}) &= \textstyle\sum_i |a_i - b_i| \\
-d_{\text{cosine}}(\mathbf{a},\mathbf{b}) &= 1 - \dfrac{\mathbf{a}\cdot\mathbf{b}}{|\mathbf{a}||\mathbf{b}|}
-\end{aligned}$$</div></div>
+<div class="sec-desc">The only algorithm here that never builds a model — it keeps the training set and answers each query by looking up who is nearby. That makes it the cleanest test of a question worth asking early: is there any local structure in this data at all? It also makes it the idea underneath every vector database, semantic search box and RAG retriever in production today.</div>
 
+<div class="card cb"><div class="card-title">There is no training. The cost did not vanish — it moved</div>
+<div class="card-body">Every other model spends time up front compressing the training set into parameters, then answers queries cheaply. KNN inverts that: <code>fit()</code> stores an array, and every prediction re-reads the entire dataset. <strong>Nothing was saved; the bill was deferred to serving time, which is the expensive place to pay it.</strong></div>
+<ol class="num" style="margin-top:8px"><li><strong>Store</strong> the training rows and their labels. This is the whole of "training"</li><li><strong>At query time</strong> compute the distance from the query point to all n training rows</li><li><strong>Take the k smallest</strong> and vote — majority label for classification, mean label for regression</li></ol>
+<div class="formula math-formula">$$d_{\text{euclid}}(a,b) = \sqrt{\sum_{i=1}^{d}(a_i-b_i)^2} \qquad d_{\text{manhattan}}(a,b) = \sum_{i=1}^{d}|a_i-b_i| \qquad d_{\text{cosine}}(a,b) = 1 - \frac{a\cdot b}{\|a\|\|b\|}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Put a number on step 2.</strong> One query against n = 1,000,000 rows with d = 100 features is 10⁸ arithmetic operations. Call it 0.1 s of real work — so a single core serves about <strong>10 predictions per second</strong>. A modest service needing 1,000 QPS would want a hundred machines to do what a logistic regression does on one. That arithmetic, not any statistical weakness, is why raw KNN does not ship.</div>
+<div class="card-body" style="margin-top:8px">Exact tree indexes — KD-tree, Ball-tree — help only up to roughly 20 dimensions. Above that they degrade to a full scan plus overhead, because their pruning rule needs a bound that high-dimensional geometry stops providing. Beyond that you give up exactness and go approximate, which is the section below.</div></div>
 
-<div class="g2">
-<div class="card cg"><div class="card-title">Strengths</div>
-<ul class="bul"><li>Zero training time</li><li>Non-parametric — no assumptions about data distribution</li><li>Naturally multi-class</li><li>Simple to understand and implement</li><li>Works well for low-dimensional, small datasets</li></ul></div>
-<div class="card cr"><div class="card-title">Weaknesses</div>
-<ul class="bul"><li><strong>Curse of dimensionality:</strong> in high-D, everything is equidistant</li><li>Slow prediction: O(n) per query (use KD-tree or Ball-tree for speed)</li><li>Memory-intensive: stores entire training set</li><li>Sensitive to irrelevant features — feature scaling required</li><li>No feature importance output</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Choosing k</div>
-<ul class="bul"><li><strong>Small k (e.g., k=1):</strong> low bias, high variance — overfits, noisy boundaries</li><li><strong>Large k:</strong> high bias, low variance — over-smooths boundaries</li><li><strong>Rule of thumb:</strong> k = √n as starting point; tune via CV</li><li>Use odd k for binary classification to avoid ties</li></ul></div>
-<div class="box story"><div class="bl">📖 New Neighborhood Analogy</div><p>You move to a new city and want to know if a neighborhood is safe. KNN asks: "What are the 5 closest data points (past reports) to this location? If 4/5 say unsafe, predict unsafe." It's pure pattern matching — no model, just memory. Works great if you have good data; fails if data is sparse or high-dimensional.</p></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Forgetting to scale features</strong> — the #1 KNN mistake. A feature ranging [0,1000] completely drowns one ranging [0,1] in Euclidean distance. Always StandardScaler or MinMaxScaler before KNN</li>
-  <li><strong>Using k=1 in noisy data</strong> — 1-NN is extremely sensitive to outliers and label noise; it perfectly memorises training data (zero training error, poor generalisation). Always tune k via CV</li>
-  <li><strong>Brute-force KNN at scale</strong> — O(n·d) per query. For n &gt; 50k, use KD-tree (works for d &lt; 20) or Ball-tree; for high-dimensional data or n &gt; 1M use approximate nearest neighbors (Faiss, HNSW)</li>
-  <li><strong>"Curse of dimensionality" is just a phrase</strong> — in practice: when d &gt; 20, Euclidean distance concentrates around the same value for all points (ratio of max to min distance → 1). KNN becomes random beyond ~30 dimensions without dimensionality reduction first</li>
-  <li><strong>Using KNN for large-scale production serving</strong> — storing the entire training set (no compression) and O(n) prediction time make raw KNN unviable at scale. Use ANN indexes (Faiss, HNSW, ScaNN) for production</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Spotify / Netflix (recommendation):</strong> not raw KNN but approximate KNN (HNSW via Faiss) over learned item/user embeddings — "nearest neighbors in embedding space" is the core retrieval step in modern recommender systems</li>
-  <li><strong>Google (image search):</strong> ScaNN (Google's ANN library) performs billion-scale nearest neighbor search over image embeddings for reverse image search and visual similarity</li>
-  <li><strong>Fraud detection (anomaly):</strong> 1-NN distance as anomaly score — a point with no close neighbors in training space is a novel/anomalous transaction</li>
-  <li><strong>Drug discovery:</strong> molecular similarity search uses KNN over Morgan fingerprints (chemical feature vectors) to find similar known compounds to a candidate molecule</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "KNN is a powerful concept but not a production algorithm in raw form — O(n) prediction time and full training set storage are non-starters at scale. Its real importance today is as the theoretical basis for approximate nearest neighbor search: embedding everything into a dense vector space and retrieving similar items via ANN (Faiss, HNSW). That pattern powers recommendation retrieval, semantic search, and RAG. For KNN to work at all: always scale features, tune k via CV, and use odd k for binary classification to avoid ties."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "KNN is slow." — The right answer is more nuanced: brute-force KNN is slow, but ANN indexes (HNSW, IVF) achieve sub-millisecond query time even on billions of vectors. KNN's concept is extremely modern and in production everywhere.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you scale KNN to 100 million items?" — Answer: build an HNSW index (e.g., via Faiss or hnswlib); it gives approximate but extremely fast results (sub-millisecond at scale). Trade recall for speed — HNSW at ef=200 gets 99%+ recall at ~1ms latency.</p>
-</div>
-
+<div class="card cg"><div class="card-title">k is the bias–variance dial, and it is the only knob</div>
+<div class="card-body">There are no weights to learn, so every modelling decision you have lives in k. It sets how much of the data speaks for each prediction, and it moves bias and variance in opposite directions with nothing else changing.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>k = 1:</strong> zero training error by construction — the nearest neighbour of a training point is itself. That is the textbook definition of pure variance: the boundary detours around every mislabelled point. Worth knowing that 1-NN is still not useless asymptotically, its error rate is bounded by <strong>twice the Bayes rate</strong> (Cover &amp; Hart, 1967) — remarkable for a rule this dumb, and no help at all on a finite noisy sample</li>
+<li><strong>k = n:</strong> every query averages the whole dataset, so the model predicts the majority class everywhere. Pure bias, zero variance, and the decision boundary has disappeared entirely</li>
+<li><strong>In between</strong> the boundary smooths monotonically. The effective number of parameters behaves like n/k, which is the useful way to think about it: k = 1 on 10,000 rows is a 10,000-parameter model, k = 100 is a 100-parameter one</li>
+<li><strong>Start at k ≈ √n</strong> (n = 10,000 → k = 100) and tune by cross-validation. Use odd k for two classes so votes cannot tie</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><code>weights='distance'</code> is the underrated setting. It weights each neighbour by 1/distance, which lets you take a large k for stability without the far-away members of the neighbourhood watering down a genuinely local signal.</div>
 <div class="anim-wrap"><div class="anim-title">How the decision boundary changes as k grows</div>
 <svg viewBox="0 0 500 178" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -150,6 +125,80 @@ d_{\text{cosine}}(\mathbf{a},\mathbf{b}) &= 1 - \dfrac{\mathbf{a}\cdot\mathbf{b}
 <text x="408.0" y="154.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">k = n</text>
 <text x="408.0" y="168.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">one class everywhere</text>
 </svg></div>
+</div>
+
+<div class="card cr"><div class="card-title">The curse of dimensionality, in one number</div>
+<div class="card-body">"Everything is equidistant in high dimensions" is repeated so often it stops registering. Here is the version that actually convinces, from <em>Elements of Statistical Learning</em>. Take points spread uniformly in a d-dimensional unit cube. To gather 1% of them in a small cube around your query, how long must that cube's edge be? Volume scales as edge<sup>d</sup>, so the edge must be 0.01<sup>1/d</sup>:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Dimensions</th><th>Edge length to capture 1% of the data</th><th>What that means</th></tr>
+<tr><td>d = 2</td><td><strong>0.10</strong></td><td>a genuinely local 10% × 10% patch — KNN works as advertised</td></tr>
+<tr><td>d = 10</td><td><strong>0.63</strong></td><td>the "neighbourhood" already spans 63% of the range of <em>every</em> feature</td></tr>
+<tr><td>d = 100</td><td><strong>0.96</strong></td><td>you must span 96% of every axis. The nearest neighbours are the whole dataset</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>That is the curse stated precisely: in high dimensions there is no such thing as a local neighbourhood.</strong> Distances still compute and sort fine, so nothing errors — the ratio between the nearest and farthest neighbour just creeps toward 1, and the k you selected returns points that are near only in the sense of being marginally less far. Past roughly 30 raw dimensions, expect KNN to behave like a random draw weighted by the class prior.</div>
+<div class="box warn"><div class="bl">why embeddings escape this and raw features do not</div>
+<p>A 768-dimensional sentence embedding is nowhere near as cursed as 768 raw columns, because the curse is about <em>intrinsic</em> dimension, not column count. Embeddings are trained so that semantic neighbours sit close, which concentrates the data onto a low-dimensional manifold inside the ambient space. Raw features have no such structure and spread through all of it. <strong>The fix for high-dimensional KNN is therefore a better representation — PCA, UMAP, or a learned embedding — not a bigger k.</strong></p></div></div>
+
+<div class="card cp"><div class="card-title">Scaling is not a preprocessing nicety here — it is the model</div>
+<div class="card-body">In every other model, forgetting to scale costs you convergence speed or a mis-tuned penalty. In KNN the distance function <em>is</em> the model, so the units you happened to store your columns in silently decide which features exist. Two customers, two features:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>income (dollars)</th><th>credit utilisation (0–1)</th></tr>
+<tr><td>difference between the two rows</td><td>10,000</td><td>0.5</td></tr>
+<tr><td><strong>unscaled</strong> contribution to squared distance</td><td><strong>100,000,000</strong></td><td><strong>0.25</strong></td></tr>
+<tr><td><strong>standardised</strong> contribution (sd ≈ 40,000 and 0.25)</td><td>0.0625</td><td><strong>4.0</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Unscaled, income outweighs utilisation by a factor of <strong>400 million</strong>. Utilisation is not merely down-weighted, it is arithmetically absent — you have fitted a one-feature model without noticing. Standardised, the ranking reverses and becomes defensible: a $10k income gap is a quarter of a standard deviation, while a 0.5 jump in utilisation is a two-sd move, and the two-sd move should dominate.</div>
+<div class="card-body" style="margin-top:8px"><strong>Fit the scaler inside the cross-validation fold, not before it.</strong> A <code>StandardScaler</code> fitted on the full dataset has already seen the validation rows' means, which leaks and quietly flatters your score. <code>make_pipeline(StandardScaler(), KNeighborsClassifier(k))</code> is the whole fix and there is no reason to write it any other way.</div></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Choosing the distance</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Use when</th></tr>
+<tr><td><strong>Euclidean</strong></td><td>the default for continuous, comparably scaled, low-dimensional features</td></tr>
+<tr><td><strong>Manhattan</strong></td><td>higher dimensions or heavy-tailed features — it degrades more gracefully, since one extreme coordinate is not squared</td></tr>
+<tr><td><strong>Cosine</strong></td><td>text and embeddings. Magnitude encodes document length or token count, not meaning, so you want the angle and not the distance</td></tr>
+<tr><td><strong>Hamming</strong></td><td>binary or categorical vectors — molecular fingerprints, one-hot codes</td></tr>
+<tr><td><strong>Learned / Mahalanobis</strong></td><td>features are correlated and you want the metric to account for covariance rather than treating axes as independent</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">On L2-normalised vectors, cosine similarity and Euclidean distance produce the <em>same</em> neighbour ordering — which is why vector databases normalise on insert and then use whichever the hardware computes faster.</div></div>
+
+<div class="card cg"><div class="card-title">Where KNN actually runs: approximate search</div>
+<div class="card-body">Nobody scans a billion vectors. You accept an approximate answer and buy back four orders of magnitude of latency.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>HNSW</strong> — a navigable small-world graph in layers. Start at a sparse top layer, greedily hop toward the query, descend and refine. Query cost is roughly logarithmic in n. The <code>ef_search</code> parameter is an explicit recall-for-latency dial you can turn at runtime</li>
+<li><strong>IVF</strong> — cluster the vectors, then search only the few nearest clusters. Cheap to build and memory-light; loses recall for points that fall near a cluster boundary</li>
+<li><strong>Product quantisation</strong> — compress each vector into a short code so the index fits in RAM. This is what makes billion-scale search affordable rather than merely possible</li>
+</ul>
+<div class="card-body" style="margin-top:8px">The trade is honest and worth quoting: HNSW typically returns <strong>~99% of the true neighbours in about a millisecond</strong>, against the 0.1 s exact scan above. You lose the guarantee that neighbour #7 is really #7, which for retrieval and recommendation is a rounding error, and for anything requiring a provable exact answer is not acceptable.</div></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Not scaling.</strong> The single most common KNN bug, and it never raises an error — you simply get a model built on whichever column has the widest numeric range. See the 400-million-to-one table above</li>
+<li><strong>Fitting the scaler outside cross-validation.</strong> Distance-based methods are unusually sensitive to this leak, because a shifted mean moves every neighbour relationship rather than just nudging a coefficient</li>
+<li><strong>Reporting a k = 1 training score.</strong> It is 100% accurate on training data by definition, always, on every dataset. It is not a result and it is not evidence of anything</li>
+<li><strong>Feeding in hundreds of raw features and blaming the algorithm.</strong> KNN has no mechanism for ignoring an irrelevant feature — there is no coefficient to shrink toward zero. Every junk column adds its noise directly to the distance. Reduce dimensionality first, or select features, or use a model that can down-weight them itself</li>
+<li><strong>One-hot encoding high-cardinality categoricals for KNN.</strong> A 500-level column becomes 500 dimensions where any two distinct rows sit at the same Hamming distance apart. You have added 500 dimensions of curse and no signal</li>
+<li><strong>Ignoring class imbalance.</strong> At 1% positives, a neighbourhood of k = 50 is expected to hold half a positive, so majority vote predicts the negative class everywhere. Use <code>weights='distance'</code>, shrink k, or threshold the neighbour proportion rather than taking the vote</li>
+<li><strong>Assuming an ANN index gives exact answers.</strong> Recall is a tunable parameter with a default, and the default is not 1.0. If a downstream system assumes the true top-k, measure recall against a brute-force scan on a sample before trusting it</li>
+<li><strong>Calling KNN obsolete.</strong> Under a different name it is the most heavily deployed retrieval primitive in the industry</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where this runs in production</div>
+<ul class="bul">
+<li><strong>Every RAG pipeline is a KNN query.</strong> Embed the question, retrieve the k nearest chunks, put them in the prompt. The retrieval quality ceiling is set by the embedding and by k, and "the LLM hallucinated" is very often "the retriever returned the wrong neighbours" — which is a KNN problem, diagnosable with recall@k</li>
+<li><strong>Recommendation retrieval at Spotify, Netflix, YouTube.</strong> The two-stage pattern is universal: approximate KNN over learned embeddings narrows hundreds of millions of items to a few hundred candidates, then an expensive ranker orders those. KNN is the stage that makes the expensive stage affordable</li>
+<li><strong>Billion-scale visual and semantic search.</strong> Google's ScaNN and Meta's FAISS exist to serve exactly this query shape. Reverse image search is nearest-neighbour lookup over image embeddings and nothing more</li>
+<li><strong>Anomaly and fraud detection.</strong> Distance to the nearest training point is a novelty score that needs no labels. A transaction with no close neighbours in history is either genuinely new behaviour or an attack, and both are worth a look. This is also the cleanest drift monitor available: when average nearest-neighbour distance from production traffic to the training set rises, your input distribution has moved</li>
+<li><strong>Molecular similarity in drug discovery.</strong> Nearest neighbours over Morgan fingerprints under Tanimoto/Hamming distance is how a candidate compound is matched to known actives — a domain where the interpretability of "here are the five most similar known molecules" beats a black-box score</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Do not describe it as an outdated toy.</strong> Frame it as the retrieval primitive it has become: "raw KNN is unshippable because prediction is O(nd) — a million rows at a hundred features is 10⁸ operations per query. But the idea is everywhere: embed into a dense space and query an ANN index. That is RAG, semantic search, and recommendation candidate generation." That answer tells the interviewer you know what the last five years did with this algorithm.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does KNN break in high dimensions?" — Give the number, not the phrase. To capture 1% of the data in 10 dimensions your neighbourhood must span 63% of every feature's range; at 100 dimensions, 96%. There is no local neighbourhood left to average over. Then add the resolution: embeddings survive high dimensionality because their intrinsic dimension is low, so the fix is a better representation, not a bigger k.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Scale this to 100 million items." — HNSW or IVF-PQ, roughly 1 ms at ~99% recall, with <code>ef_search</code> as the explicit recall/latency dial. Say out loud that you would measure recall against a brute-force scan on a sample, because that is the part people forget.</p>
+<p style="margin-top:8px"><strong>Volunteer the two things that make or break it:</strong> scaling (or the distance is decided by your units) and that KNN cannot ignore an irrelevant feature, since there is no weight to shrink. Both are the sort of detail that only comes from having used it.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">k-NN has no training step, so all the engineering is in the distance metric and the scaling. Skip the scaler and the largest-range feature silently becomes the only feature.</div>

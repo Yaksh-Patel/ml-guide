@@ -1,60 +1,21 @@
 <section class="section" id="sec-linlog">
 <div class="sec-title">Linear &amp; Logistic Regression</div>
-<div class="sec-desc">The workhorse baseline — fast, interpretable, and the right starting point for virtually every ML project. If you can't beat logistic regression, you shouldn't ship the complex model.</div>
+<div class="sec-desc">The baseline you have to beat before you are allowed to ship anything else. Both models fit the same weighted sum of the features; one reads that sum as a quantity, the other as log-odds. Skip the step and you never find out whether the gradient-boosted ensemble bought you three points of AUC or three months of maintenance.</div>
+
 <div class="g2">
-<div class="card cb"><div class="card-title">Linear Regression</div><div class="card-body">Predict continuous output. Minimize sum of squared residuals (OLS).</div>
-<div class="formula math-formula">$$\begin{aligned}
-\hat{y} &= \beta_0 + \beta_1 x_1 + \cdots + \beta_n x_n = X\boldsymbol{\beta} \\
-\hat{\boldsymbol{\beta}} &= (X^TX)^{-1}X^Ty \quad \text{(analytical solution)} \\
-\mathcal{L} &= \textstyle\sum(y_i - \hat{y}_i)^2 \quad \text{(MSE)}
-\end{aligned}$$</div></div>
-<div class="card cg"><div class="card-title">Logistic Regression</div><div class="card-body">Predict binary probability. Sigmoid squashes linear output to [0,1].</div>
-<div class="formula math-formula">$$\begin{aligned}
-\mathbb{P}(y=1 \mid x) &= \sigma(w^Tx+b) = \dfrac{1}{1+e^{-z}} \\
-\mathcal{L} &= -\bigl[y\log\hat{y} + (1-y)\log(1-\hat{y})\bigr] \quad \text{(BCE)} \\
-&\quad\text{No closed form} \rightarrow \text{gradient descent}
-\end{aligned}$$</div></div>
-</div>
-<div class="card cr"><div class="card-title">Assumptions — must know cold</div>
-<div class="g2" style="margin-top:8px">
-<ul class="bul"><li><strong>Linearity:</strong> linear relationship between features and output (or log-odds for logistic)</li><li><strong>Independence:</strong> observations independent — time series violates this</li><li><strong>No multicollinearity:</strong> correlated features make coefficients unstable — check with VIF &gt; 10</li></ul>
-<ul class="bul"><li><strong>Homoscedasticity (linear):</strong> constant variance of residuals across predictions</li><li><strong>Normality of residuals (linear):</strong> needed for valid coefficient CIs</li><li><strong>No influential outliers:</strong> one bad point can drag the whole line</li></ul>
-</div></div>
-<div class="g2">
-<div class="card"><div class="card-title">Regularized Variants</div>
-<table class="tbl"><tr><th>Name</th><th>Penalty</th><th>Effect</th></tr>
-<tr><td>Ridge (L2)</td><td>λΣwᵢ²</td><td>Shrinks all coefficients</td></tr>
-<tr><td>Lasso (L1)</td><td>λΣ|wᵢ|</td><td>Zeros out irrelevant features</td></tr>
-<tr><td>Elastic Net</td><td>λ₁Σ|wᵢ|+λ₂Σwᵢ²</td><td>Both — sparse + stable</td></tr>
-<tr><td>Logistic + L2</td><td>C=1/λ in sklearn</td><td>Standard regularized classifier</td></tr></table></div>
-<div class="card"><div class="card-title">Interpretation of Coefficients</div>
-<ul class="bul"><li>Linear: βᵢ = change in ŷ per unit increase in xᵢ (holding others fixed)</li><li>Logistic: βᵢ = change in log-odds per unit increase in xᵢ</li><li>Odds ratio: exp(βᵢ) — multiply odds by this per unit increase</li><li>Standardize features first to compare coefficient magnitudes</li></ul></div>
-</div>
-<div class="box story"><div class="bl">📖 Straight Road Analogy</div><p>Linear regression drives on a perfectly straight road. Real data has curves, hills, roundabouts. These models draw a straight line through a spiral staircase. Works brilliantly when the relationship is truly linear — but that's rarer than you think.</p></div>
+<div class="card cb"><div class="card-title">Linear regression is a projection</div>
+<div class="card-body">Every prediction the model can possibly make is a weighted sum of the feature columns — so the set of reachable predictions is the plane those columns span. Least squares picks the point on that plane closest to <em>y</em>. That is all fitting is: <strong>dropping a perpendicular from your target onto the space your features can reach.</strong></div>
+<div class="formula math-formula">$$\hat{y} = X\boldsymbol{\beta}, \qquad \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol\beta}\ \underbrace{\|y - X\boldsymbol\beta\|^2}_{\text{squared length of the residual}}$$</div>
+<div class="card-body" style="margin-top:8px">Setting the gradient to zero gives the <em>normal equations</em> — "normal" as in perpendicular, because the residual must be orthogonal to every feature column, or you could still move closer.</div>
+<div class="formula math-formula">$$X^{T}\underbrace{(y - X\boldsymbol\beta)}_{\text{residual}} = 0 \;\Longrightarrow\; \hat{\boldsymbol\beta} = (X^{T}X)^{-1}X^{T}y$$</div>
+<div class="card-body" style="margin-top:8px">Here <em>X</em> is n×p (rows are observations, columns are features), <em>y</em> is the n-vector of targets, and <strong>β</strong> is the p-vector of coefficients. The closed form is why linear regression is the one model that needs no optimiser.</div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Not checking assumptions before shipping</strong> — linearity, independence, homoscedasticity, no multicollinearity. Violating them doesn't crash the model but makes coefficients uninterpretable and CIs invalid. Always plot residuals vs fitted values</li>
-  <li><strong>Confusing coefficient magnitude with importance</strong> — a large β doesn't mean an important feature if the feature scale is tiny. Standardize features (z-score) before comparing coefficient magnitudes</li>
-  <li><strong>Multicollinearity blindspot</strong> — correlated features (e.g., height_cm and height_ft) make individual coefficients unstable and sign-flip unpredictably. Check VIF; drop or combine correlated features</li>
-  <li><strong>Treating logistic regression probability as calibrated without checking</strong> — logistic regression is generally well-calibrated but not perfectly. Always check a calibration plot (reliability diagram) before using the probability output directly</li>
-  <li><strong>Using accuracy to evaluate logistic regression on imbalanced data</strong> — use AUC-ROC or PR-AUC; accuracy is misleading when one class dominates</li>
-  <li><strong>Forgetting the sklearn C parameter direction</strong> — in sklearn LogisticRegression, C = 1/λ (inverse regularization strength). Smaller C = more regularization. This is opposite to intuition and a frequent bug</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (Ads CTR):</strong> logistic regression with billions of sparse one-hot features was the dominant CTR model for years before deep learning; still used as the calibration layer on top of complex models</li>
-  <li><strong>Credit scoring industry:</strong> logistic regression with Weight of Evidence (WoE) encoding is the regulatory gold standard — coefficients are interpretable, scorecards are auditable, and monotone constraints ensure compliance</li>
-  <li><strong>Netflix A/B testing:</strong> linear regression for continuous metric lift estimation in experiments; fast, interpretable, valid under the central limit theorem at Netflix's traffic scale</li>
-  <li><strong>Airbnb pricing:</strong> linear regression as the baseline for price recommendation; non-linearities handled by feature engineering (log-transforms, interaction terms) rather than model complexity</li>
-  <li><strong>Healthcare / clinical trials:</strong> logistic regression is the standard for binary outcome studies (disease yes/no); odds ratios from the model are directly reported in medical literature</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Logistic regression is my mandatory baseline for every classification task — fast, interpretable, and well-calibrated. I validate assumptions first: check VIF for multicollinearity, plot residuals for linearity. I always standardize features before fitting so I can compare coefficient magnitudes. In sklearn, remember C = 1/λ — smaller C means stronger L2 regularization. If XGBoost doesn't beat logistic regression by at least 1% AUC on validation, I ship logistic regression — simpler and easier to maintain in production."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The model with the highest coefficient is the most important feature." — Coefficients are scale-dependent. Always standardize first, or use permutation importance / SHAP for fair comparison.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why is logistic regression called 'regression' if it's a classifier?" — Answer: it models the log-odds as a linear regression (linear combination of features), then applies the sigmoid to map to probability. The regression is on the log-odds scale; classification is a downstream thresholding decision.</p>
+<div class="card cg"><div class="card-title">Logistic regression is linear — just not in probability</div>
+<div class="card-body">The name confuses people because the output curve is obviously not a line. The resolution: the model is linear in the <strong>log-odds</strong>, and the sigmoid is only the change of units that brings log-odds back to a probability.</div>
+<div class="formula math-formula">$$\underbrace{\log\frac{p}{1-p}}_{\text{log-odds (logit)}} = w^{T}x + b \qquad\Longleftrightarrow\qquad p = \sigma(z) = \frac{1}{1+e^{-z}}$$</div>
+<div class="card-body" style="margin-top:8px">Read left to right and it is a linear model. Read right to left and it is an S-curve. Same object. The logit is the natural scale for a probability because it stretches (0,1) onto the whole real line, so a linear function can no longer predict a probability of 1.4.</div>
+<div class="formula math-formula">$$\mathcal{L} = -\frac{1}{n}\sum_i \Big[y_i \log \hat p_i + (1-y_i)\log(1-\hat p_i)\Big]$$</div>
+<div class="card-body" style="margin-top:8px">That loss is cross-entropy, and it is the <em>maximum-likelihood</em> objective for a Bernoulli outcome — not an arbitrary choice. It is also why logistic regression comes out roughly calibrated for free: log loss is a proper scoring rule, minimised only by the true probability.</div></div>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">The same linear core, one squashing function apart</div>
@@ -81,6 +42,86 @@
 <text x="384.0" y="136.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">logistic: squashed into (0,1)</text>
 <text x="250.0" y="156.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">The log-odds are linear in x; the probability is not. Exponentiate the coefficient before quoting it.</text>
 </svg></div>
+
+<div class="card cp"><div class="card-title">What a logistic coefficient actually means</div>
+<div class="card-body">A linear coefficient is easy: β₁ = 2.5 means one more unit of x₁ adds 2.5 to the prediction, everywhere. A logistic coefficient is <strong>constant on the log-odds scale and therefore not constant on the probability scale</strong>, which is where nearly every misquote comes from.</div>
+<div class="card-body" style="margin-top:8px">Take β = 1.2. Exponentiate to get the odds ratio: e<sup>1.2</sup> = <strong>3.32</strong>. One extra unit of that feature multiplies the odds by 3.32 — and multiplying odds does very different things depending on where you start:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Starting p</th><th>Starting odds</th><th>× 3.32</th><th>New p</th><th>Change in p</th></tr>
+<tr><td>0.10</td><td>0.111</td><td>0.369</td><td>0.269</td><td><strong>+0.169</strong></td></tr>
+<tr><td>0.50</td><td>1.000</td><td>3.320</td><td>0.769</td><td><strong>+0.269</strong></td></tr>
+<tr><td>0.90</td><td>9.000</td><td>29.88</td><td>0.968</td><td><strong>+0.068</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">One coefficient, three different answers to "how much does the probability move". The effect peaks at p = 0.5 and dies at both extremes, because the slope of the sigmoid is p(1−p) — maximal at 0.5, near zero at the ends. Hence the useful shortcut: <strong>β/4 bounds the largest change in probability per unit</strong> (1.2/4 = 0.30, matching the middle row).</div>
+<div class="box warn"><div class="bl">the sentence to say, and the one to avoid</div>
+<p><strong>Say:</strong> "a one-unit increase multiplies the odds of default by 3.3." <strong>Never say:</strong> "it raises the probability of default by 3.3×" or "by 1.2." The first is wrong about the quantity, the second quotes a log-odds as if it were a probability. If someone needs a probability answer, give the marginal effect at a stated operating point.</p></div></div>
+
+<div class="card ca"><div class="card-title">Why one has a closed form and the other does not</div>
+<div class="card-body">Both losses are convex, so both have a single global optimum with no local minima to get stuck in. The difference is whether you can <em>solve</em> for it algebraically.</div>
+<div class="formula math-formula">$$\nabla_w \mathcal{L} = X^{T}\big(\underbrace{\sigma(Xw) - y}_{\text{prediction error}}\big)$$</div>
+<div class="card-body" style="margin-top:8px">The gradient has exactly the same shape as the linear case — features times error — but <em>w</em> is now trapped inside a sigmoid. Setting this to zero is a transcendental equation with no algebraic solution, so you iterate: lbfgs or Newton/IRLS, which converge in tens of iterations precisely because the problem is convex. <strong>"No closed form" is not the same as "hard to fit."</strong></div>
+<div class="box warn"><div class="bl">do not implement the normal equations</div>
+<p>Forming XᵀX squares the condition number: κ(XᵀX) = κ(X)². With mildly collinear features at κ(X) ≈ 10⁴ you get κ(XᵀX) ≈ 10⁸, and double precision carries about 16 digits — so you have thrown away half your significant figures before the solve begins. sklearn uses an SVD-based least-squares routine on <em>X</em> directly and never forms XᵀX. Same reason PCA is computed by SVD rather than by eigendecomposing the covariance matrix.</p></div></div>
+
+<div class="card cr"><div class="card-title">The assumptions, and the symptom of each</div>
+<div class="card-body">Violating an assumption does not throw an exception. The model fits, prints coefficients, and quietly stops meaning what you think it means. What matters is knowing what you would <em>observe</em>.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Assumption</th><th>What breaks when it fails</th><th>What you would observe</th></tr>
+<tr><td><strong>Linearity</strong> (in y, or in the log-odds)</td><td>systematic bias — the model is wrong in a pattern, not at random</td><td>residuals vs fitted shows a curve or a U, not a shapeless band</td></tr>
+<tr><td><strong>Independent observations</strong></td><td>standard errors are too small, so everything looks significant</td><td>autocorrelated residuals; a p-value of 0.001 that will not replicate. Time series and repeated measures always violate this</td></tr>
+<tr><td><strong>No multicollinearity</strong></td><td>coefficients become unstable and uninterpretable — the <em>fit</em> is fine</td><td>VIF &gt; 10; signs that flip when you add a row or drop a feature; huge standard errors on features you know matter</td></tr>
+<tr><td><strong>Homoscedasticity</strong> (linear only)</td><td>OLS is still unbiased but no longer efficient; CIs are wrong</td><td>a fan or cone shape in residuals vs fitted — spread grows with the prediction</td></tr>
+<tr><td><strong>Normal residuals</strong> (linear only)</td><td>only the inference breaks, not the point predictions</td><td>a bent Q-Q plot. Matters least of the five; large n rescues you via the CLT</td></tr>
+<tr><td><strong>No high-leverage outliers</strong></td><td>squared loss means one extreme point can set the slope by itself</td><td>Cook's distance flags a handful of rows; refitting without them moves β materially</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Multicollinearity deserves a number.</strong> VIF<sub>j</sub> = 1/(1 − R²<sub>j</sub>), where R²<sub>j</sub> is from regressing feature j on all the others. At R² = 0.90 the VIF is 10 and the coefficient's standard error is inflated by √10 ≈ <strong>3.2×</strong>. At R² = 0.99, VIF = 100 and the inflation is 10×. That is the mechanism behind "the sign flipped when I added a feature" — the interval was always wide enough to straddle zero, and you were reading noise.</div></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Regularisation, and why L1 zeroes things</div>
+<div class="card-body">Add a penalty on coefficient size and you trade a little bias for a large drop in variance. The <em>shape</em> of the penalty decides what kind of solution you get.</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Ridge (L2), λΣwᵢ²:</strong> shrinks every coefficient toward zero, reaching it only in the limit. The constraint region is a sphere — smooth everywhere, so the optimum lands off-axis with all features retained but tamed. This is the right default when features are correlated: ridge splits credit between them instead of picking one arbitrarily</li>
+<li><strong>Lasso (L1), λΣ|wᵢ|:</strong> produces exact zeros — genuine feature selection. <strong>The reason is geometric: the L1 ball is a diamond with corners sitting on the axes</strong>, and a corner is where a coordinate equals zero. Loss contours expanding outward touch a pointy vertex long before they touch a flat face, so the solution is sparse by construction, not by thresholding</li>
+<li><strong>Elastic Net, λ₁Σ|wᵢ| + λ₂Σwᵢ²:</strong> corners for sparsity, curvature for stability. The standard fix when you have groups of correlated features and pure lasso keeps picking a different member of the group on every bootstrap</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Standardise before you regularise.</strong> The penalty charges per unit of coefficient, and a coefficient's size depends on its feature's units — so an unscaled model penalises a feature measured in dollars far less than the same feature measured in thousands of dollars. Regularising unscaled features means the units chose your model.</div></div>
+
+<div class="card cg"><div class="card-title">sklearn details that cause real bugs</div>
+<ul class="bul">
+<li><strong><code>C</code> is the inverse penalty: C = 1/λ.</strong> Smaller C means <em>more</em> regularisation. C = 0.01 is heavy shrinkage, C = 100 is essentially none. The direction is backwards from every textbook and it is the single most common logistic-regression bug</li>
+<li><strong><code>LogisticRegression</code> is regularised by default</strong> — L2 with C = 1.0. If you wanted plain maximum likelihood, or you are comparing against statsmodels output, you must ask for it explicitly. Silent shrinkage on an unscaled design matrix has ruined many coefficient tables</li>
+<li><strong><code>LinearRegression</code> has no penalty</strong> and will happily hand back enormous coefficients on collinear data. Use <code>Ridge</code> the moment features are correlated</li>
+<li><strong><code>penalty='l1'</code> needs a solver that supports it</strong> — <code>liblinear</code> or <code>saga</code>. The default <code>lbfgs</code> does not, and the error message is not obvious</li>
+<li><strong><code>class_weight='balanced'</code> deliberately changes the base rate</strong> the model believes in. Useful for ranking, and it destroys calibration — recalibrate afterwards if the probability is going to be multiplied by money</li>
+</ul></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Ranking features by raw coefficient magnitude.</strong> Coefficients carry units. A β of 0.0001 on annual income in dollars is a bigger effect than a β of 2.0 on a 0/1 flag. Standardise first, or use permutation importance — and even standardised coefficients are unreliable under collinearity, because the split between two correlated features is arbitrary</li>
+<li><strong>Quoting a logistic coefficient as a probability change.</strong> It is a log-odds. Exponentiate it for an odds ratio, or state a marginal effect at a specific operating point. See the table above for why one number cannot answer the question</li>
+<li><strong>Getting <code>C</code> backwards.</strong> Grid-searching C over [1, 10, 100] and concluding "regularisation does not help" means you only ever tried almost none of it. Search log-spaced over both sides of 1</li>
+<li><strong>Regularising unscaled features.</strong> The penalty becomes a function of your units. Always put the scaler and the model in one <code>Pipeline</code>, so the scaler is refit inside every CV fold rather than on the full dataset</li>
+<li><strong>Assuming linear regression is unbiased about the mean when the target is skewed.</strong> Squared loss fits the conditional <em>mean</em>, which a long right tail drags upward. For revenue or claim sizes, model log(y) or use a Gamma/Tweedie GLM — and remember that exponentiating a prediction of log(y) gives back the median, not the mean</li>
+<li><strong>Reading p-values off a model fitted to engineered, selected features.</strong> Every threshold you tried and every feature you dropped after peeking is a hypothesis test you are not reporting. The intervals are narrower than reality by an unknown amount</li>
+<li><strong>Using linear regression on a bounded or count target.</strong> Predicting a probability with OLS gives you values below 0 and above 1, and there is no principled way to clip them. That is the problem logistic regression exists to solve</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Why this is still everywhere</div>
+<ul class="bul">
+<li><strong>Credit scorecards are logistic regression by regulation, not by nostalgia.</strong> Weight-of-Evidence binning plus logistic regression gives a model where every point of the score traces to a stated reason, monotonic constraints can be enforced and proven, and a validation team can reproduce the whole thing in a spreadsheet. Explainability is a hard requirement under ECOA/Reg B, and this is the model that satisfies it without an approximation layer</li>
+<li><strong>It is the calibration layer on top of complex models.</strong> Google's ads stack ran logistic regression over billions of sparse features for years, and the pattern survived the move to deep learning: let the big model produce a score, then fit a one-dimensional logistic on held-out data to turn it into an honest probability. Platt scaling <em>is</em> logistic regression</li>
+<li><strong>Experiment analysis runs on linear models.</strong> A/B test lift, CUPED variance reduction, and difference-in-differences are all regressions. At experiment scale the CLT does the heavy lifting, and the interpretability of a coefficient is the entire point — you need to report an effect size with an interval, not a prediction</li>
+<li><strong>It is the baseline that decides whether the project is hard.</strong> Logistic regression on sensibly engineered features tells you the floor. If XGBoost beats it by 0.5% AUC, your problem is mostly linear and you should ship the simple model. If it beats it by 15%, there are real interactions worth chasing. Without the baseline you cannot tell those two worlds apart</li>
+<li><strong>The failure mode is the giveaway.</strong> When a linear model matches a boosted ensemble to three decimal places, check for leakage before celebrating: a single feature that encodes the future will let any model, including this one, look brilliant</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the log-odds framing.</strong> "Logistic regression is a linear model — linear in the log-odds. The sigmoid is just the inverse link that maps that back to a probability, and cross-entropy is the maximum-likelihood loss for a Bernoulli outcome." That single answer covers "why is it called regression", "why the sigmoid", and "why that loss" before they are asked separately.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Interpret a coefficient of 1.2." — Exponentiate: the odds multiply by 3.3. Then volunteer the subtlety, because it is what separates candidates: the change in <em>probability</em> depends on where you start — about +0.27 near p = 0.5, only +0.07 near p = 0.9 — since the sigmoid's slope is p(1−p). Mentioning the β/4 rule shows you have used this rather than read it.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does lasso select features and ridge not?" — Answer with the geometry, not the formula: the L1 constraint region has corners on the axes and an expanding loss contour hits a corner first, so a coordinate goes exactly to zero. The L2 region is a smooth sphere with no corners, so coefficients shrink but never vanish.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> "the feature with the largest coefficient is the most important" (units), "logistic regression can't handle non-linearity" (it handles anything you put in the design matrix — splines, interactions, WoE bins), or "it's outdated" in a room that ships scorecards. <strong>Do say</strong> that you check VIF, standardise inside a pipeline, and remember that sklearn's C is 1/λ.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The two workhorses side by side. The key line is the last one: logistic regression coefficients are log-odds, and exponentiating them is the only way to state them honestly.</div>

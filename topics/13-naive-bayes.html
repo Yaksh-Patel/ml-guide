@@ -1,50 +1,27 @@
 <section class="section" id="sec-naivebayes">
 <div class="sec-title">Naive Bayes Classifier</div>
-<div class="sec-desc">Applies Bayes' theorem with a "naive" independence assumption — and works shockingly well despite that assumption being almost always wrong.</div>
-<div class="card"><div class="card-title">The Algorithm</div>
-<div class="formula math-formula">$$\begin{aligned}
-P(y \mid x_1,\ldots,x_n) &\propto P(y) \times \prod_i P(x_i \mid y) \\
-\hat{y} &= \arg\max_y \bigl[\log P(y) + \textstyle\sum_i \log P(x_i \mid y)\bigr] \\
-&\quad\text{(use log-sum to avoid numerical underflow)}
-\end{aligned}$$</div>
+<div class="sec-desc">A model that is demonstrably wrong about how the data was generated and reliably right about which class it belongs to. That gap is the whole lesson: an assumption can be false and still be worth making, if what it buys you is the ability to estimate anything at all from the data you actually have. Trains in one pass, predicts in microseconds, and remains the honest baseline for text when labels are scarce.</div>
 
+<div class="card cb"><div class="card-title">Where the assumption comes from — and what it buys</div>
+<div class="card-body">Start with Bayes' rule. You want the probability of a class given the observed features; what you can count from data is the reverse.</div>
+<div class="formula math-formula">$$P(y \mid x_1,\ldots,x_d) = \frac{\overbrace{P(y)}^{\text{prior}}\ \overbrace{P(x_1,\ldots,x_d \mid y)}^{\text{likelihood}}}{\underbrace{P(x_1,\ldots,x_d)}_{\text{same for every class}}}$$</div>
+<div class="card-body" style="margin-top:8px">The denominator does not depend on <em>y</em>, so for picking the winning class you can drop it. The prior is a class frequency — trivial to count. <strong>Everything hard is in that likelihood term, and it is hard for a reason worth quantifying.</strong></div>
+<div class="card-body" style="margin-top:8px">Suppose just 20 binary features. The full joint distribution P(x₁,…,x₂₀ | y) is a table with one entry per combination of feature values: <strong>2²⁰ − 1 = 1,048,575 parameters, per class.</strong> On a typical text problem you have maybe 800 labelled documents. You cannot estimate a million parameters from 800 examples; most cells would be empty and the rest would be noise.</div>
+<div class="card-body" style="margin-top:8px">Assume the features are conditionally independent given the class, and the joint factors into a product of one-dimensional pieces:</div>
+<div class="formula math-formula">$$P(x_1,\ldots,x_d \mid y) \approx \prod_{i=1}^{d} P(x_i \mid y) \qquad\Longrightarrow\qquad \hat y = \arg\max_y \Big[\log P(y) + \sum_{i=1}^{d}\log P(x_i \mid y)\Big]$$</div>
+<div class="box warn"><div class="bl">the actual trade</div>
+<p>That one assumption takes the model from <strong>1,048,575 parameters you cannot estimate down to 20 you can</strong> — one per feature per class, each a simple count. The assumption is not there because anyone believes it. It is there because the alternative is not estimable. Naive Bayes is the clearest example in this atlas of a bias deliberately accepted to kill variance.</p></div></div>
 
-<div class="card-body" style="margin-top:8px">The "naive" assumption: features x₁,...,xₙ are conditionally independent given y. This is almost never true, yet the classifier often dominates.</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Variants</div>
-<table class="tbl"><tr><th>Type</th><th>P(xᵢ|y)</th><th>Use Case</th></tr>
-<tr><td>Gaussian NB</td><td>Normal distribution</td><td>Continuous features</td></tr>
-<tr><td>Multinomial NB</td><td>Multinomial (counts)</td><td>Word frequency, TF-IDF</td></tr>
-<tr><td>Bernoulli NB</td><td>Bernoulli (binary)</td><td>Word presence/absence</td></tr>
-<tr><td>Complement NB</td><td>Complement class freq</td><td>Imbalanced text data</td></tr></table></div>
-<div class="card cr"><div class="card-title">Limitations</div>
-<ul class="bul"><li><strong>Zero-frequency problem:</strong> if a feature-class combo never appeared in training, P = 0 kills the whole product → fix with <strong>Laplace smoothing</strong> (+1 to all counts)</li><li>Poor probability calibration — outputs aren't well-calibrated</li><li>Independence assumption breaks with correlated features</li><li>Cannot capture feature interactions</li></ul></div>
-</div>
-<div class="box story"><div class="bl">📖 Spam Filter Analogy</div><p>You see "FREE MONEY NIGERIA" in an email. NB asks: what % of spam had "FREE"? "MONEY"? "NIGERIA"? Multiply these probabilities (naively assuming word independence). Compare to legit email. Works because the words signal spam strongly — independence doesn't matter when signals are loud.</p></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Forgetting Laplace smoothing</strong> — if any word appears in test but never in training for a class, P=0 zeroes the entire posterior. Always add-1 (Laplace) or add-α (Lidstone) smoothing to all counts</li>
-  <li><strong>Not using log-probabilities</strong> — multiplying hundreds of small probabilities causes floating-point underflow to zero. Always work in log-space: sum log-probabilities, not multiply raw probabilities</li>
-  <li><strong>"Naive" means it's a bad model</strong> — despite the violated independence assumption, Naive Bayes is competitive or best-in-class for text classification, especially with small training sets. It's "naive" about features, not naive as a model</li>
-  <li><strong>Using Gaussian NB on bag-of-words features</strong> — word count features are discrete and non-negative; Multinomial NB is the correct variant. Gaussian NB assumes continuous normally-distributed features</li>
-  <li><strong>Ignoring poor probability calibration</strong> — NB probabilities are often extreme (near 0 or 1) because of the independence assumption compounding. Never use NB raw probabilities as calibrated outputs; apply Platt scaling if probabilities matter</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Email spam filtering (Gmail, Outlook):</strong> Naive Bayes was the original spam filter backbone through the 2000s–2010s; still used as a lightweight real-time filter layer before deeper neural classifiers</li>
-  <li><strong>Medical diagnosis (low-data settings):</strong> when labeled patient data is scarce, Naive Bayes outperforms complex models; used in clinical text classification for ICD code prediction from short notes</li>
-  <li><strong>News / content categorisation:</strong> real-time topic tagging at media companies (Reuters, Bloomberg) using Multinomial NB on TF-IDF vectors — microsecond inference, no GPU needed</li>
-  <li><strong>Sentiment analysis baselines:</strong> Naive Bayes with bigrams is a strong baseline for review sentiment; frequently cited in academic papers as the comparator for new neural approaches</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Naive Bayes is my first-try classifier for text with small training sets. The independence assumption is almost always wrong, but it rarely matters in practice — strong individual feature signals dominate. Two implementation must-dos: Laplace smoothing (prevent zero probabilities) and log-space computation (prevent underflow). For text, Multinomial NB on TF or count features; for continuous features, Gaussian NB. It trains in O(n·d) and predicts in O(d) — unbeatable for real-time low-latency applications."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "Naive Bayes is too simple for serious use." — It's one of the few models that works well with very small labeled datasets, and is still production-relevant for real-time text classification where latency matters more than 1–2% accuracy.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does Naive Bayes work well despite the independence assumption being wrong?" — Answer: even when feature probabilities are wrong in absolute terms, the ranking of P(class|features) across classes is often correct. Classification only needs the right class to win the argmax, not accurate individual probabilities. The model is miscalibrated but correctly ordered.</p>
-</div>
-
+<div class="card cg"><div class="card-title">Why being wrong does not cost it the answer</div>
+<div class="card-body">Words in text are obviously not independent given the class — "space" and "shuttle" travel together, and the model counts each as fresh, unrelated evidence. So it double-counts, triple-counts, and its output probabilities are badly distorted. <strong>Classification does not need the probability to be right. It needs the argmax to be right.</strong></div>
+<div class="card-body" style="margin-top:8px">Watch what the distortion actually does. Say the honest posterior for a document is P(spam | x) = 0.60, which is log-odds log(0.60/0.40) = <strong>+0.41</strong>. Now suppose three correlated spam words each contribute their evidence in full, when jointly they should have contributed once — adding roughly +2.8 of spurious log-odds:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>log-odds</th><th>implied P(spam)</th><th>decision at 0.5</th></tr>
+<tr><td>honest posterior</td><td>+0.41</td><td>0.60</td><td><strong>spam</strong></td></tr>
+<tr><td>Naive Bayes, evidence triple-counted</td><td>+3.21</td><td><strong>0.96</strong></td><td><strong>spam</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The probability is off by 36 percentage points. The decision is identical. That is the mechanism in a sentence: <strong>the independence violation inflates the magnitude of the log-odds but rarely flips its sign</strong>, because the double-counted evidence pushes in the direction the evidence already pointed. Domingos &amp; Pazzani (1997) formalised this — Naive Bayes is optimal for zero-one loss over a far wider range of conditions than it is for probability estimation.</div>
+<div class="card-body" style="margin-top:8px">The corollary is the one rule to remember: <strong>use the ranking, never quote the probability.</strong> Its scores pile up against 0 and 1 and are among the worst-calibrated of any common classifier. If you need a real probability out of it, fit Platt scaling on held-out data.</div>
 <div class="anim-wrap"><div class="anim-title">The independence assumption is false and it still works</div>
 <svg viewBox="0 0 500 176" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -73,6 +50,74 @@ P(y \mid x_1,\ldots,x_n) &\propto P(y) \times \prod_i P(x_i \mid y) \\
 <text x="320.0" y="136.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">same way and cancel.</text>
 <text x="250.0" y="164.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans">Use it for the ranking, never quote its probabilities.</text>
 </svg></div>
+</div>
+
+<div class="card cp"><div class="card-title">Log space, and the number that forces it</div>
+<div class="card-body">Notice the argmax above sums logs rather than multiplying probabilities. That is not stylistic tidiness — the direct product does not survive contact with a real document.</div>
+<div class="card-body" style="margin-top:8px">Take a 200-word document where a typical word has P(wᵢ | y) ≈ 10⁻⁴. The likelihood is:</div>
+<div class="formula math-formula">$$\prod_{i=1}^{200}10^{-4} = 10^{-800} \qquad\text{vs}\qquad \sum_{i=1}^{200}\log(10^{-4}) = 200 \times (-9.21) = -1842$$</div>
+<div class="card-body" style="margin-top:8px">A 64-bit float bottoms out near <strong>10⁻³⁰⁸</strong>. So 10⁻⁸⁰⁰ is not a small number — it is stored as exactly <code>0.0</code>. And it is 0.0 for <em>every</em> class, so the argmax has no information left to compare and returns whichever class happens to be first. <strong>The failure mode is a classifier that silently predicts one constant label</strong> and never raises an error. Meanwhile −1842 sits comfortably in range, and comparing −1842 against −1907 is a perfectly well-conditioned decision.</div>
+<div class="card-body" style="margin-top:8px">Every library does this internally — sklearn exposes <code>feature_log_prob_</code>, not <code>feature_prob_</code>. It matters when you implement it yourself, and it is the standard interview probe on this topic. If you need the posterior back on a 0–1 scale, use the log-sum-exp trick rather than exponentiating and normalising.</div></div>
+
+<div class="card cr"><div class="card-title">The zero-frequency problem: smoothing turns a veto into a penalty</div>
+<div class="card-body">A product has a fatal property — one zero factor zeroes the whole thing. If a word never appeared in class <em>c</em> during training, its estimate is 0/N = 0, so log 0 = −∞, and <strong>that single unseen word eliminates class c no matter what the other 199 words say.</strong> A word absent from your training sample gets to overrule all the evidence you do have.</div>
+<div class="card-body" style="margin-top:8px">Laplace (add-α) smoothing pretends you saw every vocabulary word α extra times. With a class holding 5,000 tokens over a 10,000-word vocabulary:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Word's count in class c</th><th>Unsmoothed P</th><th>log P</th><th>Add-1 smoothed P</th><th>log P</th></tr>
+<tr><td>0 (never seen)</td><td>0 / 5,000 = 0</td><td><strong>−∞</strong> — class eliminated</td><td>1 / 15,000 = 6.7e-5</td><td><strong>−9.6</strong> — a penalty</td></tr>
+<tr><td>10</td><td>10 / 5,000 = 2.0e-3</td><td>−6.2</td><td>11 / 15,000 = 7.3e-4</td><td>−7.2</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The denominator is 5,000 + α·V = 15,000, not 5,000 — the added pseudo-counts have to be accounted for or the probabilities no longer sum to one. Note what happens in the second row: smoothing also pulls observed estimates <em>down</em> toward uniform. That is the point. <strong>α is a regularisation strength</strong>, and it is the one hyperparameter here worth tuning: α = 1 is the safe default, α → 0 restores the veto, α large flattens everything toward the prior and the model stops discriminating.</div></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Variants — pick by the shape of the feature</div>
+<div class="card-body">The independence assumption is fixed; the choice is which one-dimensional distribution you fit to each feature. Get this wrong and the model is misspecified in a way no amount of tuning recovers.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Variant</th><th>Models P(xᵢ|y) as</th><th>Correct when</th></tr>
+<tr><td><strong>Gaussian NB</strong></td><td>a normal per feature per class — two parameters, mean and variance</td><td>genuinely continuous features. Fits the wrong shape to a skewed one, so transform first</td></tr>
+<tr><td><strong>Multinomial NB</strong></td><td>token counts drawn from a per-class multinomial</td><td>bag-of-words counts or TF-IDF. <strong>The default choice for text</strong></td></tr>
+<tr><td><strong>Bernoulli NB</strong></td><td>presence/absence, and it explicitly scores the <em>absence</em> of a word too</td><td>short documents where "this word did not appear" is real evidence — titles, tweets, subject lines</td></tr>
+<tr><td><strong>Complement NB</strong></td><td>counts from all classes <em>except</em> the one being scored</td><td>imbalanced text. Rennie et al. (2003) — the majority class otherwise dominates every count estimate</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The most common misspecification is <strong>Gaussian NB on word counts</strong>. Counts are discrete, non-negative and mostly zero; a Gaussian fitted to them has a mean near zero, a huge variance, and puts mass on negative counts. It runs and returns a mediocre score, so nothing tells you the model was the wrong one.</div></div>
+
+<div class="card cg"><div class="card-title">What it actually costs to train</div>
+<ul class="bul">
+<li><strong>Training is one pass and a division.</strong> Count how often each feature co-occurs with each class, divide, take logs. There is no optimiser, no learning rate, no epochs — nothing to converge and nothing to diverge. O(n · d̄) where d̄ is the average number of non-zero features per row</li>
+<li><strong>Prediction is one dot product per class</strong> over the non-zero features of the query. Microseconds on CPU, no GPU, no batching. This is why it persists as a first-pass filter in front of expensive models</li>
+<li><strong>It is trivially incremental.</strong> <code>partial_fit</code> is exact rather than approximate — you are adding to counts. New labelled data updates the model without a retrain, which is unusual and genuinely useful for streaming</li>
+<li><strong>It works at small n</strong> better than almost anything else. Twenty parameters per class per feature can be estimated from hundreds of documents; that is the regime where it beats a fine-tuned transformer not on accuracy ceiling but on the accuracy you can actually reach with the labels you have</li>
+</ul>
+<div class="card-body" style="margin-top:8px">The flip side is a hard ceiling: <strong>the model cannot represent a feature interaction.</strong> "Free" and "money" together being more suspicious than the sum of each alone is exactly what independence forbids. Give it enough data and any interaction-capable model overtakes it — which is why the sensible framing is "the baseline you must beat", not "the model you ship".</div></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>No smoothing.</strong> One unseen word sends a class to −∞ and the prediction is decided by vocabulary coverage rather than evidence. Setting <code>alpha=0</code> to "avoid biasing the estimates" restores exactly this bug</li>
+<li><strong>Multiplying raw probabilities.</strong> Underflows to 0.0 for every class on any document of realistic length, and then predicts a constant label with no error raised. Sum logs</li>
+<li><strong>Quoting its probabilities.</strong> 0.98 from Naive Bayes does not mean 98%. The independence violation compounds the log-odds, so scores bunch at the extremes. Fine for ranking or thresholding; never multiply one by a dollar amount</li>
+<li><strong>Gaussian NB on bag-of-words.</strong> Wrong distribution for the data. Multinomial for counts and TF-IDF, Bernoulli for presence on short text</li>
+<li><strong>Forgetting the smoothed denominator.</strong> Adding α to the numerator without adding α·V to the denominator gives you something that is not a probability distribution. Easy to get wrong in a from-scratch implementation and it barely shows in the accuracy</li>
+<li><strong>Reading "naive" as "bad".</strong> It refers to the independence assumption about features, not the quality of the model. It is competitive on small-sample text and it is the standard comparator in the literature for a reason</li>
+<li><strong>Deduplicating features and expecting no change.</strong> Because each feature is counted as independent evidence, keeping two near-identical columns doubles their influence. Removing redundant features materially changes the output — unlike in a model that can share credit between correlated inputs</li>
+<li><strong>Using it on an imbalanced corpus without Complement NB.</strong> The majority class's counts swamp the estimates and the model collapses toward predicting it</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where it still earns its place</div>
+<ul class="bul">
+<li><strong>The cheap first stage in a cascade.</strong> Spam and abuse pipelines put a Naive Bayes filter in front of the expensive classifiers: it disposes of the obvious cases at microsecond cost and passes only the ambiguous ones downstream. The economics of the stack, not accuracy, is the argument</li>
+<li><strong>Real-time text tagging.</strong> Newsroom and market-data topic tagging at wire-service latency, where the budget is microseconds per document and no GPU is in the path. A 1–2% accuracy gap is a fair price for that</li>
+<li><strong>Low-label domains.</strong> Clinical note classification and ICD coding often have a few hundred labelled examples of a category. With that little data the variance of a high-capacity model dominates its lower bias, and Naive Bayes wins on the bias–variance trade rather than on sophistication</li>
+<li><strong>Streaming and drifting content.</strong> Exact incremental updates via <code>partial_fit</code> mean the model can absorb new labels continuously — valuable in adversarial settings where spammers change vocabulary faster than a retrain cycle</li>
+<li><strong>The baseline in every paper.</strong> Naive Bayes with bigrams remains the standard comparator for sentiment and topic classification. If a new architecture cannot clear it by a comfortable margin on your data, the result is about your data, not the architecture</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>The question is always some form of "why does it work when the assumption is false".</strong> Answer with the argmax argument: "classification needs the right class to win, not the probabilities to be accurate. The independence violation inflates the magnitude of the log-odds because correlated evidence gets counted twice, but it rarely flips the sign — so the ranking survives and the calibration does not. It is a well-ordered, badly-calibrated model."</p>
+<p style="margin-top:8px"><strong>Then give the reason the assumption exists</strong>, which most candidates skip: the full joint over 20 binary features is 2²⁰ ≈ a million parameters per class, and independence reduces that to 20. It is a deliberate bias-for-variance trade, not laziness. This is the answer that sounds like someone who has thought about it.</p>
+<p style="margin-top:8px"><strong>Expect the two implementation probes.</strong> Smoothing: without it one unseen word zeroes an entire class, so add-α turns an infinite veto into a finite penalty — and remember α·V in the denominator. Log space: a 200-word document multiplies out to about 10⁻⁸⁰⁰, float64 stops at 10⁻³⁰⁸, so the naive product is 0.0 for every class and the classifier silently returns a constant.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> "it's too simple to be useful" — it is the standard baseline and a live production filter. <strong>Do volunteer</strong> the ceiling: it cannot represent feature interactions, which is precisely why more data eventually favours a model that can.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The "naive" assumption is wrong on essentially every real dataset, and the classifier still works. This shows why: the decision only needs the argmax to be right, not the probabilities.</div>
