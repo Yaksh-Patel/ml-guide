@@ -315,6 +315,8 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   max-height: calc(100vh - 100px); overflow-y: auto;
   padding-left: 18px; border-left: 1px solid var(--border);
   scrollbar-width: thin;
+  background: var(--bg);
+  z-index: 5;
 }
 .toc[hidden] { display: none; }
 .toc-label {
@@ -412,6 +414,26 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
 .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin-bottom: 13px; }
+
+/* Overflow containment ------------------------------------------------------
+   Grid and flex children default to min-width:auto, so one wide element (a
+   KaTeX display block, a long formula, a table) can force its column wider
+   than the container -- which pushed topic content out from under its own
+   column and beneath the sticky "on this page" rail. Every container that can
+   hold wide content gets min-width:0, and the wide things themselves scroll. */
+.g2 > *, .g3 > *, .cgrid > *, .card, .box, .home-grid > * { min-width: 0; }
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;          /* room for the scrollbar, so it cannot clip glyphs */
+  max-width: 100%;
+}
+.katex { max-width: 100%; }
+
+.formula, .math-formula, .formula-block { max-width: 100%; }
+
+.card-body, .box p, .box li, .tbl td { overflow-wrap: anywhere; }
 
 .box { border-radius: var(--radius-sm); padding: 12px 15px; margin-top: 12px; }
 .box .bl { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
