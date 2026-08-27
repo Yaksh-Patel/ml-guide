@@ -1,6 +1,6 @@
 <section class="section" id="sec-vectordb">
 <div class="sec-title">Vector Databases</div>
-<div class="sec-desc">The infrastructure layer behind every RAG system, semantic search, and embedding-based recommendation. Vector databases efficiently store, index, and retrieve high-dimensional embedding vectors using approximate nearest-neighbour search — finding the most semantically similar items in milliseconds across billions of vectors.</div>
+<div class="sec-desc">A vector database exists because exact nearest-neighbour search does not scale and you do not actually need it. Every design decision here is a position on one trade — how much recall you will give up for how much speed and memory — and the uncomfortable part is that <strong>the recall you give up is invisible unless you measure it against a brute-force baseline</strong>, which almost nobody does before shipping.</div>
 
 <!-- Why vector DBs -->
 <div class="g2">
@@ -12,7 +12,18 @@
   <li><strong>Scale challenge:</strong> OpenAI text-embedding-3-large produces 3072-dim vectors; a 10M document corpus = 30B floats = 120GB at float32</li>
 </ul></div>
 
-<div class="card cg"><div class="card-title">Similarity Metrics</div>
+<div class="card cg"><div class="card cb"><div class="card-title">What "approximate" actually buys</div>
+<div class="card-body">Exact search compares the query against every stored vector. Put a billion 768-dimensional vectors through that and the cost per query is arithmetic you can do in your head:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>Work per query</th><th>Relative</th></tr>
+<tr><td>Exact — compare against all 10⁹ vectors</td><td>10⁹ × 768 ≈ <strong>7.7 × 10¹¹</strong> multiply-adds</td><td>1×</td></tr>
+<tr><td>HNSW — traverse a few thousand graph nodes</td><td>~1,500 × 768 ≈ <strong>1.2 × 10⁶</strong></td><td><strong>~670,000× less</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Six orders of magnitude, and the price is that the answer is no longer guaranteed correct. <strong>That guarantee is worth less than it sounds</strong> for most applications — if neighbour #7 is really #9, a results page or a RAG context is unaffected. It matters when the ranking <em>is</em> the product: deduplication, exact-match compliance lookups, or any downstream system that assumes a true top-k.</div>
+<div class="box warn"><div class="bl">recall is a number you must measure, not assume</div>
+<p>Every ANN index has a recall/latency dial — <code>ef_search</code> in HNSW, <code>nprobe</code> in IVF — and every one ships with a default that is <em>not</em> recall 1.0. Nothing in the system reports the neighbours it failed to find, so a mistuned index looks exactly like a working one and surfaces only as "search quality is a bit disappointing".</p>
+<p style="margin-top:8px">The fix takes an afternoon: sample a few thousand queries, compute the true top-k by brute force, and measure what fraction your index returns. That turns recall@k into an actual number and lets you set the dial deliberately rather than inherit a library default. <strong>Do this before tuning anything else in a retrieval stack</strong> — a chunking or reranking change measured on top of unknown recall tells you nothing.</p></div></div>
+<div class="card-title">Similarity Metrics</div>
 <table class="tbl">
 <tr><th>Metric</th><th>Formula</th><th>When to use</th></tr>
 <tr><td><strong>Cosine similarity</strong></td><td>$\frac{u \cdot v}{\|u\|\|v\|}$</td><td>Text embeddings — magnitude irrelevant, direction matters</td></tr>
@@ -197,6 +208,17 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </div>
 
 <!-- Quantisation -->
+<div class="card cp"><div class="card-title">Memory, in absolute terms</div>
+<div class="card-body">Compression ratios are easier to reason about as bytes. One million 768-dimensional vectors:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Representation</th><th>Size</th><th>Typical recall cost</th></tr>
+<tr><td>float32</td><td><strong>3.07 GB</strong></td><td>baseline</td></tr>
+<tr><td>float16</td><td><strong>1.54 GB</strong></td><td>negligible</td></tr>
+<tr><td>int8 scalar quantisation</td><td><strong>768 MB</strong></td><td>a fraction of a percent</td></tr>
+<tr><td>binary — 1 bit per dimension</td><td><strong>96 MB</strong></td><td>several percent, usually recovered by reranking</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">float16 is close to free and is a reasonable default. The interesting pattern is at the bottom: <strong>binary quantisation plus exact reranking</strong> — search 96 MB of binary codes by Hamming distance to get a shortlist of a few hundred, then rescore those against their full-precision vectors. You pay 32× less memory for the search and recover most of the accuracy, because full precision is only needed to <em>order</em> a shortlist rather than to find it.</div>
+<div class="card-body" style="margin-top:8px"><strong>And the graph is not free.</strong> HNSW stores neighbour lists: at M = 16 that is roughly M × 2 × 4 = <strong>128 bytes per vector</strong> of edge data. Against 768-dimensional float32 vectors that is a 4% overhead and safely ignored — against 128-dimensional vectors it is <strong>25%</strong>, and against binary-quantised vectors the graph can exceed the vectors themselves. <strong>The cheaper you make the vectors, the more the index structure dominates</strong>, which is the trap when you compress hard and find memory did not fall as expected.</div></div>
 <div class="card cg"><div class="card-title">Vector Compression — Quantisation Techniques</div>
 <table class="tbl">
 <tr><th>Technique</th><th>Compression</th><th>Recall Impact</th><th>How</th></tr>
@@ -209,7 +231,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </table></div>
 
 <!-- Common mistakes -->
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>Using different models for indexing vs querying</strong> — destroys the embedding space; recall drops to near-zero. Always use the exact same model and preprocessing</li>
   <li><strong>Not normalising embeddings</strong> — cosine similarity computed on unnormalised vectors gives wrong results; always L2-normalise before inserting</li>
@@ -229,11 +251,14 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
   <li><strong>OpenAI / Anthropic / LangChain ecosystem:</strong> Chroma for prototyping; Pinecone/Qdrant/Weaviate for production RAG</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>How vector search works:</strong> "We embed documents and queries into a shared high-dimensional space using the same model. At query time we embed the query and run approximate nearest-neighbour search — typically HNSW — against the indexed document vectors. HNSW builds a multi-layer navigable graph and traverses it top-down in O(log n), achieving 95–99% recall at &lt;5ms for millions of vectors."</p>
 <p style="margin-top:8px"><strong>ANN vs exact search:</strong> "Brute-force exact search is O(n·d) — infeasible at scale. HNSW trades 1–5% recall for 100–1000× speedup. In practice: measure recall@10 vs a Flat index on your specific data. If recall is sufficient (usually &gt;95%), ANN is the clear choice."</p>
 <p style="margin-top:8px"><strong>Index selection guide:</strong> "HNSW for &lt;50M vectors where RAM is available and recall matters. IVF+PQ for billion-scale where memory is constrained — 32× compression with ~5% recall loss. pgvector for teams already on Postgres who need &lt;10M vectors without new infra. Pinecone/Qdrant for managed production with metadata filtering."</p>
 <p style="margin-top:8px"><strong>Common follow-up — filtered search:</strong> "Filtered ANN is non-trivial — pre-filtering with HNSW on selective filters breaks graph connectivity and collapses recall. Best approach: Qdrant's payload-indexed HNSW that applies filters during graph traversal, or over-fetch with post-filtering. Always benchmark recall on your actual filter distributions."</p>
+<p style="margin-top:8px"><strong>Quantify what approximate buys.</strong> A billion 768-dim vectors is 7.7 × 10¹¹ multiply-adds per exact query; HNSW traverses a couple of thousand nodes for about 1.2 × 10⁶ — roughly 670,000× less work, in exchange for an answer no longer guaranteed correct. Then say when that guarantee matters: deduplication, compliance lookups, or a downstream system assuming a true top-k.</p>
+<p style="margin-top:8px"><strong>The answer that separates people: recall is a measurement, not a setting.</strong> Every index ships with a default <code>ef_search</code> or <code>nprobe</code> below recall 1.0, and nothing reports the neighbours it missed — so a mistuned index is indistinguishable from a working one. Sample a few thousand queries, brute-force the true top-k, measure recall@k. Do it <em>before</em> tuning chunking or reranking, because those measurements mean nothing on top of unknown recall.</p>
+<p style="margin-top:8px"><strong>Have the memory numbers.</strong> A million 768-dim vectors: 3.07 GB float32, 1.54 GB float16, 768 MB int8, 96 MB binary. The production pattern worth naming is binary search plus full-precision reranking of the shortlist — 32× less search memory, most of the accuracy back. And HNSW's graph costs ~128 bytes per vector at M = 16, which is 4% overhead on 768-dim vectors and 25% on 128-dim ones, so aggressive compression makes the index structure dominate.</p>
 </div>
 
 

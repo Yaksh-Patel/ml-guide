@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C13 done (39 topics), C14–C20 remaining (16 topics)** |
+| **Prose quality** | **C1–C14 done (41 topics), C15–C20 remaining (14 topics)** |
 
-### Prose progress: 39 / 55
+### Prose progress: 41 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -40,7 +40,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C11 32 cnns · 33 rnns-lstms
 - [x] C12 34 attention · 35 transformers · 36 transfer-distillation
 - [x] C13 37 tokenization · 38 bert · 39 llms-rlhf
-- [ ] C14 40 rag · 41 vector-databases
+- [x] C14 40 rag · 41 vector-databases
 - [ ] C15 42 agentic-ai · 43 multimodal
 - [ ] C16 44 time-series · 45 credit-risk
 - [ ] C17 46 gnns · 47 bipartite-graphs
@@ -240,6 +240,15 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
 - **Diagram labels in a serif fallback.** 294 SVG `text` elements named DM
   Sans / Syne / Inter, which this build no longer loads. One CSS rule in the
   compat layer remaps them.
+- **Boxes carry `style` attributes too, and `check_topics.py` cannot see a
+  malformed label.** `<div class="box story" style="...">` does not match a
+  literal-class search — the same trap as `anim-wrap` in section 4. Worse, if an
+  edit injects content into a `<div class="bl">` label and consumes its closing
+  tag, the divs still *balance*, so `check_topics.py` reports ok. Two rules that
+  follow: find boxes with `<div class="box X"[^>]*>` and depth-match, and after
+  any box edit assert that every `.bl` label closes immediately and contains no
+  `<p>`. That check now runs repo-wide (155 boxes, 0 malformed).
+
 - **Unsupported Unicode inside `\text{}`.** KaTeX's *text* mode rejects maths
   symbols: `×`, `→`, `←`, `÷`, `≤`, `≥` and friends all warn (and would fail under
   `strict:'error'`). Em dashes and en dashes are fine. Fixed in `39-llms-rlhf`,

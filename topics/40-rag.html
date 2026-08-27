@@ -1,6 +1,6 @@
 <section class="section" id="sec-rag">
 <div class="sec-title">RAG &amp; Retrieval</div>
-<div class="sec-desc">Retrieval-Augmented Generation (RAG) is the dominant pattern for grounding LLM outputs in real, current, sourced knowledge — without fine-tuning. A RAG pipeline retrieves relevant documents from a knowledge base and injects them into the LLM's context at inference time. Getting every stage right — chunking, embedding, retrieval, reranking, generation — is the difference between a hallucinating chatbot and a reliable production system.</div>
+<div class="sec-desc">A language model cannot tell you what it does not know, and it cannot tell you that it does not know. RAG addresses both by putting the answer in the context window rather than hoping it is in the weights — which turns a knowledge problem into a <em>retrieval</em> problem. That is a real improvement, and it relocates the failure: almost every disappointing RAG system is retrieving the wrong chunks, and the model is faithfully summarising them.</div>
 
 <!-- Why RAG -->
 <div class="g2">
@@ -79,6 +79,22 @@
 <!-- Chunking strategies -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Chunking Strategies</div>
 
+<div class="card cb"><div class="card-title">Chunk size, costed out</div>
+<div class="card-body">Chunk size is usually discussed as a quality trade-off. It is also an arithmetic one, and doing the arithmetic makes the decision concrete. Take a 10,000-word document — about <strong>13,300 tokens</strong> at the usual 1.33 tokens per word — chunked with 20% overlap:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Chunk size</th><th>Effective stride</th><th>Chunks produced</th><th>Top-5 context cost</th></tr>
+<tr><td>512 tokens</td><td>410</td><td><strong>33</strong></td><td>2,560 tokens</td></tr>
+<tr><td>256 tokens</td><td>205</td><td><strong>65</strong></td><td>1,280 tokens</td></tr>
+<tr><td>128 tokens</td><td>102</td><td><strong>130</strong></td><td>640 tokens</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Quartering the chunk size <strong>quadruples the number of vectors</strong> you store, index and search — and simultaneously quarters the context each retrieved chunk consumes. So the decision trades three things at once:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Retrieval precision</strong> improves with smaller chunks, because a chunk is matched on its whole content and a large one dilutes its own signal with irrelevant sentences</li>
+<li><strong>Answer completeness</strong> improves with larger chunks, because a claim and its qualifying clause must travel together. A chunk ending mid-argument retrieves a half-truth</li>
+<li><strong>Index size and rerank cost</strong> scale inversely with chunk size</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>The context budget is the constraint people forget.</strong> With an 8K window and roughly 1K reserved for prompt and answer, you can fit about <strong>14</strong> chunks of 512 tokens — so "retrieve top-20" is not available at that chunk size regardless of whether it would help. Chunk size and top-k are one decision.</div>
+<div class="card-body" style="margin-top:8px">The resolution used in practice is to stop coupling them: <strong>retrieve on small chunks and feed the model the larger passage around the hit.</strong> Small-to-big or parent-document retrieval buys the precision of a 128-token match and the completeness of a 512-token context, at the cost of storing the mapping. Usually a better first move than tuning a single chunk size.</div></div>
 <div class="card ca"><div class="card-title">Chunking — The Most Underrated RAG Decision</div>
 <div class="card-body">Chunk size controls the granularity of retrieval. Too large: retrieved chunks contain irrelevant context, polluting the LLM. Too small: single chunks lack enough context to be useful.</div>
 <table class="tbl" style="margin-top:10px">
@@ -122,6 +138,17 @@
 </div>
 <div class="box info" style="margin-top:10px"><div class="bl">BGE-M3: dense + sparse in one model</div><p>BGE-M3 generates dense embeddings, sparse (SPLADE-style) weights, and ColBERT late-interaction vectors from a single encoder. Eliminates the need for separate BM25 + dense pipelines — state-of-the-art on BEIR benchmark for hybrid retrieval.</p></div>
 </div>
+<div class="card cg"><div class="card-title">Fusing two rankings: reciprocal rank fusion</div>
+<div class="card-body">Hybrid search leaves two ranked lists whose scores are not comparable — a cosine similarity and a BM25 score live on different scales, so you cannot simply add them. Reciprocal rank fusion sidesteps that by discarding the scores and using only the <em>ranks</em>:</div>
+<div class="formula math-formula">$$\text{RRF}(d) = \sum_{r \in \text{rankers}} \frac{1}{k + \text{rank}_r(d)}, \qquad k \approx 60$$</div>
+<div class="card-body" style="margin-top:8px">Being scale-free, it needs no per-retriever normalisation or tuning. Watch what it rewards:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Document</th><th>Dense rank</th><th>Sparse rank</th><th>RRF score</th></tr>
+<tr><td>A — first in one system, poor in the other</td><td>1</td><td>50</td><td>1/61 + 1/110 = <strong>0.0255</strong></td></tr>
+<tr><td>B — good in both</td><td>5</td><td>5</td><td>1/65 + 1/65 = <strong>0.0308</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>B wins, despite never being first in anything.</strong> That is the intended behaviour: agreement between two retrievers with different failure modes is stronger evidence than one confident hit, and a document only one method finds is more often that method's artefact than a better answer. The constant k damps the very top ranks — at k = 60, rank 1 and rank 2 differ by only 3% — so RRF trusts consensus over any single system's confidence.</div>
+<div class="card-body" style="margin-top:8px">Use RRF when you have two or more retrievers and no labelled data. With relevance labels a tuned weighted combination of normalised scores can beat it, at the cost of needing re-tuning whenever either retriever changes.</div></div>
 
 <div class="card cc"><div class="card-title">Advanced Retrieval Patterns</div>
 <table class="tbl">
@@ -174,7 +201,7 @@
 <tr><td><strong>Context recall</strong></td><td>Did retrieval find all the relevant information needed to answer?</td><td>Ground truth answer decomposed into claims; check each in context</td><td>&gt;0.80</td></tr>
 <tr><td><strong>Answer correctness</strong></td><td>Is the final answer factually correct? (requires ground truth)</td><td>Semantic + factual similarity to reference answer</td><td>&gt;0.75</td></tr>
 </table>
-<div class="box story" style="margin-top:10px"><div class="bl">💡 Practical Eval Setup</div><p>Build a golden dataset of 50–100 question / expected-answer / source-document triples from your actual corpus. Run RAGAS on every pipeline change. Track faithfulness first — it's the hallucination metric and the most important for production trust. Context precision and recall diagnose whether the problem is in retrieval or generation.</p></div>
+<div class="box info" style="margin-top:10px"><div class="bl">the two failure modes look nothing alike</div><p>A RAG system that retrieves badly and one that generates badly produce different symptoms, and conflating them wastes weeks. <strong>Retrieval failure</strong> looks like a confident, well-written answer about the wrong thing — or "I don't have information on that" when the document plainly exists. <strong>Generation failure</strong> looks like an answer contradicting a chunk that was correctly retrieved and is sitting in the context. The first is fixed by chunking, hybrid search and reranking; the second by prompting, a better model, or enforced citation. <strong>Log the retrieved chunks alongside every answer</strong> — without them you cannot tell which you have, and most teams add this after building the pipeline rather than before.</p></div>
 </div>
 
 <div class="card cg"><div class="card-title">Retrieval Metrics (without LLM judge)</div>
@@ -226,7 +253,7 @@
 </div></div>
 
 <!-- Common mistakes -->
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>RAG as a silver bullet for hallucination</strong> — RAG reduces hallucination but doesn't eliminate it. The LLM can still ignore retrieved context. Faithfulness evaluation is essential</li>
   <li><strong>Skipping reranking</strong> — bi-encoder retrieval has poor precision on hard queries. Cross-encoder reranking is cheap (runs on top-50 docs) and reliably improves quality 5–15%</li>
@@ -246,11 +273,14 @@
   <li><strong>Financial firms:</strong> RAG over earnings transcripts, regulatory filings, internal research notes; faithfulness critical for compliance</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>What is RAG?</strong> "RAG grounds LLM outputs in retrieved knowledge. At query time: embed the question, run ANN search over indexed document embeddings, retrieve top-k chunks, inject them into the LLM context, generate a grounded answer. The key insight: the LLM's parametric memory is unreliable for facts — retrieval provides real, current, citable information."</p>
 <p style="margin-top:8px"><strong>Why hybrid search?</strong> "Dense retrieval handles semantic similarity but misses exact keywords. BM25 handles keywords but misses paraphrases. Hybrid search fuses both ranked lists via Reciprocal Rank Fusion — consistently outperforms either alone. BGE-M3 generates dense + sparse signals from a single encoder, making the combination simple."</p>
 <p style="margin-top:8px"><strong>How do you evaluate a RAG pipeline?</strong> "I use RAGAS: faithfulness (are claims supported by context?), context recall (did retrieval find the necessary info?), and answer relevance (does the answer address the question?). I build a golden dataset of 50–100 QA pairs from the actual corpus and run these metrics on every pipeline change. Faithfulness is the first metric to check — it's the hallucination measure."</p>
 <p style="margin-top:8px"><strong>RAG vs fine-tuning?</strong> "RAG for knowledge — facts, current information, sourced answers. Fine-tune for behaviour — style, format, persona, task-specific patterns. The combination is the best of both worlds: LoRA shapes how the model communicates, RAG provides what it knows."</p>
+<p style="margin-top:8px"><strong>Do the chunking arithmetic out loud.</strong> A 10,000-word document is ~13,300 tokens; at 512-token chunks with 20% overlap that is 33 chunks, at 128 it is 130 — so quartering chunk size quadruples the index. And with an 8K window minus ~1K for prompt and answer you fit only about 14 chunks of 512, so chunk size and top-k are one decision. Then give the resolution: <strong>retrieve on small chunks and pass the surrounding parent passage.</strong></p>
+<p style="margin-top:8px"><strong>Know how to fuse hybrid results.</strong> Cosine and BM25 are not on the same scale so you cannot add them — reciprocal rank fusion uses ranks only, 1/(60 + rank) summed across retrievers. It rewards consensus: rank 5 in both scores 0.0308 and beats rank 1 plus rank 50 at 0.0255, deliberately, because agreement between methods with different failure modes is better evidence than one confident hit.</p>
+<p style="margin-top:8px"><strong>The diagnostic that matters most:</strong> log retrieved chunks with every answer. Retrieval failure and generation failure look completely different and have disjoint fixes, and teams that cannot separate them spend weeks tuning a prompt to fix a chunking problem.</p>
 </div>
 
 
