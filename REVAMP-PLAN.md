@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C14 done (41 topics), C15–C20 remaining (14 topics)** |
+| **Prose quality** | **C1–C15 done (43 topics), C16–C20 remaining (12 topics)** |
 
-### Prose progress: 41 / 55
+### Prose progress: 43 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -41,7 +41,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C12 34 attention · 35 transformers · 36 transfer-distillation
 - [x] C13 37 tokenization · 38 bert · 39 llms-rlhf
 - [x] C14 40 rag · 41 vector-databases
-- [ ] C15 42 agentic-ai · 43 multimodal
+- [x] C15 42 agentic-ai · 43 multimodal
 - [ ] C16 44 time-series · 45 credit-risk
 - [ ] C17 46 gnns · 47 bipartite-graphs
 - [ ] C18 48 causal-inference · 49 responsible-ai
@@ -240,6 +240,17 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
 - **Diagram labels in a serif fallback.** 294 SVG `text` elements named DM
   Sans / Syne / Inter, which this build no longer loads. One CSS rule in the
   compat layer remaps them.
+- **`check_topics.py` only tracks `div` and `section`.** A stray `</tt>`, an
+  unclosed `<th>`, a mismatched `<em>` — none of it is caught, because the
+  parser deliberately watches only the two tags the router depends on. A full
+  tag-balance pass over all 56 topics currently reports 0 imbalances; re-run one
+  after any hand-written table or inline markup:
+
+  ```python
+  # HTMLParser walking every tag, skipping void/SVG elements and raw-text blocks
+  # (pre/script/textarea/style). See the C15 commit for the ~20-line version.
+  ```
+
 - **Boxes carry `style` attributes too, and `check_topics.py` cannot see a
   malformed label.** `<div class="box story" style="...">` does not match a
   literal-class search — the same trap as `anim-wrap` in section 4. Worse, if an

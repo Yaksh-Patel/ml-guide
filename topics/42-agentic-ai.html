@@ -1,6 +1,6 @@
 <section class="section" id="sec-agents">
 <div class="sec-title">Agentic AI</div>
-<div class="sec-desc">Agents extend LLMs beyond single-turn Q&amp;A into systems that reason, plan, use tools, and take actions across multiple steps to complete complex goals. Agentic AI is the fastest-growing application layer in 2025 — understanding the design patterns, failure modes, and production considerations is increasingly a core DS/ML skill.</div>
+<div class="sec-desc">An agent is a loop: the model proposes an action, something executes it, the result comes back, repeat. Everything hard about agents follows from that loop running many times — reliability compounds multiplicatively so per-step accuracy that sounds excellent becomes a coin flip, cost grows quadratically because each turn resends the history, and every observation the loop ingests is untrusted input arriving on the same channel as your instructions.</div>
 
 <!-- What is an agent -->
 <div class="g2">
@@ -14,6 +14,32 @@
 </ul>
 <div class="box warn" style="margin-top:8px"><div class="bl">Failure risk</div><p>Agency = power + autonomy. Mistakes compound across steps. A single wrong tool call can cascade. Never give an agent more permissions than the minimum required, and always implement human-in-the-loop checkpoints for irreversible actions.</p></div>
 </div>
+<div class="card cr"><div class="card-title">Why agents fail: reliability compounds</div>
+<div class="card-body">This is the single most important number in the topic and it is one exponent. If each step of a loop succeeds independently with probability p, an n-step task succeeds with <strong>pⁿ</strong>:</div>
+<div class="formula math-formula">$$P(\text{task succeeds}) = p^{\,n}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Per-step reliability</th><th>5 steps</th><th>10 steps</th><th>20 steps</th><th>50 steps</th></tr>
+<tr><td>95%</td><td>77%</td><td><strong>60%</strong></td><td><strong>36%</strong></td><td>8%</td></tr>
+<tr><td>99%</td><td>95%</td><td>90%</td><td><strong>82%</strong></td><td>61%</td></tr>
+<tr><td>99.9%</td><td>99.5%</td><td>99%</td><td>98%</td><td>95%</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>95% per-step sounds excellent and gives you a 36% success rate over 20 steps.</strong> That is the entire explanation for why agent demos work and agent products disappoint — a demo is a short trajectory, and production tasks are long ones.</div>
+<div class="card-body" style="margin-top:8px">Read the table the other way and it tells you what to build. To hit 90% overall across 20 steps you need <strong>99.5% per step</strong>, which no current model delivers on open-ended tool use. So the engineering lever is not the model:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Reduce the step count.</strong> At 95% per step, going from 20 steps to 5 moves you from 36% to 77% with no change to the model. Every step you can replace with one deterministic call — a SQL query instead of three exploratory tool uses, a fixed workflow instead of open planning — multiplies through. <em>This is why most successful "agents" in production are mostly ordinary software with a model at a few decision points</em></li>
+<li><strong>Make steps verifiable</strong> so a failure is caught and retried rather than propagated. A retried step with two attempts at 95% is 99.75% — recovering the exponent is worth more than improving p</li>
+<li><strong>Checkpoint and allow resumption</strong>, so a 20-step failure does not restart from zero</li>
+<li><strong>Bound the loop.</strong> Without a hard step cap an agent that cannot solve the task will keep paying for attempts. Every production agent needs a maximum iteration count and a budget kill-switch</li>
+</ul>
+<div class="box warn"><div class="bl">and the cost grows quadratically</div>
+<p>Each iteration resends the accumulated history, so the tokens <em>processed</em> are the sum of the prefixes rather than the sum of the additions. If each step adds about 500 tokens of thought, action and observation:</p>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Steps</th><th>Tokens added</th><th>Tokens actually processed</th><th>Multiple</th></tr>
+<tr><td>5</td><td>2,500</td><td>7,500</td><td>3.0×</td></tr>
+<tr><td>10</td><td>5,000</td><td><strong>27,500</strong></td><td><strong>5.5×</strong></td></tr>
+<tr><td>20</td><td>10,000</td><td>105,000</td><td>10.5×</td></tr>
+</table>
+<p style="margin-top:10px">A 10-step agent costs <strong>5.5× the naive estimate</strong>, and prompt caching is the main reason this is survivable in practice — the unchanged prefix is billed at a discount. Budget with the quadratic, not the linear, and note that long observations (a full web page, a large query result) blow this up fast. Truncate and summarise observations before they enter the history.</p></div></div>
 
 <div class="card cg"><div class="card-title">Agent vs Chatbot vs RAG Pipeline</div>
 <table class="tbl">
@@ -226,6 +252,18 @@ response = client.messages.create(
 </ul>
 </div>
 </div></div>
+<div class="card cr"><div class="card-title">Why prompt injection has no fix, only mitigations</div>
+<div class="card-body">It is tempting to treat this as SQL injection and look for the equivalent of a parameterised query. There isn't one, and the reason is structural rather than a gap in the tooling.</div>
+<div class="card-body" style="margin-top:8px"><strong>SQL injection is solvable because SQL has a parser.</strong> A prepared statement separates code from data before execution, so a value can never be reinterpreted as syntax. A language model has no such separation: your system prompt, the user's request and a retrieved web page all arrive as <em>one undifferentiated token sequence</em>. There is no privileged position in that sequence and no parse step that could enforce one. <strong>The model's only means of distinguishing instruction from data is to be persuaded, which is exactly what an attacker is doing.</strong></div>
+<div class="card-body" style="margin-top:8px">So the correct posture is defence in depth, on the assumption that injection will sometimes succeed:</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Least privilege on tools.</strong> The question is not "can the agent be tricked" but "what is the worst thing it can do once tricked". An agent with read-only database access and no outbound network is a nuisance when compromised; one that can send email and move money is a breach. This is where nearly all real risk reduction comes from</li>
+<li><strong>Human approval for irreversible actions.</strong> Sending, deleting, paying, publishing. A confirmation step converts a silent compromise into a visible odd request</li>
+<li><strong>Separate the privileged model from the exposed one.</strong> One model plans with trusted input and never sees retrieved content; a second processes untrusted content and can only return data, never request actions</li>
+<li><strong>Constrain tool arguments by schema and validate them outside the model</strong> — an allowlist of recipients beats asking the model to be careful about who it emails</li>
+<li><strong>Log every action with its justification</strong>, because detection is the only layer that works after prevention fails</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>The framing worth carrying:</strong> treat every observation the loop ingests as hostile user input, and design so that a fully compromised model cannot do unacceptable damage. Any mitigation that relies on the model resisting persuasion is a soft control, not a boundary.</div></div>
 
 <!-- Evaluation -->
 <div class="card cp"><div class="card-title">Evaluating Agents — Much Harder Than Evaluating LLMs</div>
@@ -238,11 +276,11 @@ response = client.messages.create(
 <tr><td><strong>Error recovery rate</strong></td><td>Can the agent recover from tool call failures?</td><td>Inject failures during eval; measure re-routing</td></tr>
 <tr><td><strong>Safety violations</strong></td><td>Did the agent attempt disallowed actions?</td><td>Adversarial scenarios; red-teaming</td></tr>
 </table>
-<div class="box story" style="margin-top:10px"><div class="bl">Eval frameworks</div><p><strong>WebArena / OSWorld:</strong> benchmark agents on real web browser and desktop tasks. <strong>AgentBench:</strong> 8 environment types from code execution to web browsing. <strong>Custom trajectories:</strong> record human expert trajectories; compare agent tool call sequence and success rate. Trajectory-based evals are the gold standard for production agent validation.</p></div>
+<div class="box info"><div class="bl">the honest shape of a production agent</div><p>The demo version is a model with a dozen tools and an open-ended goal. The version that survives contact with users is mostly deterministic software — a fixed pipeline with the model making a small number of bounded decisions, each verified, with hard caps on iterations and spend. That is not a failure of ambition, it is the compounding arithmetic above: <strong>every step you move out of the loop and into ordinary code multiplies the success rate.</strong> When someone says their agent is unreliable, the productive question is usually not which model they use but how many model-decided steps stand between the request and the result.</p></div>
 </div>
 
 <!-- Common mistakes -->
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>Building an agent when a RAG pipeline suffices</strong> — agents add significant complexity and failure modes. If the task is single-step retrieval + generation, use RAG. Agents are for multi-step tasks requiring decisions</li>
   <li><strong>Too many tools</strong> — LLMs perform worse with more tools (attention dilution). Limit to 5–10 highly relevant tools per agent task. Use sub-agents with specialised tool sets</li>
@@ -263,11 +301,14 @@ response = client.messages.create(
   <li><strong>Cognition (Devin):</strong> software engineering agent with terminal, browser, and editor tools; operates a complete development environment</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>What is an agent?</strong> "An agent is an LLM that can reason across multiple steps and take actions via tool calls — breaking a complex goal into sub-tasks, calling the right tools in sequence, incorporating results, and repeating until the task is complete. The core loop is ReAct: Thought → Action → Observation → repeat."</p>
 <p style="margin-top:8px"><strong>How does tool calling work?</strong> "You define tools as JSON schemas with name, description, and input parameters. The LLM reads the descriptions and decides which tool to call. Your code executes it, appends the result to the conversation, and sends it back to the LLM for the next step. The description quality is critical — it's what the LLM uses to select the right tool."</p>
 <p style="margin-top:8px"><strong>What are the biggest risks with agents?</strong> "Irreversible actions — agents can send emails, delete records, make purchases. Always require explicit confirmation before any write action that can't be undone. Prompt injection — malicious content in retrieved docs can hijack the agent. Separate tool outputs from system instructions. And cascading failures — one wrong step makes downstream steps wrong. Set iteration budgets, validate outputs between steps, log every action."</p>
 <p style="margin-top:8px"><strong>When not to use an agent?</strong> "If the task is a single retrieval + generation (use RAG), a single classification (use a fine-tuned model), or a fixed deterministic workflow (use a traditional pipeline). Agents add real complexity and failure modes. Only reach for agents when the task genuinely requires multi-step reasoning with dynamic tool selection."</p>
+<p style="margin-top:8px"><strong>Lead with the compounding arithmetic — it is the answer to "why are agents unreliable".</strong> Success is pⁿ, so 95% per step is 60% over 10 steps and <strong>36% over 20</strong>. Hitting 90% across 20 steps needs 99.5% per step, which nothing currently delivers on open-ended tool use. So the lever is step count, not model choice: at 95%, cutting 20 steps to 5 takes you from 36% to 77%. That is why production agents are mostly deterministic software with a model at a few decision points.</p>
+<p style="margin-top:8px"><strong>Know the cost shape.</strong> Each iteration resends the history, so tokens processed are the sum of prefixes — a 10-step loop at 500 tokens per step processes 27,500 tokens, <strong>5.5× the naive 5,000</strong>, and 20 steps is 10.5×. Mention that prompt caching is what makes this survivable, and that long observations must be truncated before they enter the history.</p>
+<p style="margin-top:8px"><strong>On prompt injection, give the structural reason rather than a list of tips.</strong> SQL injection is solvable because SQL has a parser and prepared statements separate code from data. A model receives system prompt, user input and retrieved content as one token stream with no privileged position and no parse step — so its only defence is being persuaded, which is what the attacker is doing. Therefore: least privilege on tools, human approval for irreversible actions, and design so a fully compromised model still cannot do unacceptable damage. <strong>The right question is not "can it be tricked" but "what can it do once tricked".</strong></p>
 </div>
 
 

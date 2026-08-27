@@ -1,6 +1,6 @@
 <section class="section" id="sec-multimodal">
 <div class="sec-title">Multimodal Models</div>
-<div class="sec-desc">Multimodal models process and connect information across multiple modalities — text, images, audio, video, and structured data. They are one of the fastest-growing areas of applied ML: powering image search, visual question answering, document understanding, generative image editing, and the vision capabilities now standard in frontier LLMs.</div>
+<div class="sec-desc">The trick that made multimodal work is embarrassingly simple: stop trying to translate between modalities and instead train two encoders to land in the <em>same</em> vector space. Once an image and the sentence describing it are nearby points, search, classification and captioning all become the same operation. Everything since — vision-language models, text-to-image, document understanding — is that shared space plus a way of feeding it to a language model.</div>
 
 <div class="g2">
 <div class="card cb"><div class="card-title">Why Multimodal Matters</div>
@@ -71,6 +71,16 @@ probs = logits_per_image.softmax(dim=1)
 
 <div class="box info" style="margin-top:10px"><div class="bl">Zero-shot classification with CLIP</div><p>CLIP's shared embedding space enables zero-shot image classification: describe class labels as text ("a photo of a dog", "a photo of a cat"), compute text embeddings, find the label whose text embedding is most similar to the image embedding. No task-specific training needed — CLIP achieves competitive accuracy on ImageNet zero-shot.</p></div>
 </div>
+<div class="card cg"><div class="card-title">Why contrastive learning needs enormous batches</div>
+<div class="card-body">CLIP's loss asks each image to identify its own caption among all the captions in the batch. So <strong>the batch size is the difficulty of the task</strong> — every other item is a negative example, and the number of negatives is the entire training signal.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Batch size</th><th>Negatives per positive</th><th>Chance of guessing right</th><th>What the model must learn</th></tr>
+<tr><td>256</td><td>255</td><td>0.39%</td><td>coarse distinctions — dog vs car</td></tr>
+<tr><td>4,096</td><td>4,095</td><td>0.024%</td><td>finer — breed, setting, colour</td></tr>
+<tr><td><strong>32,768</strong> (CLIP's actual batch)</td><td>32,767</td><td><strong>0.003%</strong></td><td>fine-grained detail, because coarse features no longer disambiguate</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">At batch 256 an image can be matched to its caption on gist alone. At 32,768 the batch almost certainly contains several photographs of dogs on grass, so gist is not enough and the encoder is forced to represent what actually distinguishes them. <strong>The batch size is a curriculum, not an implementation detail</strong> — which is why contrastive pretraining is infrastructure-heavy, and why techniques that keep a memory bank of past negatives exist to simulate a larger batch than fits in memory.</div>
+<div class="card-body" style="margin-top:8px">This also explains the temperature parameter in the loss. It scales the logits before the softmax, controlling how sharply the model is punished for near-misses — and CLIP <em>learns</em> it rather than fixing it, because the right sharpness changes as the representation improves. Same mechanism as the softmax saturation argument in attention: too sharp and gradients vanish on everything but the top candidate.</div></div>
 
 <!-- ViT -->
 <div class="card cp"><div class="card-title">Vision Transformer (ViT) — How Images Become Tokens</div>
@@ -87,6 +97,17 @@ N &= \frac{HW}{P^2} \quad \text{(e.g. 224}\times\text{224 image, P=16} \rightarr
   <li>Full Transformer attention over all patches — each patch can attend to every other patch regardless of spatial distance</li>
   <li><strong>Variants:</strong> ViT-B/16 (86M params), ViT-L/14 (307M, used by CLIP), ViT-H/14 (632M) — B/L/H = Base/Large/Huge</li>
 </ul></div>
+<div class="card cp"><div class="card-title">Resolution is expensive, and images eat context</div>
+<div class="card-body">Patchifying turns resolution into sequence length, and attention is quadratic in sequence length — so resolution is quadratically expensive in a way that is easy to underestimate:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Input</th><th>Patch size</th><th>Patches (tokens)</th><th>Attention pairs</th></tr>
+<tr><td>224 × 224</td><td>16</td><td>196</td><td>38,416</td></tr>
+<tr><td>224 × 224</td><td>14</td><td>256</td><td>65,536</td></tr>
+<tr><td>336 × 336</td><td>14</td><td><strong>576</strong></td><td><strong>331,776</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Going from 224 to 336 is <strong>2.25× the pixels and 8.6× the attention work.</strong> That is why higher-resolution vision is not simply a matter of feeding bigger images, and why models handle detail by tiling — splitting a large image into several standard-sized crops plus a downscaled overview — rather than by scaling the patch grid.</div>
+<div class="card-body" style="margin-top:8px"><strong>The consequence for VLMs is that images consume the language model's context.</strong> LLaVA passes 256 patch embeddings per image into the LLM, so each image occupies 256 token slots before a word of text. Four images is <strong>1,024 tokens</strong>; a high-resolution tiled image can be well over a thousand on its own. Two things follow that surprise people: a multi-image conversation fills a context window remarkably fast, and <strong>image tokens are billed like text tokens</strong>, so an image-heavy application costs far more per request than its word count suggests.</div>
+<div class="card-body" style="margin-top:8px">It is also why the projection layer matters more than its simplicity suggests. It is the only thing translating CLIP's visual geometry into the LLM's token space, and in the LLaVA recipe it is trained first on its own while both encoders stay frozen — the alignment is learned before anything else is allowed to move.</div></div>
 
 <!-- VLMs -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Vision-Language Models (VLMs)</div>
@@ -240,7 +261,7 @@ for batch in domain_dataloader:
 </table></div>
 
 <!-- Common mistakes -->
-<div class="card"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>Using CLIP embeddings for text-only retrieval</strong> — CLIP's text encoder is optimised for vision-language alignment, not pure text semantic similarity. Use a dedicated text embedding model (BGE, E5) for text-only retrieval</li>
   <li><strong>Assuming VLMs "see" images like humans</strong> — VLMs process a fixed grid of patches with no explicit spatial reasoning. They can struggle with counting, spatial relationships ("is the red ball to the left or right of the blue cube?"), and fine-grained differences between similar images</li>
@@ -260,10 +281,13 @@ for batch in domain_dataloader:
   <li><strong>Anthropic / OpenAI:</strong> vision capabilities in Claude 3 and GPT-4V built on transformer-based vision encoders projected into the LLM's token space — the LLaVA paradigm at scale</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>How does CLIP work?</strong> "CLIP trains a vision encoder (ViT) and a text encoder (Transformer) jointly using contrastive learning on 400M image-caption pairs. Matching pairs are pushed together in the embedding space; non-matching pairs are pushed apart. This creates a shared representation space where similar concepts — regardless of modality — end up close together. The result: zero-shot image classification, image-text retrieval, and semantic image search without task-specific training."</p>
 <p style="margin-top:8px"><strong>How does a VLM like LLaVA work?</strong> "LLaVA connects a CLIP vision encoder to an LLM via a small learned projection layer. The image is split into patches, encoded by ViT into 256 patch embeddings, projected into the LLM's embedding space, and then concatenated with the text prompt tokens. The LLM sees image tokens and text tokens together and generates a response auto-regressively — the same way it would for a text-only prompt. Only the projection layer is trained from scratch; CLIP and the LLM are fine-tuned lightly or frozen."</p>
 <p style="margin-top:8px"><strong>Multimodal retrieval in production?</strong> "Embed all images with CLIP and index in a vector DB. At query time, embed the text query with CLIP's text encoder — the shared embedding space means the query vector is directly comparable to image vectors. Run ANN search to find the top-k visually matching images. This is how Pinterest Lens, Google Shopping, and most e-commerce visual search works. CLIP's zero-shot generalisation means you don't need to label training data for each new category — the pre-trained space already understands 'red floral dress' vs 'blue striped shirt'."</p>
+<p style="margin-top:8px"><strong>Explain why contrastive learning needs huge batches</strong>, because it is the non-obvious part. The batch <em>is</em> the task difficulty: every other item is a negative, so at batch 256 an image can find its caption on gist alone, while CLIP's batch of 32,768 almost certainly contains several photos of dogs on grass and forces the encoder to represent what actually distinguishes them. Random chance goes from 0.39% to 0.003%. <strong>Batch size is a curriculum, not an implementation detail.</strong></p>
+<p style="margin-top:8px"><strong>Know that resolution is quadratic.</strong> A 224 × 224 image at patch 16 is 196 tokens and 38,416 attention pairs; 336 × 336 at patch 14 is 576 tokens and 331,776 pairs — <strong>2.25× the pixels for 8.6× the work</strong>. That is why high-resolution VLMs tile rather than scale the grid. Then the production consequence: LLaVA spends 256 context tokens per image, so four images is 1,024 tokens before any text, image tokens are billed like text, and multi-image conversations exhaust a context window fast.</p>
+<p style="margin-top:8px"><strong>The framing that ties it together:</strong> the contribution was not translating between modalities but training two encoders into one shared space, after which retrieval, zero-shot classification and captioning are all the same nearest-neighbour operation. A VLM is then that space plus a projection into a language model's token stream — which is why the projection layer is trained first, with both encoders frozen.</p>
 </div>
 
 
