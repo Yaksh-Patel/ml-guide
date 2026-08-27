@@ -1,53 +1,37 @@
 <section class="section" id="sec-ensemble">
 <div class="sec-title">Ensemble Methods</div>
-<div class="sec-desc">Combine multiple models to outperform any individual — the technique behind every top Kaggle solution and many production systems.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Bagging (Bootstrap Aggregating)</div>
-<div class="card-body">Train same algorithm on different bootstrap samples. Average predictions. <strong>Reduces variance.</strong></div>
-<ul class="bul" style="margin-top:8px"><li>Models trained independently and in parallel</li><li>Works best when base model has high variance (overfitting)</li><li>Examples: Random Forest, Extra Trees</li><li>OOB evaluation: each training sample missed by ~37% of trees → free validation</li></ul></div>
-<div class="card cg"><div class="card-title">Boosting</div>
-<div class="card-body">Train sequentially — each model focuses on previous model's errors. <strong>Reduces bias.</strong></div>
-<ul class="bul" style="margin-top:8px"><li>Models trained sequentially, each correcting its predecessor</li><li>Works best when base model has high bias (underfitting)</li><li>Examples: XGBoost, LightGBM, AdaBoost, CatBoost</li><li>Risk: sensitive to noisy labels (each boosted model doubles down on hard examples)</li></ul></div>
-</div>
-<div class="card ca"><div class="card-title">Stacking (Stacked Generalization)</div>
-<div class="card-body">Train multiple diverse base models. Use their predictions as features for a meta-model (blender) trained on held-out predictions.</div>
-<div class="formula math-formula">$$\begin{aligned}
-&\text{Stage 1: train base models } \{M_1, M_2, \ldots, M_k\} \text{ on training data} \\
-&\text{Stage 2 (out-of-fold): get predictions from each } M_i \text{ on validation folds} \\
-&\text{Stage 3: train meta-model on } [M_1(x_i), M_2(x_i), \ldots, M_k(x_i)] \rightarrow y \\
-&\text{Inference: stack base model predictions} \rightarrow \text{feed to meta-model}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Meta-model learns which base model to trust on which inputs</li><li>Diversity is key: combine logistic regression + XGBoost + neural network</li><li>Risk of leakage: always use out-of-fold predictions, not in-sample predictions</li></ul></div>
-<div class="card"><div class="card-title">Voting &amp; Blending</div>
-<div class="g2" style="margin-top:8px">
-<div><strong style="font-size:13px;color:var(--text)">Voting Classifier</strong>
-<ul class="bul" style="margin-top:6px"><li><strong>Hard voting:</strong> majority vote on class labels</li><li><strong>Soft voting:</strong> average predicted probabilities — almost always better</li><li>Weights can be assigned to better-performing models</li></ul></div>
-<div><strong style="font-size:13px;color:var(--text)">Blending vs Stacking</strong>
-<ul class="bul" style="margin-top:6px"><li>Blending: simpler — hold out a fixed 20% for meta-model training</li><li>Stacking: use k-fold CV out-of-fold predictions — more data for meta-model, less leakage risk</li><li>Blending faster to implement; stacking more robust</li></ul></div>
-</div></div>
+<div class="sec-desc">Three families that all "combine models" and are betting on three completely different things. Bagging bets your error is variance. Boosting bets it is bias. Stacking bets that no single model is best everywhere and that the right weighting can be learned. Knowing which bet you are making tells you what to build — and whether the ensemble will help at all.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Training the meta-model on in-sample predictions</strong> — the #1 stacking mistake. Base models fitted on the full training set and used to generate training features for the meta-model create massive leakage: meta-model learns to trust overfit base model predictions. Always use out-of-fold (OOF) predictions for stacking</li>
-  <li><strong>Stacking similar models</strong> — stacking XGBoost + another XGBoost with slightly different hyperparameters provides almost no diversity. Ensemble diversity = reduced correlation between model errors. Mix model types: tree ensemble + linear model + neural network</li>
-  <li><strong>"More models = better ensemble"</strong> — diminishing returns set in quickly. After 5–7 diverse models, adding more rarely helps and increases inference cost. The correlation between base model errors matters more than count</li>
-  <li><strong>Using a complex meta-model</strong> — meta-models should be simple (linear regression, logistic regression, ridge). A complex meta-model on OOF predictions will overfit to the small number of base models. Ridge regression is the standard meta-learner</li>
-  <li><strong>Not computing OOF predictions correctly for test set</strong> — for each CV fold, train base models on train fold, predict on val fold (these become OOF train features). For test features: average base model predictions across all k folds' versions of the model</li>
-</ul></div>
+<div class="card cb"><div class="card-title">One decomposition, three attacks</div>
+<div class="card-body">Expected error splits into bias², variance, and irreducible noise. Each ensemble family targets a different term, which is why they behave so differently in practice rather than being interchangeable ways of averaging.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>Bagging</th><th>Boosting</th><th>Stacking</th></tr>
+<tr><td><strong>Attacks</strong></td><td>variance</td><td>bias</td><td>model-selection error</td></tr>
+<tr><td><strong>Base learners</strong></td><td>deep, low-bias, high-variance</td><td>shallow, high-bias — depth 3–6</td><td>strong and <em>different</em> from each other</td></tr>
+<tr><td><strong>Fitted</strong></td><td>independently, in parallel</td><td>sequentially, on what remains</td><td>independently, then a meta-model on their outputs</td></tr>
+<tr><td><strong>More members</strong></td><td>converges, cannot overfit</td><td>eventually fits noise — early-stop</td><td>diminishing fast; overfits the meta-model</td></tr>
+<tr><td><strong>Fails when</strong></td><td>the base model is already stable</td><td>labels are noisy</td><td>the members agree</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The diagnostic follows directly. <strong>If train error is already high, no amount of bagging will help</strong> — you have a bias problem, and averaging does not touch bias. If train error is near zero and validation is far behind, that is variance, and averaging is exactly right. Reaching for an ensemble without checking which one you have is how people spend a week for nothing.</div>
+<div class="card-body" style="margin-top:8px">Stacking's framing is worth stating precisely, because "combine models" undersells it: <strong>you were always going to pick one model by comparing validation scores.</strong> That choice is itself an estimate, made once, globally, from noisy numbers. Stacking replaces it with a learned, input-dependent weighting — so it attacks the error in your <em>model selection</em>, not in any individual model.</div></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Kaggle top-10 solutions:</strong> virtually all winning structured-data solutions use stacking — typically LightGBM + XGBoost + CatBoost + neural network base models with a ridge meta-learner; the ensemble typically adds 0.2–0.5% AUC over the best single model</li>
-  <li><strong>Netflix Prize (2009):</strong> the winning solution was an ensemble of 107 distinct algorithms — stacking introduced the concept of learned meta-models in the competition ML community</li>
-  <li><strong>Production ML at scale:</strong> full stacking is often impractical at serving time; soft voting (averaging 2–3 models) is the production-friendly alternative — simple to deploy, easy to debug, meaningful accuracy gain</li>
-  <li><strong>Weather forecasting (ECMWF):</strong> ensemble forecasting is the standard in meteorology — running 50 perturbed model instances and averaging produces better probabilistic forecasts than any single deterministic model; the ML concept is borrowed from this tradition</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For competitions: stack XGBoost + LightGBM + CatBoost + neural network, meta-model is ridge regression on OOF predictions — diversity across model types is the key. For production: soft voting of 2–3 models is the pragmatic choice — easy to deploy, easy to roll back. The cardinal stacking rule: meta-model must train on out-of-fold predictions, never on in-sample predictions — the leakage otherwise is severe and makes the ensemble look far better than it is on the training set."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I averaged predictions from two XGBoost models with different seeds." — Two nearly-identical models have highly correlated errors; averaging barely helps. Diversity (different model families) is what drives ensemble gains.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does ensembling reduce variance?" — Answer: if base model errors are uncorrelated with variance σ², averaging k models reduces variance to σ²/k. In practice, errors are partially correlated, so the reduction is (1 + (k−1)ρ)·σ²/k where ρ is the average pairwise error correlation. Minimizing ρ (diversity) is equivalent to maximizing variance reduction — this is why diverse model types are critical.</p>
-</div>
+<div class="card cg"><div class="card-title">Diversity, not count — the arithmetic</div>
+<div class="card-body">Averaging k models each with variance σ² and average pairwise error correlation ρ gives:</div>
+<div class="formula math-formula">$$\operatorname{Var}\!\left(\frac{1}{k}\sum_i M_i\right) = \frac{1 + (k-1)\rho}{k}\,\sigma^2 \qquad \xrightarrow{\ k \to \infty\ } \ \rho\sigma^2$$</div>
+<div class="card-body" style="margin-top:8px">Same formula as the one behind Random Forest's feature subsampling, applied now across <em>model families</em> rather than across trees. Put σ² = 1 and k = 5 through it:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Five models of…</th><th>ρ</th><th>Variance</th><th>Reduction</th></tr>
+<tr><td>the same XGBoost, different seeds</td><td>0.9</td><td>0.920</td><td><strong>8%</strong> — very nearly nothing</td></tr>
+<tr><td>XGBoost + LightGBM + CatBoost</td><td>0.5</td><td>0.600</td><td><strong>40%</strong></td></tr>
+<tr><td>boosted trees + linear + neural net</td><td>0.2</td><td>0.360</td><td><strong>64%</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Identical k, radically different payoff, and the only thing that changed is how much the members disagree.</strong> This is the answer to "I averaged two XGBoosts with different seeds and it barely helped" — their errors are the same errors. Diversity comes from different inductive biases: a linear model and a tree ensemble are wrong about different rows, which is precisely what makes their average better than either.</div>
+<div class="card-body" style="margin-top:8px">The same formula also settles how many members are worth having. At ρ = 0.5:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>k</th><th>1</th><th>2</th><th>5</th><th>10</th><th>50</th><th>∞</th></tr>
+<tr><td><strong>Variance</strong></td><td>1.000</td><td>0.750</td><td>0.600</td><td>0.550</td><td>0.510</td><td><strong>0.500</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Going from one model to two buys <strong>0.250</strong>. Going from five to ten buys <strong>0.050</strong>. The floor is ρ itself and you are most of the way there by five. That is the arithmetic behind the folk rule that five to seven diverse models is where it flattens — and the reason a leaderboard entry with forty models is buying almost nothing per model while paying full price for each.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Bagging, boosting, stacking: what each one is betting on</div>
 <svg viewBox="0 0 500 206" xmlns="http://www.w3.org/2000/svg">
@@ -92,6 +76,73 @@
 <text x="430.0" y="159.0" fill="#b97cf8" font-size="8.8" text-anchor="middle" font-family="DM Sans">attacks BOTH, can overfit</text>
 <text x="250.0" y="196.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Hand-rolled stacking that trains the meta-learner on in-fold predictions leaks badly.</text>
 </svg></div>
+
+<div class="card cp"><div class="card-title">Stacking, and the leak that makes it look brilliant</div>
+<div class="card-body">Stacking trains a meta-model on the base models' predictions. Everything depends on <em>which</em> predictions, and getting that wrong is the single most common failure in the topic.</div>
+<div class="card-body" style="margin-top:8px"><strong>The correct procedure:</strong></div>
+<ol class="num" style="margin-top:8px">
+<li>Split the training data into k folds</li>
+<li>For each fold i, fit every base model on the other k − 1 folds and predict fold i. Collect these — <strong>each row now has one out-of-fold prediction per base model</strong>, produced by a model that never saw that row</li>
+<li>Train the meta-model on that n × m matrix of OOF predictions against y</li>
+<li>For test features, average each base model's k fold-versions' predictions (or refit on all training data and predict once). Averaging the fold models is more faithful to what the meta-model was trained on</li>
+</ol>
+<div class="box warn"><div class="bl">what happens if you skip step 2</div>
+<p>Fit the base models on all the training data, then have them predict that same data to build the meta-model's features. Those are <em>in-sample</em> predictions: an XGBoost that scores R² 0.99 in-sample and 0.85 out-of-sample now hands the meta-model a column that is almost exactly y.</p>
+<p style="margin-top:8px">The meta-model does the sensible thing with a near-perfect feature — it puts nearly all the weight on it and ignores everything else. Then at inference that column arrives at its real quality of 0.85, and the learned weights are calibrated to an accuracy that does not exist. <strong>You have manufactured a train/serve distribution shift inside your own ensemble</strong>, the training score looks superb, and the ensemble underperforms its best single member. Out-of-fold predictions are not a refinement; they are the whole method.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>Keep the meta-model small.</strong> Its features are m columns that are all predicting the same target, so they are strongly correlated and carry far less independent information than m columns normally would. Ridge is the standard choice. <strong>Non-negative least squares is often better still</strong>, because it forbids the meta-model from learning a large positive weight on one member offset by a large negative weight on another — an arrangement that fits the noise in their difference and generalises badly. Anything with real capacity here will overfit a handful of correlated columns.</div>
+<div class="card-body" style="margin-top:8px"><strong>Blending</strong> is the cheap version: hold out a fixed 20% once, train base models on the rest, fit the meta-model on that slice. Faster and simpler, but the meta-model sees only 20% of the data and you lose the rest for base-model training. Stacking with k-fold OOF uses everything and is what competitions actually run.</div></div>
+
+<div class="card ca"><div class="card-title">Voting: why soft beats hard, and its precondition</div>
+<div class="card-body">Hard voting takes the majority of predicted <em>labels</em>. Soft voting averages predicted <em>probabilities</em>. The difference is that hard voting throws away confidence, and the example makes it obvious.</div>
+<div class="card-body" style="margin-top:8px">Three models score one instance at P(positive) = 0.45, 0.45, 0.90:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Scheme</th><th>Computation</th><th>Verdict</th></tr>
+<tr><td><strong>Hard voting</strong></td><td>labels 0, 0, 1 → majority</td><td><strong>negative</strong></td></tr>
+<tr><td><strong>Soft voting</strong></td><td>(0.45 + 0.45 + 0.90) / 3 = <strong>0.60</strong></td><td><strong>positive</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two models were <em>barely</em> negative and one was firmly positive. Soft voting uses that; hard voting rounds each to a bit first and discards it. Soft voting is almost always the better default, and it lets you weight members by validation performance, which hard voting cannot express meaningfully.</div>
+<div class="box warn"><div class="bl">soft voting assumes the numbers are comparable</div>
+<p>Averaging is only meaningful if the members' outputs are on the same scale. They frequently are not: an SVM's <code>decision_function</code> is an unbounded signed distance, a random forest's score is a vote share that avoids the extremes, and a boosted model's is typically overconfident. <strong>Averaging those three averages three different things.</strong></p>
+<p style="margin-top:8px">Calibrate each member before averaging — Platt or isotonic on held-out data — or average <em>ranks</em> instead of scores, which is scale-free and is why rank-averaging is so common in competitions. Skipping this step is why an ensemble sometimes scores below its best member.</p></div></div>
+
+<div class="card cb"><div class="card-title">Where diversity actually comes from</div>
+<ul class="bul">
+<li><strong>Different model families</strong> — the strongest source by far, because the inductive biases genuinely differ. A tree ensemble splits on axis-aligned thresholds; a linear model extrapolates; a neural net learns smooth interactions. They are wrong about different rows</li>
+<li><strong>Different feature representations</strong> — one member on raw features, one on target-encoded categoricals, one on principal components. Cheap and underused, and it decorrelates errors more than another hyperparameter setting does</li>
+<li><strong>Different objectives</strong> — one model on log loss, one on a ranking objective, one on Huber. Each is optimal for a different part of the distribution</li>
+<li><strong>Different resamples and seeds</strong> — the weakest source, ρ stays high. Nearly free, so worth doing, but do not expect the arithmetic above to reward it</li>
+<li><strong>Snapshot ensembles</strong> — checkpoints from a single training run at different points in the schedule. Almost zero extra cost since you were training anyway, with modest gains for the same reason: high correlation</li>
+</ul>
+<div class="card-body" style="margin-top:8px">A useful sanity check before building anything: <strong>compute the correlation matrix of your candidate members' errors on validation.</strong> If everything is above 0.9, the ensemble will not help and you should go find a genuinely different model instead of adding a seventh gradient-boosted variant. This takes two minutes and saves days.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>In-sample predictions as meta-features.</strong> The defining stacking bug. The meta-model learns to trust a feature at an accuracy it will never see again. Always out-of-fold</li>
+<li><strong>Stacking near-identical members.</strong> Five gradient-boosted variants have ρ near 0.9, which the formula prices at an 8% variance reduction. Check the error correlation matrix first</li>
+<li><strong>A complex meta-model.</strong> A handful of highly correlated columns, so a boosted meta-model will overfit them. Ridge, or non-negative least squares</li>
+<li><strong>Soft-voting uncalibrated members.</strong> An SVM margin, a forest's vote share and a boosted logit are not on one scale. Calibrate, or average ranks</li>
+<li><strong>Building the test-time meta-features differently from the training ones.</strong> If the meta-model trained on single-model OOF predictions but receives an average of k fold-models at inference, its inputs have a different variance than it was fitted for. Pick one convention and apply it in both places</li>
+<li><strong>Adding members past the flat part of the curve.</strong> Five to ten diverse models is where the returns stop. Beyond that you are paying linearly in latency, cost and on-call surface for a fourth decimal place</li>
+<li><strong>Ensembling to rescue a leaking pipeline.</strong> Every member inherits the leak, so the ensemble validates the leak more convincingly. Fix the features first</li>
+<li><strong>Ensembling instead of fixing bias.</strong> If train error is high, averaging cannot help. Check the learning curve before building anything</li>
+<li><strong>Ignoring the operational cost.</strong> A five-model stack is five models to retrain, monitor, version and debug, plus a meta-model whose behaviour depends on all of them. For 0.3% AUC that is often the wrong trade, and saying so is the senior answer</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Competitions versus production</div>
+<ul class="bul">
+<li><strong>Competitions ensemble because the objective is one number.</strong> Winning tabular solutions are near-universally stacks — LightGBM, XGBoost, CatBoost and a neural net over varied feature representations, with a ridge meta-learner on OOF predictions. The gain over the best single model is typically a few tenths of a percent, which decides a leaderboard and would not survive a cost review</li>
+<li><strong>Production usually stops at soft voting of two or three.</strong> Simple to deploy, simple to reason about, simple to roll back one member. It captures most of the diversity benefit while keeping the system debuggable, which matters more than the last decimal when something breaks at 3am</li>
+<li><strong>The Netflix Prize is the canonical cautionary tale.</strong> The winning entry blended over a hundred algorithms; Netflix reportedly never deployed it, because the engineering cost of the ensemble outweighed the accuracy gain. It is the clearest illustration that ensembles optimise a metric, not a system</li>
+<li><strong>Meteorology has done this longest.</strong> Numerical weather prediction runs dozens of perturbed model instances and uses the spread as the forecast's uncertainty. Note what they get that ML ensembles usually ignore: <strong>the disagreement among members is itself the useful output</strong> — a cheap, well-founded uncertainty estimate that a single model cannot provide</li>
+<li><strong>Model-agnostic uses worth remembering:</strong> ensemble spread as an uncertainty signal for routing low-confidence cases to human review, and deep ensembles as the strongest practical baseline for predictive uncertainty in neural networks — usually beating fancier Bayesian approximations</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Open with the three bets.</strong> "Bagging reduces variance so it wants deep base learners and cannot overfit by adding more; boosting reduces bias so it wants shallow ones and needs early stopping; stacking attacks model-selection error by learning an input-dependent weighting." One sentence, and it demonstrates you understand why they differ rather than that you can name them.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does ensembling help?" — Give the formula and use it. Var = σ²[1 + (k−1)ρ]/k, tending to ρσ². Then the numbers: at k = 5, ρ = 0.9 gives an 8% variance reduction and ρ = 0.2 gives 64%. <strong>Diversity, not count</strong> — which directly answers why averaging two XGBoosts with different seeds barely moves anything, and why the limit means five to seven members is enough.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What is the cardinal rule of stacking?" — Out-of-fold predictions for the meta-features. Then explain the mechanism rather than just the rule: in-sample predictions from a base model are near-perfect, so the meta-model over-weights that member, and at inference the feature arrives at its real quality. You built a train/serve shift inside your own ensemble.</p>
+<p style="margin-top:8px"><strong>The senior move:</strong> volunteer the operational side. "In a competition I would stack; in production I would soft-vote two or three, because five models is five things to retrain, monitor and page someone about, and the gain is usually a few tenths of a percent." Add that you check the members' error correlation before building — if everything is above 0.9, the ensemble is not the answer.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Bagging, boosting and stacking express three different bets about where the error comes from. Stacking with out-of-fold predictions is the only version that does not leak.</div>

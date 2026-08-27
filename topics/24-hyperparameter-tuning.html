@@ -1,48 +1,19 @@
 <section class="section" id="sec-hyperparam">
 <div class="sec-title">Hyperparameter Tuning</div>
-<div class="sec-desc">The systematic search for the model configuration that maximizes validation performance — done right, it can be the difference between a good model and a great one.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Grid Search</div>
-<div class="card-body">Exhaustively evaluate all combinations of a predefined hyperparameter grid.</div>
-<ul class="bul" style="margin-top:8px"><li>Simple, reproducible, parallelizable</li><li><strong>Weakness:</strong> exponential in number of hyperparameters — 5 params × 10 values = 100,000 evaluations</li><li>Use when: small grid, fast model, few hyperparameters</li></ul></div>
-<div class="card cg"><div class="card-title">Random Search</div>
-<div class="card-body">Sample configurations randomly from distributions over each hyperparameter.</div>
-<ul class="bul" style="margin-top:8px"><li>Covers more diverse configurations in same budget</li><li>Key insight: if only a few hyperparameters matter, random search wastes less budget on the unimportant ones</li><li>Typically 10x more efficient than grid search</li><li>Bergstra &amp; Bengio (2012): random &gt; grid for most practical cases</li></ul></div>
-</div>
-<div class="card cp"><div class="card-title">Bayesian Optimization</div>
-<div class="card-body">Build a probabilistic model (surrogate) of the objective function. Use it to select next configurations that maximize expected improvement.</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Acquisition (EI):} & \quad EI(x) = \mathbb{E}[\max(f(x)-f^*,\, 0)] \\
-\text{Surrogate:} & \quad \text{Gaussian Process (GP) or TPE (Tree Parzen Estimator)}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Samples more from promising regions, less from bad ones</li><li>Each evaluation informs the next — learns the landscape</li><li>Best for expensive models (each trial takes minutes/hours)</li><li><strong>Tools:</strong> Optuna (TPE), Hyperopt, Ray Tune, W&amp;B Sweeps</li></ul>
-<div class="card-body" style="margin-top:8px"><strong>Optuna example:</strong> <code>study = optuna.create_study(); study.optimize(objective, n_trials=100)</code></div>
-<div class="card-body" style="margin-top:6px"><strong>Hyperopt:</strong> One of the earliest Bayesian optimisation libraries. Uses TPE by default and integrates with MLflow. <code>fmin(objective, space, algo=tpe.suggest, max_evals=100)</code>. Optuna is generally preferred today for its cleaner API and pruning support, but Hyperopt remains widely used in legacy codebases.</div></div>
-<div class="card"><div class="card-title">Best Practices</div>
-<ul class="bul"><li><strong>Search order:</strong> learning_rate and n_estimators first (most impactful), then regularization params, then minor ones</li><li><strong>Early stopping in each trial:</strong> don't waste budget on clearly bad configs</li><li><strong>Log scale for learning rate:</strong> sample from [1e-4, 1e-1] in log space, not linearly</li><li><strong>Nested CV for unbiased evaluation:</strong> inner loop for tuning, outer loop for evaluation</li><li><strong>Budget allocation:</strong> 50% Bayesian, 50% manual exploration around best found region</li></ul></div>
+<div class="sec-desc">The cheapest way to make a model better, and the easiest place to fool yourself. Every score you <em>select on</em> becomes optimistic, so the important discipline is not which search algorithm you pick — it is knowing which data you are allowed to look at, and whether the difference you just chased is bigger than your own measurement noise.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Grid searching on a linear scale</strong> — learning rate of 0.001 vs 0.01 is a 10× difference; 0.1 vs 0.2 is only 2×. Always use log-scale sampling for any hyperparameter spanning orders of magnitude: learning_rate, λ, C, gamma</li>
-  <li><strong>Using the test set for hyperparameter selection</strong> — tuning hyperparameters on the test set inflates reported performance and invalidates the generalisation estimate. Always tune on a held-out validation set or via CV; test set is touched exactly once</li>
-  <li><strong>Running too few Bayesian optimization trials</strong> — Bayesian optimization needs ~20 "warm-up" trials before the surrogate model is reliable. Running only 10 total trials gives results no better than random. Minimum 50–100 trials for meaningful Bayesian optimization</li>
-  <li><strong>Not setting early stopping inside each trial</strong> — each trial of a gradient boosting model should use early stopping so bad configs terminate early. Without this, every trial wastes the full n_estimators budget regardless of whether the config is promising</li>
-  <li><strong>Ignoring interaction effects between hyperparameters</strong> — learning_rate and n_estimators are strongly coupled (lower LR needs more trees). Grid search over them independently misses the interaction. Bayesian optimization handles this naturally</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (Vizier / Vertex AI Hyperparameter Tuning):</strong> Bayesian optimization at scale — internally used to tune all major Google ML models; exposed as Vertex AI Hyperparameter Tuning with Gaussian Process or NSGA-II (multi-objective) backends</li>
-  <li><strong>Meta (Ax / BoTorch):</strong> open-sourced their Bayesian optimization platform (Ax + BoTorch); used internally for model tuning and A/B test design; state-of-the-art Gaussian process surrogates with GPU acceleration</li>
-  <li><strong>Kaggle top solutions:</strong> Optuna with TPE sampler is the de facto standard for competition hyperparameter tuning; pruning (MedianPruner) kills bad trials early, dramatically increasing search efficiency</li>
-  <li><strong>MLOps pipelines (Airflow + MLflow):</strong> hyperparameter tuning integrated into CI/CD — each model retraining run triggers a tuning stage that searches within pre-defined bounds, logs results to MLflow, and promotes the best config</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "My tuning strategy: (1) fix n_estimators large + early stopping — tree count is handled automatically. (2) Optuna with TPE sampler for Bayesian optimization — more efficient than grid search, handles parameter interactions. (3) Start broad (wide ranges, 50 trials), then refine around the best region (narrow ranges, 50 more trials). (4) Always log-scale for learning_rate, λ, gamma. For XGBoost, learning_rate + max_depth give the most signal per trial. For neural nets, learning_rate is #1, then batch size, then architecture."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I grid searched over [0.1, 0.01, 0.001] for learning rate." — This is 3 values with 10× spacing on log scale. Bayesian optimization explores continuously and adapts to promising regions. Grid search on 3 values is barely better than guessing.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does Bayesian optimization work?" — Answer: maintains a surrogate model (usually Gaussian Process) of the objective function over the hyperparameter space. After each trial, updates the surrogate with the new result. Uses an acquisition function (Expected Improvement, UCB) to select the next point that balances exploration (uncertain regions) vs exploitation (near the current best). Each trial is informed by all previous results — far more efficient than random or grid search.</p>
-</div>
+<div class="card cb"><div class="card-title">Why random search beats grid search — the actual argument</div>
+<div class="card-body">"Random is about ten times more efficient" is repeated without the reasoning, and the reasoning is what makes it usable. It rests on one empirical fact: <strong>in almost every model, a couple of hyperparameters matter enormously and the rest barely matter at all.</strong></div>
+<div class="card-body" style="margin-top:8px">Now watch what a grid does with that. Take a 5 × 5 grid over two parameters — 25 trials. If only the first parameter matters, you have spent 25 evaluations testing just <strong>5 distinct values</strong> of the thing that matters, each one re-tested five times against irrelevant changes. Random search with the same 25 trials tests <strong>25 distinct values</strong> of it.</div>
+<div class="card-body" style="margin-top:8px">The probabilistic version is stronger. Suppose the best 5% of the important parameter's range is what you need to hit. Each random draw has a 5% chance, so n draws succeed with probability 1 − 0.95<sup>n</sup>:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Random trials</th><th>P(landing in the top 5%)</th></tr>
+<tr><td>20</td><td><strong>64%</strong></td></tr>
+<tr><td>60</td><td><strong>95%</strong></td></tr>
+<tr><td>100</td><td><strong>99%</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The decisive property: that table does not mention the number of dimensions.</strong> Sixty random trials give you a 95% shot at the important parameter whether your space has two knobs or twenty. A grid degrades exponentially — five parameters at ten values each is <strong>100,000 trials</strong>, and that only buys ten values per dimension.</div>
+<div class="card-body" style="margin-top:8px">This is why the practical default is: random search when trials are cheap, and something adaptive when they are not. Grid search survives only for two or three parameters you genuinely want exhaustively covered, or when you need a reproducible sweep for a report.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Why random search wins at equal budget</div>
 <svg viewBox="0 0 500 202" xmlns="http://www.w3.org/2000/svg">
@@ -77,6 +48,103 @@
 <text x="250.0" y="176.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Most hyperparameters barely matter. Grid re-tests the ones that do not; random does not waste the budget.</text>
 <text x="250.0" y="192.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Whatever you use: the score you tuned on is optimistic. Nested CV is the honest number.</text>
 </svg></div>
+
+<div class="card cg"><div class="card-title">Sample on the right scale</div>
+<div class="card-body">A learning rate of 0.001 against 0.01 is a tenfold change in behaviour; 0.1 against 0.2 is barely distinguishable. So the quantity that matters is the <em>order of magnitude</em>, and sampling uniformly on a linear scale spends nearly all your budget in the top decade.</div>
+<div class="card-body" style="margin-top:8px">Five points across [10⁻⁴, 10⁻¹], both ways:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Spacing</th><th>Points sampled</th><th>Coverage</th></tr>
+<tr><td><strong>Linear</strong></td><td>0.0001, 0.025, 0.050, 0.075, 0.100</td><td><strong>1 of 5</strong> points below 0.01 — two entire decades get a single sample</td></tr>
+<tr><td><strong>Log</strong></td><td>0.0001, 0.00056, 0.0032, 0.018, 0.100</td><td><strong>3 of 5</strong> below 0.01 — roughly even coverage per decade</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Log-scale anything that spans orders of magnitude:</strong> learning rate, λ and α, C and γ in an SVM, weight decay, <code>min_child_weight</code>. Use linear scale for things that are genuinely additive — <code>max_depth</code>, <code>num_leaves</code>, subsample fractions. Getting this wrong is the most common reason a search "found nothing": the good region was never sampled.</div></div>
+
+<div class="card cp"><div class="card-title">Bayesian optimisation, and the cost nobody mentions</div>
+<div class="card-body">Fit a cheap model — the <em>surrogate</em> — mapping hyperparameters to validation score. After each trial, update it. Choose the next point by maximising an <em>acquisition function</em> that balances trying where the surrogate predicts a good score against trying where it is most uncertain.</div>
+<div class="formula math-formula">$$EI(x) = \mathbb{E}\big[\max\big(f(x) - f^{*},\ 0\big)\big]$$</div>
+<div class="card-body" style="margin-top:8px">Expected improvement: how much better than the current best f* this point might be, averaged over the surrogate's uncertainty. Points that are probably-mediocre score low; points that are uncertain score high even if their mean is unremarkable, which is what produces exploration.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Gaussian process</strong> surrogates model the score surface directly. Excellent in low dimensions with continuous parameters; awkward with categorical or conditional spaces, and cubic in the number of trials</li>
+<li><strong>TPE</strong> (Optuna's default) inverts the problem: model p(x | good) and p(x | bad) separately, then sample where their ratio is highest. Cheaper, and it handles categoricals and conditional spaces — "use this parameter only if the optimiser is Adam" — which is where real search spaces live</li>
+</ul>
+<div class="box warn"><div class="bl">two things that make it worse than random search in practice</div>
+<p><strong>It needs a warm-up.</strong> The surrogate has nothing to fit until you have run a batch of essentially random trials — typically 10 to 20. A "Bayesian" search of 15 total trials is random search carrying extra machinery. Below about 50 trials, do not expect an advantage.</p>
+<p style="margin-top:8px"><strong>It is sequential by construction</strong>, and that is the trade-off usually left out. Each suggestion depends on all previous results. With 100 cores and a budget of 100 trials, <strong>random search finishes in one round while a strictly sequential Bayesian search takes 100</strong>. Libraries offer batched and asynchronous variants, but they weaken exactly the property that made it efficient. Bayesian optimisation wins when a single trial is expensive enough that you cannot afford many of them; random search wins when you can run them all at once.</p></div></div>
+
+<div class="card ca"><div class="card-title">Successive halving: stop paying for configurations that are losing</div>
+<div class="card-body">The largest inefficiency in naive tuning is not <em>which</em> configurations you try, it is that you train every one to completion — including the obviously bad ones. Successive halving fixes that by treating budget as something to be allocated rather than divided.</div>
+<div class="card-body" style="margin-top:8px">Start many configurations with a tiny budget, keep the best fraction 1/η, multiply the survivors' budget by η, repeat. With 81 configurations, η = 3, and one epoch to start:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Round</th><th>Configurations</th><th>Epochs each</th><th>Epochs spent</th></tr>
+<tr><td>1</td><td>81</td><td>1</td><td>81</td></tr>
+<tr><td>2</td><td>27</td><td>3</td><td>81</td></tr>
+<tr><td>3</td><td>9</td><td>9</td><td>81</td></tr>
+<tr><td>4</td><td>3</td><td>27</td><td>81</td></tr>
+<tr><td>5</td><td>1</td><td>81</td><td>81</td></tr>
+<tr><td colspan="3"><strong>Total</strong></td><td><strong>405</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Every round costs the same 81 epochs — that is the design. You have explored 81 configurations and trained the winner for a full 81 epochs, for <strong>405 epochs instead of 81 × 81 = 6,561. A 16× saving</strong>, and it composes with any search strategy: this is what Optuna's pruners and Ray Tune's ASHA scheduler implement, and it is where most of the practical speedup in modern tuning comes from.</div>
+<div class="box warn"><div class="bl">the assumption, and when it is false</div>
+<p>Successive halving assumes <strong>early performance predicts final performance.</strong> Usually true, and it fails in a specific, recognisable way: a configuration with a small learning rate or a long warmup looks terrible for the first few epochs and wins comfortably by epoch 50. Halving kills it in round 1.</p>
+<p style="margin-top:8px">Hyperband is the answer — it runs several halving brackets with different starting budgets, so some brackets give every configuration a longer look before cutting. If you know your configurations need a warmup, set the pruner's grace period past it rather than trusting the default.</p></div></div>
+
+<div class="card cr"><div class="card-title">The number you report is not the number you found</div>
+<div class="card-body">This is the part that matters most and gets the least attention. If you evaluate 100 configurations and keep the best validation score, that score is <strong>the maximum of 100 noisy measurements</strong> — and a maximum is biased upward even when every configuration is genuinely identical.</div>
+<div class="card-body" style="margin-top:8px">Simulate it. Give every configuration the same true score and give each CV estimate a standard deviation of 0.01. Take the best:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Configurations tried</th><th>Expected overstatement</th><th>In σ units</th></tr>
+<tr><td>10</td><td>+0.015</td><td>1.5σ</td></tr>
+<tr><td>100</td><td><strong>+0.025</strong></td><td>2.5σ</td></tr>
+<tr><td>1,000</td><td>+0.032</td><td>3.2σ</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>A hundred-trial search inflates your reported score by about 0.025 out of nothing at all.</strong> That is the same multiple-comparisons mechanism that makes a tree's split search prefer high-cardinality features — take the max over many noisy candidates and the max is optimistic. It is also why a carefully tuned model so often lands a point or two below its CV score in production.</div>
+<div class="card-body" style="margin-top:8px">Two consequences worth acting on:</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Use nested CV, or a third split.</strong> Tune in an inner loop, evaluate the whole tuning procedure in an outer loop. The outer score is honest because nothing was selected on it. The cost is real — an outer 5-fold around an inner search is five searches — which is why the cheap version is a single untouched test set, scored once</li>
+<li><strong>Compare differences against your noise.</strong> If fold-to-fold standard deviation is 0.01 and your best two configurations differ by 0.003, <strong>you have not learned which is better</strong> — you are ranking noise. Report the fold spread alongside the mean, use repeated stratified CV when it matters, and prefer the simpler configuration when the difference is inside the error bar</li>
+</ul></div>
+
+<div class="card cb"><div class="card-title">What to tune, in order of how much it moves</div>
+<div class="card-body">Since only a few parameters matter, knowing which ones is worth more than any search algorithm.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Model</th><th>Tune first</th><th>Then</th><th>Do not bother</th></tr>
+<tr><td><strong>Gradient boosting</strong></td><td><code>learning_rate</code>, and capacity (<code>max_depth</code> / <code>num_leaves</code>)</td><td><code>min_child_weight</code>, <code>subsample</code>, <code>colsample_bytree</code>, then <code>reg_lambda</code> / <code>gamma</code></td><td><code>n_estimators</code> — set it high and early-stop</td></tr>
+<tr><td><strong>Random forest</strong></td><td><code>max_features</code> — the correlation knob</td><td><code>min_samples_leaf</code> if trees are memorising</td><td><code>max_depth</code> (leave at None), <code>n_estimators</code> (just go high)</td></tr>
+<tr><td><strong>Neural networks</strong></td><td><strong>learning rate</strong>, by a wide margin</td><td>batch size, weight decay, warmup/schedule, then width and depth</td><td>fine-grained architecture changes before the LR is right</td></tr>
+<tr><td><strong>SVM (RBF)</strong></td><td>C and γ <em>jointly</em> — they compensate for each other</td><td>kernel choice</td><td>anything else</td></tr>
+<tr><td><strong>Linear / logistic</strong></td><td>λ (or C), log-spaced</td><td>penalty type — L1 vs L2 vs elastic net</td><td>solver, unless it fails to converge</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two structural points. <strong>Never tune a parameter that early stopping already determines</strong> — grid-searching <code>n_estimators</code> alongside a learning rate is searching a space with one redundant axis. And <strong>tune coupled parameters together</strong>: C and γ, learning rate and batch size, <code>num_leaves</code> and <code>min_data_in_leaf</code>. Sweeping one at a fixed value of the other finds a point on a ridge and calls it a summit.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Tuning on the test set.</strong> The test set is touched once, at the end, to produce one number. Everything else happens on validation folds. Selecting on the test set makes your reported score a best-of-n maximum — see the table above for how much that is worth</li>
+<li><strong>Reporting the tuned CV score as the model's performance.</strong> Even without touching test data, the best-of-100 validation score is optimistic by roughly 2.5 fold-standard-deviations. Nested CV or a held-out set</li>
+<li><strong>Linear grids on multiplicative parameters.</strong> Guarantees the small-value region is unexplored, and produces the conclusion "regularisation does not help"</li>
+<li><strong>Chasing differences smaller than the fold noise.</strong> Always print the standard deviation across folds. If it exceeds the gap between your top configurations, the ranking is arbitrary and the honest move is to take the simpler model</li>
+<li><strong>Bayesian optimisation with 15 trials.</strong> Below the warm-up it is random search plus overhead. Either commit to 50+ trials or use random search</li>
+<li><strong>No pruning.</strong> Every trial trained to completion, including the ones that were clearly losing after two epochs. Turn on a pruner; it is often a 10× effective budget increase</li>
+<li><strong>Preprocessing outside the tuning loop.</strong> The scaler, imputer, encoder and selector must refit inside every fold of every trial. A search over model hyperparameters on leaked features optimises the wrong thing</li>
+<li><strong>Not fixing the seed.</strong> With subsampling on, two identical configurations score differently. Without a fixed seed you cannot tell a real improvement from a reseed, and you will tune the random number generator</li>
+<li><strong>Tuning to a metric nobody asked for.</strong> Optimising accuracy on an imbalanced problem, or F1 when the cost ratio is 100:1. Decide the metric before the search, because the search will faithfully deliver whatever you asked for</li>
+<li><strong>Re-using last quarter's hyperparameters after the dataset doubled.</strong> The optimal regularisation strength depends on n. More data usually wants less penalty and more capacity</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is run at scale</div>
+<ul class="bul">
+<li><strong>Tuning is a service, not a script.</strong> Large organisations run centralised black-box optimisation platforms — Google's Vizier, Meta's Ax/BoTorch — so that thousands of teams share one well-tested implementation, and so results, budgets and search spaces are logged rather than living in someone's notebook. The engineering value is reproducibility as much as efficiency</li>
+<li><strong>Pruning plus TPE is the competition default.</strong> Optuna with a median or ASHA pruner, because it lets a fixed compute budget cover several times as many configurations. The pruner, not the sampler, is usually where the speedup comes from</li>
+<li><strong>Retraining pipelines tune within fixed bounds.</strong> In production the search space is a reviewed artefact with guardrails, not an open question — a scheduled retrain searches inside pre-approved ranges, logs to a tracking server, and promotes a config only if it beats the incumbent by more than the known noise. That last clause is the one teams learn the hard way</li>
+<li><strong>Multi-objective tuning is normal in serving.</strong> Accuracy against latency, or accuracy against model size. The output is a Pareto front and a human choosing a point on it, because there is no single best answer when two objectives genuinely conflict</li>
+<li><strong>The realistic expectation:</strong> tuning typically buys a fraction of a percent once the features and the metric are right. It is worth doing, and it is worth doing <em>after</em> feature work and leakage checks — which return far more and cannot be recovered by any amount of search</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Have the random-versus-grid argument, not the slogan.</strong> "Only a few hyperparameters matter. A 5 × 5 grid spends 25 trials on 5 distinct values of the one that matters; 25 random trials give 25 distinct values. And the probability of hitting the top 5% of a dimension is 1 − 0.95ⁿ regardless of dimensionality — 60 trials gets you to 95%, whether the space has 2 knobs or 20." That last independence-from-dimension point is the whole result.</p>
+<p style="margin-top:8px"><strong>Describe pruning, because it is where real speedups live.</strong> Successive halving on 81 configurations at η = 3 costs 405 epochs versus 6,561 to train them all fully — 16×. Then name its assumption and failure: early performance must predict final performance, which breaks for configurations with a long warmup, and Hyperband hedges by running several bracket sizes.</p>
+<p style="margin-top:8px"><strong>The answer that separates people:</strong> volunteer that the tuned score is biased. "Best-of-100 is the maximum of 100 noisy estimates, so it overstates by roughly 2.5 fold-standard-deviations even if every config is identical — same multiple-comparisons effect as a tree's split search. So I nest the tuning inside an outer CV loop, or keep a test set I touch once." Very few candidates raise this, and it is the reason tuned models disappoint in production.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> you grid-searched <code>n_estimators</code> (early stopping determines it), or that you tuned learning rate over [0.1, 0.5, 1.0] (wrong scale and wrong range). <strong>Do say</strong> that you check whether the winning margin exceeds the fold-to-fold standard deviation before believing it.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Random search beats grid search for the same budget, and Bayesian search beats both once evaluations get expensive. The nested-CV note at the end is the part interviews probe.</div>
