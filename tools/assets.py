@@ -30,9 +30,20 @@ def fmt(c):
 
 def blocks(src):
     """Every anim-wrap / code-runner block, matched by div depth so wrappers
-    carrying style attributes and inner <script> tags are captured too."""
-    out = []
-    for m in re.finditer(r'<div class="(?:anim-wrap|code-runner)\b[^>]*>', src):
+    carrying style attributes and inner <script> tags are captured too.
+
+    Two subtleties, both learned from real breakage:
+      * `code-runner\b` ALSO matches `code-runner-header`, because '-' is a
+        non-word character. That returned a widget's own header as a separate
+        "block" nested inside it, and substituting both placeholders duplicated
+        the header. Hence the (?=["\s]) lookahead: the class name must end
+        there. Affected 28-loss-functions and 29-backpropagation.
+      * Belt and braces, any span wholly contained in another is dropped, so
+        nesting can never produce duplicate substitutions again regardless of
+        how a class gets named in future.
+    """
+    spans = []
+    for m in re.finditer(r'<div class="(?:anim-wrap|code-runner)(?=["\s])[^>]*>', src):
         start, depth = m.start(), 0
         for d in re.finditer(r'<div\b[^>]*>|</div>', src[start:]):
             depth += 1 if d.group(0).startswith('<div') else -1
@@ -40,14 +51,15 @@ def blocks(src):
                 end = start + d.end()
                 # a widget's <script> often sits immediately AFTER its wrapper
                 tail = src[end:end + 400]
-                lead = tail[:len(tail) - len(tail.lstrip())]
                 if tail.lstrip().startswith('<script'):
-                    se = src.index('</script>', end) + len('</script>')
-                    out.append(src[start:se])
-                else:
-                    out.append(src[start:end])
+                    end = src.index('</script>', end) + len('</script>')
+                spans.append((start, end))
                 break
-    return out
+    # drop any span strictly inside another (compare by position, not content,
+    # so two identical widgets are both kept)
+    keep = [(a, b) for (a, b) in spans
+            if not any((c <= a and b <= d) and (c, d) != (a, b) for (c, d) in spans)]
+    return [src[a:b] for a, b in sorted(keep)]
 
 def codecard(src):
     m = re.search(r'<div class="card cc"><div class="card-title">In code</div>.*?</code></pre></div>', src, re.S)

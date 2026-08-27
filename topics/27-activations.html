@@ -1,20 +1,22 @@
 <section class="section" id="sec-activations">
 <div class="sec-title">Activation Functions</div>
-<div class="sec-desc">The non-linearity that makes deep networks more than stacked linear algebra. Without activations, depth is useless. With the right activation, gradients flow freely.</div>
-<div class="card"><div class="card-title">Why They're Critical</div>
-<div class="card-body">W₃(W₂(W₁x)) = (W₃W₂W₁)x — stack of linear layers = one linear layer. Activation functions break this and allow networks to learn arbitrary functions. Choice also controls gradient flow (vanishing/exploding) during backpropagation.</div></div>
-<div class="card"><div class="card-title">Activation Function Comparison</div>
-<table class="tbl"><tr><th>Function</th><th>Formula</th><th>Range</th><th>Gradient at saturation</th><th>Use Case</th></tr>
-<tr><td><strong>Sigmoid</strong></td><td>1/(1+e⁻ˣ)</td><td>(0,1)</td><td>→0 (vanishes!)</td><td>Binary output, LSTM gates</td></tr>
-<tr><td><strong>Tanh</strong></td><td>(eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)</td><td>(−1,1)</td><td>→0 at extremes</td><td>Hidden layers (zero-centered)</td></tr>
-<tr><td><strong>ReLU</strong></td><td>max(0,x)</td><td>[0,∞)</td><td>1 for x&gt;0</td><td>Default hidden layer activation</td></tr>
-<tr><td><strong>Leaky ReLU</strong></td><td>x if x≥0, else 0.01x</td><td>(−∞,∞)</td><td>0.01 for x&lt;0</td><td>Fixes dying ReLU</td></tr>
-<tr><td><strong>ELU</strong></td><td>x if x≥0, else α(eˣ−1)</td><td>(−α,∞)</td><td>Smooth for x&lt;0</td><td>Faster convergence than ReLU</td></tr>
-<tr><td><strong>GELU</strong></td><td>x·Φ(x)</td><td>(−∞,∞)</td><td>Smooth everywhere</td><td>Transformers (BERT, GPT)</td></tr>
-<tr><td><strong>Swish</strong></td><td>x·σ(x)</td><td>(−∞,∞)</td><td>Non-monotonic</td><td>EfficientNet; better than ReLU empirically</td></tr>
-<tr><td><strong>Softmax</strong></td><td>eˣⁱ/Σeˣʲ</td><td>(0,1)→1</td><td>—</td><td>Multi-class output</td></tr>
-<tr><td><strong>Sigmoid</strong></td><td>σ(x)</td><td>(0,1)</td><td>—</td><td>Binary classification output</td></tr></table></div>
-<!-- Activation function visualization -->
+<div class="sec-desc">Two jobs, and they pull in different directions. In the <strong>forward</strong> pass the activation supplies the non-linearity without which depth collapses. In the <strong>backward</strong> pass its derivative multiplies into every gradient that passes through it — so the choice decides whether a deep network trains at all. The history of this topic is the history of that second job being taken seriously.</div>
+
+<div class="card cb"><div class="card-title">Why sigmoid lost, in one multiplication</div>
+<div class="card-body">Backpropagation multiplies one activation derivative per layer into the gradient. So the derivative's <em>magnitude</em> compounds geometrically with depth, and that single fact decided which activations survived.</div>
+<div class="formula math-formula">$$\sigma'(z) = \sigma(z)\big(1 - \sigma(z)\big) \qquad\Longrightarrow\qquad \max_z \sigma'(z) = \sigma'(0) = 0.25$$</div>
+<div class="card-body" style="margin-top:8px">The sigmoid's derivative peaks at <strong>0.25</strong> — and that is its <em>best</em> case, at the single most favourable input. Ten layers of sigmoid multiply <em>at most</em>:</div>
+<div class="formula math-formula">$$0.25^{10} = 9.5 \times 10^{-7}$$</div>
+<div class="card-body" style="margin-top:8px">A gradient arriving at the output is a millionth of its size by the time it reaches the first layer, in the most optimistic case available. Away from zero it is far worse — σ′(4) = 0.018, σ′(8) = 0.0003 — so any unit that has saturated contributes essentially nothing, permanently.</div>
+<div class="card-body" style="margin-top:8px"><strong>ReLU's derivative is exactly 1 for every positive input.</strong> Ten layers multiply 1 × 1 × … × 1 = 1. The gradient arrives at the first layer at full strength. That is the entire reason ReLU replaced sigmoid in hidden layers — not empirical luck, but the observation that <strong>a derivative of 1 is the only value that does not compound.</strong></div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Depth</th><th>Sigmoid (best case, 0.25 per layer)</th><th>ReLU (positive inputs)</th></tr>
+<tr><td>3 layers</td><td>0.016</td><td><strong>1.0</strong></td></tr>
+<tr><td>5 layers</td><td>0.00098</td><td><strong>1.0</strong></td></tr>
+<tr><td>10 layers</td><td><strong>9.5 × 10⁻⁷</strong></td><td><strong>1.0</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Sigmoid and tanh still have their places — sigmoid at a binary output, where a bounded [0,1] value <em>is</em> the answer, and both inside LSTM cells, where the gates need bounded outputs by design. What they cannot be is the activation of a deep hidden stack.</div></div>
+
 <div class="anim-wrap"><div class="anim-title">Activation function shapes</div>
 <svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="axm" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#4e5a7a"/></marker></defs>
@@ -44,31 +46,92 @@
 <text x="450" y="175" text-anchor="middle" fill="#f5a623" font-size="10" font-family="DM Sans">Softmax</text>
 <text x="450" y="12" text-anchor="middle" fill="#4e5a7a" font-size="9" font-family="DM Sans">Sums to 1 → prob dist</text>
 </svg></div>
-<div class="card ca"><div class="card-title">Dying ReLU Problem &amp; Fixes</div>
-<div class="card-body">If a neuron receives consistently negative input, its output is always 0 and its gradient is always 0 — it can never recover. "Dead neurons" contribute nothing to the network.</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Leaky ReLU:</strong> α=0.01 for negative inputs — always has a non-zero gradient</li><li><strong>ELU:</strong> smooth negative saturation — better gradient properties</li><li><strong>Careful initialization + BatchNorm:</strong> prevents weights from going too negative initially</li><li><strong>Lower learning rate:</strong> reduces risk of neurons being pushed into dead zone early</li></ul></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cg"><div class="card-title">The comparison, and what each is actually for</div>
+<table class="tbl">
+<tr><th>Function</th><th>Formula</th><th>Range</th><th>Derivative behaviour</th><th>Use</th></tr>
+<tr><td><strong>Sigmoid</strong></td><td>1/(1+e⁻ˣ)</td><td>(0, 1)</td><td>max 0.25, → 0 at both ends</td><td>binary output; LSTM gates</td></tr>
+<tr><td><strong>Tanh</strong></td><td>(eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)</td><td>(−1, 1)</td><td>max 1.0 at 0, → 0 at ends</td><td>LSTM cell state — zero-centred and bounded</td></tr>
+<tr><td><strong>ReLU</strong></td><td>max(0, x)</td><td>[0, ∞)</td><td><strong>exactly 1</strong> for x &gt; 0, <strong>0</strong> for x &lt; 0</td><td>the CNN default; still the baseline everywhere</td></tr>
+<tr><td><strong>Leaky ReLU</strong></td><td>x if x ≥ 0 else αx</td><td>(−∞, ∞)</td><td>1, or α (≈0.01) — never zero</td><td>when dead units are measured, not assumed</td></tr>
+<tr><td><strong>ELU</strong></td><td>x if x ≥ 0 else α(eˣ−1)</td><td>(−α, ∞)</td><td>smooth, saturates negatively</td><td>pushes mean activation toward zero</td></tr>
+<tr><td><strong>GELU</strong></td><td>x · Φ(x)</td><td>(−∞, ∞)</td><td>smooth everywhere, non-monotonic</td><td><strong>the transformer default</strong> — BERT, GPT</td></tr>
+<tr><td><strong>SiLU / Swish</strong></td><td>x · σ(x)</td><td>(−∞, ∞)</td><td>smooth, non-monotonic</td><td>EfficientNet, MobileNetV3, YOLO</td></tr>
+<tr><td><strong>SwiGLU</strong></td><td>Swish(xW) ⊗ (xV)</td><td>(−∞, ∞)</td><td>gated — two projections</td><td><strong>modern LLMs</strong> — LLaMA, PaLM</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Notice the direction of travel: from bounded and saturating, to unbounded with derivative 1, to <em>smooth</em> and unbounded, to <em>gated</em>. Each step keeps the gradient-flow property and adds expressiveness.</div></div>
+
+<div class="card cp"><div class="card-title">Dying ReLU, and the bias shift nobody mentions</div>
+<div class="card-body">ReLU's derivative for negative input is 0, not small — <em>zero</em>. A unit whose pre-activation is negative for every training example outputs 0, receives gradient 0, and therefore never updates again. It is not learning slowly; it is <strong>permanently removed from the network</strong>, and its parameters are dead weight.</div>
+<div class="card-body" style="margin-top:8px">Causes are specific: a learning rate high enough for one update to drive the bias strongly negative, poor initialisation, or a large negative gradient from an outlier batch. The remedies:</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Measure it before fixing it.</strong> Log the fraction of units with zero activation across a validation batch. A few percent is normal and healthy sparsity; 40% is a problem. Most people switch activations on suspicion rather than measurement</li>
+<li><strong>He initialisation</strong> — variance 2/n_in, derived specifically for ReLU's halved output variance. The right default, and it removes most dying-ReLU cases at the source</li>
+<li><strong>Leaky ReLU</strong> keeps a gradient of α ≈ 0.01 on the negative side, so a unit can always recover. Cheap insurance; slightly less sparsity</li>
+<li><strong>Lower the learning rate, or add warmup</strong> — most death happens in the first few hundred steps, when updates are largest</li>
+</ul>
+<div class="box warn"><div class="bl">the subtler problem: ReLU is not zero-centred</div>
+<p>For a zero-mean pre-activation z ~ N(0,1), ReLU's output has mean <strong>1/√(2π) ≈ 0.399</strong> — positive, always, because every negative value was clipped to zero. So each ReLU layer hands the next layer inputs with a positive mean offset, and that shift accumulates with depth.</p>
+<p style="margin-top:8px">A consistently positive input means all weights in a unit receive gradients of the same sign, so they can only move together rather than independently — the zig-zagging that makes optimisation slower. <strong>This, not dying units, is the main reason the smooth alternatives were sought:</strong> ELU, GELU and Swish all allow small negative outputs, pulling the mean activation back toward zero. It is also part of why batch normalisation helps so much after a ReLU — it re-centres exactly this drift.</p></div></div>
+
+<div class="card ca"><div class="card-title">GELU: a soft gate rather than a hard one</div>
+<div class="card-body">ReLU is a hard gate — it multiplies the input by 1 or by 0. GELU multiplies the input by <em>the probability that a standard normal falls below it</em>:</div>
+<div class="formula math-formula">$$\text{GELU}(x) = x \cdot \Phi(x), \qquad \Phi(x) = \mathbb{P}(Z \le x),\ Z \sim \mathcal{N}(0,1)$$</div>
+<div class="card-body" style="margin-top:8px">So instead of "keep it or discard it", the rule is "keep the fraction of it that its magnitude justifies". Large positive inputs pass almost untouched; large negatives are almost entirely suppressed; and in between the gate opens gradually.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>x</th><th>Φ(x) — the gate</th><th>GELU(x)</th><th>ReLU(x)</th></tr>
+<tr><td>−2</td><td>0.023</td><td><strong>−0.046</strong></td><td>0</td></tr>
+<tr><td>−1</td><td>0.159</td><td><strong>−0.159</strong></td><td>0</td></tr>
+<tr><td>−0.75</td><td>0.227</td><td><strong>−0.170</strong> ← minimum</td><td>0</td></tr>
+<tr><td>0</td><td>0.500</td><td>0</td><td>0</td></tr>
+<tr><td>1</td><td>0.841</td><td><strong>0.841</strong></td><td>1</td></tr>
+<tr><td>2</td><td>0.977</td><td><strong>1.955</strong></td><td>2</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two properties matter. It is <strong>smooth everywhere</strong>, so there is no kink at zero where the derivative jumps — gentler for the second-order structure that adaptive optimisers estimate. And it is <strong>non-monotonic</strong>: it dips to −0.170 around x = −0.75 before returning toward zero, so a small negative pre-activation produces a small negative output rather than nothing. Both the zero-centring and the escape from dead units come for free.</div>
+<div class="card-body" style="margin-top:8px"><strong>SwiGLU</strong> is the current answer in large language models, and it earns its place with an accounting trick worth knowing. It splits the feed-forward input into two projections and uses one to gate the other — Swish(xW) ⊗ (xV) — which needs <em>three</em> weight matrices instead of two. To keep the parameter count unchanged, implementations shrink the hidden width from 4d to <strong>8d/3</strong>. At d = 4,096 that is 10,923 instead of 16,384, and the totals land at 134.21M against 134.22M — <strong>essentially identical parameters, measurably better loss.</strong> That is why LLaMA-family models have an oddly-shaped feed-forward block.</div></div>
+
+<div class="card cb"><div class="card-title">Output activations are chosen by the task</div>
+<div class="card-body">Hidden activations are a judgement call. Output activations are not — the task determines them, and getting this wrong produces a model that trains without complaint and cannot express the right answer.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Task</th><th>Output activation</th><th>Loss</th></tr>
+<tr><td>Regression, unbounded</td><td><strong>none</strong> (identity)</td><td>MSE, or Huber with outliers</td></tr>
+<tr><td>Regression, strictly positive</td><td>softplus or exp</td><td>MSE on log, or Poisson/Tweedie</td></tr>
+<tr><td>Binary classification</td><td><strong>sigmoid</strong> — one output</td><td>binary cross-entropy</td></tr>
+<tr><td>Single-label multi-class</td><td><strong>softmax</strong> — K outputs summing to 1</td><td>categorical cross-entropy</td></tr>
+<tr><td>Multi-label</td><td><strong>K independent sigmoids</strong></td><td>K binary cross-entropies, summed</td></tr>
+</table>
+<div class="box warn"><div class="bl">softmax where sigmoid belongs — the most common output bug</div>
+<p>Softmax normalises across classes, so its outputs must sum to 1. That encodes <strong>mutual exclusivity</strong>: more probability for one class necessarily means less for another. Correct when exactly one label is true.</p>
+<p style="margin-top:8px">For multi-label it is simply wrong. An image can be both "cat" and "outdoors", and the honest answer is P(cat) = 0.9 <em>and</em> P(outdoors) = 0.9 — which softmax cannot represent, because 0.9 + 0.9 &gt; 1. It will be forced to split the mass and report roughly 0.5 each, so the model looks uncertain about two things it is confident about. Use K independent sigmoids: each output is its own binary question.</p>
+</div>
+<div class="card-body" style="margin-top:8px"><strong>Softmax needs the max subtracted before exponentiating.</strong> A float64 exponential overflows just past e⁷⁰⁹ ≈ 8.2 × 10³⁰⁷, so a logit of 710 gives <code>inf</code>, and inf/inf is <code>NaN</code>. Subtracting the row maximum leaves the result mathematically unchanged — the constant cancels top and bottom — while making the largest exponent exactly e⁰ = 1. Framework implementations do this; hand-written ones frequently do not, and the symptom is a loss that becomes NaN once logits grow confident. This is also why you should pass logits to <code>CrossEntropyLoss</code> rather than pre-softmaxed probabilities: the fused version is the numerically stable one.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Using sigmoid/tanh in hidden layers of deep networks</strong> — both saturate (gradient ≈ 0 at extremes), causing vanishing gradients in deep networks. Hidden layers: ReLU or GELU. Sigmoid belongs only at the output for binary classification; tanh can work in LSTMs (bounded activations help gating)</li>
-  <li><strong>"ReLU is always safe"</strong> — ReLU can cause dead neurons if learning rate is too high or weights are initialised poorly. A neuron that receives only negative pre-activations outputs 0 forever. Use He initialisation + BatchNorm to mitigate; use Leaky ReLU if dead neurons are observed (monitor fraction of zero-activation units)</li>
-  <li><strong>Using softmax where sigmoid is needed</strong> — softmax forces outputs to sum to 1 (mutual exclusion); correct for single-label multi-class. For multi-label classification (an image can have both "cat" AND "outdoors"), use independent sigmoid per class — softmax would incorrectly distribute probability mass</li>
-  <li><strong>Applying ReLU after the final layer</strong> — ReLU clips negatives to zero; for regression output you need the full real line (linear activation). For probability output you need [0,1] (sigmoid) or sum-to-1 (softmax). Never apply ReLU to the output layer</li>
-  <li><strong>Ignoring GELU for transformers</strong> — GELU (used in GPT, BERT) is smooth and probabilistically motivated: x·Φ(x) weights the input by the probability it is above 0 under a standard normal. Empirically outperforms ReLU on transformers; don't default to ReLU for attention-based architectures</li>
+<li><strong>Sigmoid or tanh in a deep hidden stack.</strong> 0.25 per layer compounds to 10⁻⁶ over ten layers <em>at best</em>. ReLU or GELU</li>
+<li><strong>ReLU on the output.</strong> Clips every negative prediction to zero, so a regression model can never predict below zero and half its error signal disappears</li>
+<li><strong>Softmax for multi-label.</strong> Forces mutual exclusivity that does not exist. Independent sigmoids</li>
+<li><strong>Double-applying softmax.</strong> Passing already-softmaxed probabilities into a loss that applies softmax internally — <code>CrossEntropyLoss</code> in PyTorch expects raw logits. It trains, badly, and the gradients are wrong rather than absent, which makes it hard to spot</li>
+<li><strong>Switching activations because you suspect dead units.</strong> Measure the zero-activation fraction first. Some sparsity is healthy; the fix for a real problem is usually He initialisation or a lower learning rate, not a different activation</li>
+<li><strong>Hand-rolling softmax without the max subtraction.</strong> Works until logits get large, then NaN. Same class of bug as forgetting log1p</li>
+<li><strong>Assuming a newer activation will help.</strong> GELU over ReLU is worth a fraction of a percent in transformers and usually nothing in a small CNN. It is a real but small effect, and it is not where a struggling model's problem lies</li>
+<li><strong>Putting an activation after the final normalisation in a residual block.</strong> Placement inside a block matters and is architecture-specific; copy the reference implementation rather than reasoning from first principles</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card ca"><div class="card-title">What is actually deployed</div>
 <ul class="bul">
-  <li><strong>OpenAI / Anthropic (LLMs):</strong> SwiGLU activation (a gated variant of GLU) used in LLaMA, PaLM, and Claude — replaces FFN's ReLU/GELU with a learned gating mechanism: SwiGLU(x,W,V) = Swish(xW) ⊗ (xV); consistently outperforms GELU in large-scale language model training</li>
-  <li><strong>Google (BERT, T5):</strong> GELU throughout all hidden layers; empirically determined to outperform ReLU on NLP tasks in the original BERT ablation study — now the standard for transformer encoder architectures</li>
-  <li><strong>ResNet / EfficientNet (computer vision):</strong> ReLU remains dominant in CNN architectures; Swish/SiLU used in EfficientNet and MobileNetV3 — smooth activations improve gradient flow in very deep convolutional networks</li>
-  <li><strong>LSTMs / GRUs (sequence models):</strong> tanh for cell state (bounded: prevents exploding hidden states), sigmoid for gates (naturally outputs [0,1] gating values) — this specific combination is deliberate and important for LSTM stability</li>
+<li><strong>Transformers use GELU, and large language models have moved to SwiGLU.</strong> BERT's ablations picked GELU over ReLU on measured task performance, and it became the encoder standard. The LLaMA/PaLM generation replaced it with gated variants and shrank the feed-forward width to 8d/3 to hold parameters constant — a change worth understanding because it explains the architecture's unusual proportions</li>
+<li><strong>Convolutional networks still run ReLU.</strong> ResNet's ReLU has not been displaced for general vision work; the smooth alternatives (SiLU in EfficientNet and MobileNetV3) win by small margins at some cost in inference speed, which matters when the model runs on a phone</li>
+<li><strong>LSTM's tanh-and-sigmoid pairing is deliberate, not legacy.</strong> Sigmoid on the gates because a gate must be a bounded fraction in [0,1]; tanh on the cell state because it must stay bounded to keep the recurrence stable. This is the one place where saturating activations are the correct engineering choice</li>
+<li><strong>Quantised and edge deployment prefers ReLU.</strong> Its piecewise-linear form quantises cleanly to int8, while smooth activations need lookup tables or polynomial approximations. On-device model choices are often driven by this rather than by accuracy</li>
+<li><strong>Output layers are where activation bugs actually cost money.</strong> Multi-label classifiers built with softmax, and regression heads with ReLU that cannot predict a loss, are the failures that reach production — because both train quietly and only the predictions are wrong</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "ReLU is my default for hidden layers — gradient=1 for positive inputs prevents vanishing gradients, and it's computationally cheap. For transformer architectures I use GELU (smoother gradient flow, empirically better in BERT/GPT ablations). For very large LLMs, SwiGLU has become standard (LLaMA, PaLM). Output activations are task-determined: sigmoid for binary classification, softmax for single-label multi-class, independent sigmoids for multi-label, linear for regression. Never ReLU at the output."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used softmax for multi-label classification." — Softmax forces outputs to sum to 1, implying mutual exclusion. Multi-label needs independent sigmoid per class — each output is an independent binary decision.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the dying ReLU problem and how do you fix it?" — Answer: a ReLU neuron dies when its pre-activation is always negative, making output=0 and gradient=0 — the neuron can never recover. Causes: high learning rate pushing weights negative, bad initialisation. Fixes: He initialisation (prevents initial negative activations), BatchNorm (keeps pre-activations centred), Leaky ReLU (α=0.01 preserves a small gradient even for negative inputs), or monitoring and resetting dead neurons.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Answer "why ReLU over sigmoid" with the multiplication.</strong> "Backprop multiplies one activation derivative per layer. Sigmoid's peaks at 0.25, so ten layers give at most 0.25¹⁰ ≈ 10⁻⁶ — and that is the best case, at z = 0. ReLU's derivative is exactly 1 for positive inputs, so nothing compounds." A specific number beats "sigmoid causes vanishing gradients" by a wide margin.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What is dying ReLU and how do you fix it?" — Negative pre-activation gives output 0 and gradient 0, so the unit is permanently removed, not merely slowed. Then be the candidate who measures: log the zero-activation fraction, because some sparsity is healthy. Fixes in order — He initialisation, lower learning rate or warmup, then Leaky ReLU. And volunteer the deeper issue: <strong>ReLU's output mean is 1/√(2π) ≈ 0.4, not 0</strong>, and that positive bias shift accumulating through depth is the real reason GELU and Swish were sought.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Softmax or sigmoid?" — Softmax normalises across classes, so it encodes mutual exclusivity: right for single-label, wrong for multi-label, where an image being both "cat" and "outdoors" needs two independent sigmoids. Add the numerical note — subtract the row max before exponentiating, since e⁷¹⁰ overflows float64 — and that you pass logits to the loss rather than probabilities.</p>
+<p style="margin-top:8px"><strong>Explain GELU as a soft gate:</strong> x·Φ(x) keeps the fraction of the input its magnitude justifies, rather than ReLU's all-or-nothing. It is smooth and non-monotonic — dipping to about −0.17 near x = −0.75 — which fixes both dead units and the mean-shift in one function.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

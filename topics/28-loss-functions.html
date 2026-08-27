@@ -1,27 +1,33 @@
 <section class="section" id="sec-loss">
 <div class="sec-title">Loss Functions</div>
-<div class="sec-desc">The objective you optimize — every loss function encodes a probability model and a cost structure. Choose wrong and you optimize for the wrong thing. For classifiers, cross-entropy is almost always the right choice over MSE or raw classification error.</div>
+<div class="sec-desc">The loss is not a scoring rule bolted onto training — it is the only statement of what you want, and every gradient the model ever sees comes from it. Each loss also encodes a probability model whether you chose one or not: squared error assumes Gaussian noise, absolute error assumes Laplace, cross-entropy assumes Bernoulli. Picking a loss is picking that assumption, and the failures in this topic are almost all cases of the assumption not matching the data.</div>
 
-<div class="g2">
-<div class="card cb"><div class="card-title">Regression Losses</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{MSE} &= \tfrac{1}{n}\sum(y-\hat{y})^2 \quad\rightarrow\text{assumes Gaussian noise} \\
-\text{MAE} &= \tfrac{1}{n}\sum|y-\hat{y}| \quad\rightarrow\text{assumes Laplace noise} \\
-\text{Huber} &= \begin{cases} \tfrac{1}{2}(y-\hat{y})^2 & \text{if } |e| \leq \delta \\ \delta|y-\hat{y}|-\tfrac{\delta^2}{2} & \text{otherwise}\end{cases}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>MSE:</strong> penalizes large errors heavily; differentiable; outlier-sensitive</li><li><strong>MAE:</strong> robust to outliers; non-differentiable at 0 (subgradient)</li><li><strong>Huber:</strong> MSE near 0, MAE for large errors — best of both</li><li><strong>Log-cosh:</strong> smooth approximation to Huber; twice differentiable everywhere</li></ul></div>
-<div class="card cg"><div class="card-title">Classification Losses</div>
-<div class="formula math-formula">$$\begin{aligned}
-BCE = -\left[y \log \hat{y} + (1-y) \log(1-\hat{y})\right] \\
-CCE = -\sum y_i \log \hat{y}_i \quad \text{[categorical cross-entropy]} \\
-ACE = -(1/n) \sum \log(\hat{y}_{\text{correct}}) \quad \text{[average cross-entropy]} \\
-Hinge = \max(0, 1-y\cdot\hat{y})_{SVMloss} \\
-Focal = -(1-\hat{y})^\gamma \log \hat{y} \quad \text{[imbalanced data]}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>BCE:</strong> standard binary; equivalent to Bernoulli MLE</li><li><strong>CCE / ACE:</strong> multi-class with softmax; equivalent to Categorical MLE</li><li><strong>Focal Loss:</strong> (1−ŷ)^γ down-weights easy examples; γ=2 is standard</li><li><strong>Label smoothing:</strong> target = 0.9 instead of 1.0 — prevents overconfident predictions</li></ul></div>
-</div>
+<div class="card cb"><div class="card-title">Every loss is a likelihood in disguise</div>
+<div class="card-body">Losses look arbitrary until you write down where they come from. Assume a noise distribution, take the negative log-likelihood of your data under it, and the standard losses fall out — which is why they have exactly the forms they do rather than any other reasonable-looking formula.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Assume the noise is…</th><th>Negative log-likelihood becomes</th><th>So the model fits the…</th></tr>
+<tr><td>Gaussian</td><td><strong>squared error</strong> — Σ(y − ŷ)²</td><td><strong>mean</strong> of p(y | x)</td></tr>
+<tr><td>Laplace (heavy-tailed)</td><td><strong>absolute error</strong> — Σ|y − ŷ|</td><td><strong>median</strong></td></tr>
+<tr><td>Bernoulli</td><td><strong>binary cross-entropy</strong></td><td>probability of the positive class</td></tr>
+<tr><td>Categorical</td><td><strong>categorical cross-entropy</strong></td><td>full class distribution</td></tr>
+<tr><td>Poisson</td><td><strong>Poisson deviance</strong></td><td>event rate — for counts</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The third column is the practical payoff.</strong> Squared error fits the conditional <em>mean</em>, and a long right tail drags the mean upward — so a model trained with MSE on revenue or claim sizes systematically over-predicts the typical case. Absolute error fits the <em>median</em>, which is usually what "a typical value" means to whoever asked. This is a modelling decision disguised as a loss choice, and most people make it by accident.</div>
+<div class="card-body" style="margin-top:8px">It also explains why cross-entropy comes out roughly calibrated for free while squared error on class labels does not: cross-entropy <em>is</em> the maximum-likelihood objective for a probability, so it is a proper scoring rule — minimised only by the true probability, and therefore impossible to game by shifting scores around.</div></div>
 
-<!-- ── ACE vs MSE vs Classification Error ── -->
+<div class="card cg"><div class="card-title">Regression losses, and what each does with an outlier</div>
+<div class="formula math-formula">$$\text{MSE} = \frac{1}{n}\sum(y-\hat y)^2 \qquad \text{MAE} = \frac{1}{n}\sum|y-\hat y| \qquad \text{Huber}_\delta = \begin{cases}\tfrac{1}{2}e^2 & |e| \le \delta \\[2pt] \delta|e| - \tfrac{1}{2}\delta^2 & |e| > \delta\end{cases}$$</div>
+<div class="card-body" style="margin-top:8px">What separates them is the <em>gradient</em>, not the loss value — the gradient is what actually moves the weights. For squared error the gradient grows linearly with the error, so a single far-off point can dominate an entire batch:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Error e</th><th>MSE loss</th><th>MSE gradient ∝ e</th><th>MAE gradient</th><th>Huber (δ=1) gradient</th></tr>
+<tr><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+<tr><td>10</td><td><strong>100</strong></td><td><strong>10</strong></td><td>1</td><td>1</td></tr>
+<tr><td>100</td><td><strong>10,000</strong></td><td><strong>100</strong></td><td>1</td><td>1</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">One point at error 100 contributes as much gradient as a hundred points at error 1. If that point is a data-entry mistake, MSE will happily bend the whole model to accommodate it. <strong>MAE and Huber cap the per-example gradient at a constant</strong>, so no single row can hijack the update — that is the entire content of "robust to outliers".</div>
+<div class="card-body" style="margin-top:8px">Huber is the practical default when you are unsure: quadratic within δ, so it keeps MSE's smooth, well-behaved gradient near the optimum, and linear beyond δ, so it keeps MAE's robustness in the tails. δ is a real hyperparameter — it is the error magnitude at which you stop believing the point — and it must be set in the units of your target, so scale matters.</div>
+<div class="card-body" style="margin-top:8px"><strong>Quantile (pinball) loss</strong> deserves a mention because it does something the others cannot. Weighting under- and over-prediction asymmetrically makes the model fit a chosen <em>quantile</em> instead of a central value. Train at the 10th and 90th percentiles and you have a prediction interval rather than a point estimate — which is how demand and inventory forecasts get uncertainty bounds without a probabilistic model.</div></div>
+
 <div class="card"><div class="card-title">Why Average Cross-Entropy (ACE) Beats Classification Error and MSE</div>
 <div class="card-body" style="margin-bottom:10px">Consider two classifiers predicting political affiliation (Democrat / Republican / Other) — both get 2 out of 3 examples correct, so both have identical <strong>classification error = 1/3</strong>. But they are clearly not equally good:</div>
 
@@ -60,7 +66,6 @@ For each example, only the log-prob of the <strong>TRUE class</strong> is counte
 <div class="card-body" style="margin-top:10px">ACE correctly identifies Classifier B as superior. Classification error cannot.</div>
 </div>
 
-<!-- ── MSE comparison ── -->
 <div class="card ca"><div class="card-title">MSE for Classifiers — Better Than Accuracy, Still Worse Than ACE</div>
 <div class="formula math-formula">$$\text{MSE} = \dfrac{1}{n}\sum_i \sum_j (y_{ij} - \hat{y}_{ij})^2 \quad \text{(summed over all output neurons)}$$</div>
 <div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
@@ -80,7 +85,6 @@ For each example, only the log-prob of the <strong>TRUE class</strong> is counte
 
 <div class="card-body" style="margin-top:8px">MSE also correctly ranks B above A, but it <strong>wastes signal on the wrong neurons</strong> — it penalizes the 0.3 and 0.4 outputs of the incorrect class, even though those are irrelevant to the decision. ACE only grades you on the probability you assigned to the true class, which is exactly the information that matters.</div></div>
 
-<!-- ── Training stall explanation ── -->
 <div class="card cp"><div class="card-title">The Deeper Reason: MSE Causes Training to Stall Near Convergence</div>
 <div class="formula math-formula">$$\Delta W \propto (\hat{y}-y)\cdot\underbrace{\hat{y}(1-\hat{y})}_{\sigma'(z)\text{ term}} \quad \text{(sigmoid + MSE)}$$</div>
 <div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
@@ -103,7 +107,41 @@ Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is
 
 <ul class="bul" style="margin-top:8px"><li>This cancellation is why BCE is the canonical loss for binary classification with sigmoid output</li><li>The same cancellation occurs for CCE with softmax — ∂L/∂z = ŷ − y</li><li>This is not a coincidence — these loss-activation pairs are designed together to have clean gradients</li></ul></div>
 
-<!-- ── When to use which ── -->
+<div class="anim-wrap"><div class="anim-title">What each loss punishes, and how hard</div>
+<svg viewBox="0 0 500 170" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
+<line x1="48" y1="122" x2="240" y2="122" stroke="#4e5a7a" stroke-width="1"/>
+<line x1="48" y1="122" x2="48" y2="24" stroke="#4e5a7a" stroke-width="1"/>
+<text x="144.0" y="138.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">residual</text>
+<text x="39" y="73.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" transform="rotate(-90 39 73.0)">penalty</text>
+<path d="M48.0,24.0 L50.1,28.3 L52.3,32.5 L54.4,36.6 L56.5,40.6 L58.7,44.6 L60.8,48.4 L62.9,52.1 L65.1,55.7 L67.2,59.3 L69.3,62.7 L71.5,66.1 L73.6,69.3 L75.7,72.4 L77.9,75.5 L80.0,78.4 L82.1,81.3 L84.3,84.1 L86.4,86.7 L88.5,89.3 L90.7,91.8 L92.8,94.1 L94.9,96.4 L97.1,98.6 L99.2,100.7 L101.3,102.6 L103.5,104.5 L105.6,106.3 L107.7,108.0 L109.9,109.6 L112.0,111.1 L114.1,112.5 L116.3,113.8 L118.4,115.0 L120.5,116.1 L122.7,117.2 L124.8,118.1 L126.9,118.9 L129.1,119.6 L131.2,120.3 L133.3,120.8 L135.5,121.2 L137.6,121.6 L139.7,121.8 L141.9,122.0 L144.0,122.0 L146.1,122.0 L148.3,121.8 L150.4,121.6 L152.5,121.2 L154.7,120.8 L156.8,120.3 L158.9,119.6 L161.1,118.9 L163.2,118.1 L165.3,117.2 L167.5,116.1 L169.6,115.0 L171.7,113.8 L173.9,112.5 L176.0,111.1 L178.1,109.6 L180.3,108.0 L182.4,106.3 L184.5,104.5 L186.7,102.6 L188.8,100.7 L190.9,98.6 L193.1,96.4 L195.2,94.1 L197.3,91.8 L199.5,89.3 L201.6,86.7 L203.7,84.1 L205.9,81.3 L208.0,78.4 L210.1,75.5 L212.3,72.4 L214.4,69.3 L216.5,66.1 L218.7,62.7 L220.8,59.3 L222.9,55.7 L225.1,52.1 L227.2,48.4 L229.3,44.6 L231.5,40.6 L233.6,36.6 L235.7,32.5 L237.9,28.3 L240.0,24.0" fill="none" stroke="#f06767" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M48.0,24.0 L50.1,26.6 L52.3,29.2 L54.4,31.8 L56.5,34.5 L58.7,37.1 L60.8,39.7 L62.9,42.3 L65.1,44.9 L67.2,47.5 L69.3,50.1 L71.5,52.7 L73.6,55.4 L75.7,58.0 L77.9,60.6 L80.0,63.2 L82.1,65.8 L84.3,68.4 L86.4,71.0 L88.5,73.7 L90.7,76.3 L92.8,78.9 L94.9,81.5 L97.1,84.1 L99.2,86.7 L101.3,89.3 L103.5,91.9 L105.6,94.6 L107.7,97.2 L109.9,99.8 L112.0,102.4 L114.1,104.9 L116.3,107.3 L118.4,109.5 L120.5,111.5 L122.7,113.3 L124.8,114.9 L126.9,116.4 L129.1,117.7 L131.2,118.9 L133.3,119.8 L135.5,120.6 L137.6,121.2 L139.7,121.7 L141.9,121.9 L144.0,122.0 L146.1,121.9 L148.3,121.7 L150.4,121.2 L152.5,120.6 L154.7,119.8 L156.8,118.9 L158.9,117.7 L161.1,116.4 L163.2,114.9 L165.3,113.3 L167.5,111.5 L169.6,109.5 L171.7,107.3 L173.9,104.9 L176.0,102.4 L178.1,99.8 L180.3,97.2 L182.4,94.6 L184.5,91.9 L186.7,89.3 L188.8,86.7 L190.9,84.1 L193.1,81.5 L195.2,78.9 L197.3,76.3 L199.5,73.7 L201.6,71.0 L203.7,68.4 L205.9,65.8 L208.0,63.2 L210.1,60.6 L212.3,58.0 L214.4,55.4 L216.5,52.7 L218.7,50.1 L220.8,47.5 L222.9,44.9 L225.1,42.3 L227.2,39.7 L229.3,37.1 L231.5,34.5 L233.6,31.8 L235.7,29.2 L237.9,26.6 L240.0,24.0" fill="none" stroke="#22d3a0" stroke-width="2.4" stroke-linecap="round"/>
+<text x="224.0" y="40.0" fill="#f06767" font-size="9" text-anchor="end" font-family="DM Sans">MSE</text>
+<text x="224.0" y="92.0" fill="#22d3a0" font-size="9" text-anchor="end" font-family="DM Sans">Huber</text>
+<text x="144.0" y="140.0" fill="#4e5a7a" font-size="8.3" text-anchor="middle" font-family="DM Sans">one outlier at r=50 costs MSE 2500, Huber 49.5</text>
+<line x1="300" y1="122" x2="470" y2="122" stroke="#4e5a7a" stroke-width="1"/>
+<line x1="300" y1="122" x2="300" y2="24" stroke="#4e5a7a" stroke-width="1"/>
+<text x="385.0" y="138.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">p (true class)</text>
+<path d="M300.0,24.0 L301.9,26.1 L303.8,40.9 L305.7,49.5 L307.6,55.7 L309.4,60.4 L311.3,64.3 L313.2,67.6 L315.1,70.4 L317.0,72.9 L318.9,75.2 L320.8,77.2 L322.7,79.1 L324.6,80.8 L326.4,82.4 L328.3,83.8 L330.2,85.2 L332.1,86.5 L334.0,87.7 L335.9,88.9 L337.8,90.0 L339.7,91.0 L341.6,92.0 L343.4,92.9 L345.3,93.8 L347.2,94.7 L349.1,95.5 L351.0,96.4 L352.9,97.1 L354.8,97.9 L356.7,98.6 L358.6,99.3 L360.4,100.0 L362.3,100.6 L364.2,101.3 L366.1,101.9 L368.0,102.5 L369.9,103.1 L371.8,103.6 L373.7,104.2 L375.6,104.7 L377.4,105.2 L379.3,105.8 L381.2,106.3 L383.1,106.8 L385.0,107.2 L386.9,107.7 L388.8,108.2 L390.7,108.6 L392.6,109.0 L394.4,109.5 L396.3,109.9 L398.2,110.3 L400.1,110.7 L402.0,111.1 L403.9,111.5 L405.8,111.9 L407.7,112.3 L409.6,112.6 L411.4,113.0 L413.3,113.4 L415.2,113.7 L417.1,114.1 L419.0,114.4 L420.9,114.7 L422.8,115.1 L424.7,115.4 L426.6,115.7 L428.4,116.0 L430.3,116.3 L432.2,116.6 L434.1,116.9 L436.0,117.2 L437.9,117.5 L439.8,117.8 L441.7,118.1 L443.6,118.4 L445.4,118.7 L447.3,119.0 L449.2,119.2 L451.1,119.5 L453.0,119.8 L454.9,120.0 L456.8,120.3 L458.7,120.5 L460.6,120.8 L462.4,121.0 L464.3,121.3 L466.2,121.5 L468.1,121.8 L470.0,122.0" fill="none" stroke="#5ba4fb" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M300.0,24.0 L301.9,28.3 L303.8,44.5 L305.7,54.3 L307.6,61.4 L309.4,67.1 L311.3,71.7 L313.2,75.7 L315.1,79.2 L317.0,82.3 L318.9,85.0 L320.8,87.5 L322.7,89.8 L324.6,91.8 L326.4,93.7 L328.3,95.5 L330.2,97.1 L332.1,98.6 L334.0,100.1 L335.9,101.4 L337.8,102.6 L339.7,103.8 L341.6,104.9 L343.4,105.9 L345.3,106.9 L347.2,107.8 L349.1,108.6 L351.0,109.4 L352.9,110.2 L354.8,110.9 L356.7,111.6 L358.6,112.2 L360.4,112.9 L362.3,113.4 L364.2,114.0 L366.1,114.5 L368.0,115.0 L369.9,115.4 L371.8,115.9 L373.7,116.3 L375.6,116.7 L377.4,117.0 L379.3,117.4 L381.2,117.7 L383.1,118.0 L385.0,118.3 L386.9,118.6 L388.8,118.8 L390.7,119.1 L392.6,119.3 L394.4,119.5 L396.3,119.7 L398.2,119.9 L400.1,120.1 L402.0,120.3 L403.9,120.4 L405.8,120.6 L407.7,120.7 L409.6,120.8 L411.4,120.9 L413.3,121.0 L415.2,121.1 L417.1,121.2 L419.0,121.3 L420.9,121.4 L422.8,121.5 L424.7,121.5 L426.6,121.6 L428.4,121.6 L430.3,121.7 L432.2,121.7 L434.1,121.8 L436.0,121.8 L437.9,121.8 L439.8,121.9 L441.7,121.9 L443.6,121.9 L445.4,121.9 L447.3,121.9 L449.2,122.0 L451.1,122.0 L453.0,122.0 L454.9,122.0 L456.8,122.0 L458.7,122.0 L460.6,122.0 L462.4,122.0 L464.3,122.0 L466.2,122.0 L468.1,122.0 L470.0,122.0" fill="none" stroke="#b97cf8" stroke-width="2.4" stroke-linecap="round"/>
+<text x="456.0" y="44.0" fill="#5ba4fb" font-size="9" text-anchor="end" font-family="DM Sans">BCE</text>
+<text x="400.0" y="104.0" fill="#b97cf8" font-size="9" text-anchor="end" font-family="DM Sans">focal γ=2</text>
+<text x="385.0" y="140.0" fill="#b97cf8" font-size="8.3" text-anchor="middle" font-family="DM Sans">focal flattens the easy region</text>
+<text x="250.0" y="160.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Pick the loss for the shape of the failure you care about: tails (Huber) or a drowned minority class (focal).</text>
+</svg></div>
+
+<div class="card ca"><div class="card-title">Cross-entropy in practice: the details that bite</div>
+<ul class="bul">
+<li><strong>Pass logits to the loss, never probabilities.</strong> <code>CrossEntropyLoss</code> and <code>BCEWithLogitsLoss</code> apply the softmax or sigmoid internally, fused with the log for numerical stability. Applying softmax yourself and then calling them means the activation is applied twice: the model still trains, worse, with quietly wrong gradients — a bug that produces mediocre results rather than an error</li>
+<li><strong>log(0) is −∞.</strong> Any hand-written cross-entropy needs its input clipped — <code>log(max(p, 1e-7))</code> — or one confident mistake turns the whole batch's loss into NaN. The fused framework losses handle this; custom metric code usually does not</li>
+<li><strong>Label smoothing bounds the confidence.</strong> A hard target of 1 is only reachable by driving the correct logit infinitely far above the others, so cross-entropy keeps widening that gap forever and the model grows steadily more overconfident. Replace the target with 1 − ε and the optimum becomes finite. At ε = 0.1 over 10 classes the true class targets 0.9 and each other class 0.0111 — a calibration fix as much as a regulariser, and standard in transformer training</li>
+<li><strong>Focal loss reweights by difficulty.</strong> Multiplying by (1 − p_t)^γ suppresses examples the model already gets right: at γ = 2, an example at p_t = 0.9 contributes 1% of its unmodulated loss while one at 0.5 contributes 25%. Built for dense object detection at roughly 1000:1 background-to-object, where the sum of a million negligible easy-negative terms would otherwise swamp the informative ones</li>
+<li><strong>Class weights are the simpler answer for tabular imbalance.</strong> Focal loss is machinery aimed at extreme imbalance in deep models; for gradient-boosted trees, weighting the classes and then moving the decision threshold does the same job with fewer moving parts</li>
+</ul>
+<div class="box warn"><div class="bl">the loss is not the metric</div>
+<p>You train with cross-entropy and report accuracy, F1, or AUC. These are different objects with different jobs: the loss must be differentiable and informative about direction, the metric must be meaningful to whoever reads it. <strong>Accuracy is not differentiable, so it cannot be a training objective</strong> — its gradient is zero almost everywhere and undefined at the threshold.</p>
+<p style="margin-top:8px">The reverse mistake matters too: a falling loss and a flat metric is a real and common state. It usually means the model is becoming more confident about examples it already had right — which improves log loss and moves no predictions across the threshold. Watch both curves, and decide in advance which one gates the release.</p></div></div>
+
 <div class="card"><div class="card-title">Probabilistic &amp; Specialized Losses</div>
 <table class="tbl"><tr><th>Loss</th><th>Use Case</th><th>Key Property</th></tr>
 <tr><td>KL Divergence</td><td>VAEs, knowledge distillation</td><td>Asymmetric — KL(P‖Q) ≠ KL(Q‖P)</td></tr>
@@ -125,33 +163,38 @@ Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is
 <div class="card-body" style="margin-top:8px; font-size:12.5px; color:var(--text3)">Note: classification accuracy is a good reporting metric after training — the argument for ACE over accuracy applies specifically during training, where the gradient signal matters.</div>
 </div>
 
-<div class="box story"><div class="bl">📖 Taxi Meter Analogy</div><p>MSE is a taxi that charges exponentially per mile you're off route: 1 mile wrong = <span>$1</span>, 10 miles = <span>$100</span>. MAE charges linearly. For a city with occasional crazy detours (outliers), MAE is fairer. Huber is a taxi with a daily cap. Cross-entropy is a different kind of taxi — it only charges you for how confident you were about the street you recommended. If you confidently said "go left" and the destination was right, the fare is astronomical. If you quietly suggested "maybe left?" it's a smaller penalty. It rewards learning to be confident about the right things.</p></div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>MSE for classification.</strong> It ranks classifiers correctly, so it looks defensible — and it wastes gradient on the non-target outputs and stalls as predictions sharpen, because σ′(z) → 0. Cross-entropy's cancellation exists precisely to avoid this</li>
+<li><strong>Double-applying softmax.</strong> Softmax in the model plus softmax inside the loss. Trains, badly, silently</li>
+<li><strong>MSE on a skewed target.</strong> Squared error fits the mean and a long tail drags it. Model log(y), or use Huber, or a Gamma/Tweedie objective — and remember that exponentiating a prediction of log(y) returns the median, not the mean</li>
+<li><strong>Unnormalised multi-task losses.</strong> Summing a loss of order 100 with one of order 0.01 means the second task is decoration. Normalise each by its scale, then weight deliberately — and re-check the weights when either task's data changes</li>
+<li><strong>Optimising a metric nobody wants.</strong> Accuracy on imbalanced data, or F1 when a miss costs a hundred times a false alarm. The optimiser will faithfully deliver whatever you asked for</li>
+<li><strong>Reading the training loss as progress.</strong> Training loss falls monotonically almost by construction. The validation curve is the one that carries information</li>
+<li><strong>Comparing losses across different reductions.</strong> A sum-reduced loss scales with batch size and a mean-reduced one does not, so "the loss went up" after a batch-size change is often just the reduction. Fix one convention</li>
+<li><strong>Ignoring that a weighted or resampled loss breaks calibration.</strong> Class weights, focal loss and resampling all shift the implied base rate on purpose. Ranking survives; probabilities need recalibrating before they are multiplied by anything</li>
+</ul></div>
 
-<div class="box warn"><div class="bl">⚠️ Common Mistake</div><p>Using <strong>MSE as a classification loss</strong> (e.g., targets as 0/1 and computing squared error across all output nodes) is a subtly bad idea that used to be common. It works — MSE does rank classifiers in the right order — but it dilutes the gradient with signal from the wrong output neurons, and it causes the vanishing-gradient stall near convergence. Always use cross-entropy for classifier training.</p></div>
+<div class="card ca"><div class="card-title">Where the choice of loss is the whole design</div>
+<ul class="bul">
+<li><strong>Focal loss made dense detection work.</strong> RetinaNet's contribution was largely the loss: at ~1000:1 background-to-foreground, the easy negatives dominate the gradient, and suppressing them let a single-stage detector match two-stage accuracy. A case where changing the loss, not the architecture, was the result</li>
+<li><strong>RLHF is a loss-function story end to end.</strong> Human preference pairs train a reward model under a Bradley–Terry pairwise objective — maximise log σ(r(preferred) − r(rejected)) — and that learned reward then becomes the objective for policy optimisation. The alignment problem is largely the problem of what to put in the loss</li>
+<li><strong>Contrastive losses built modern retrieval.</strong> InfoNCE and its variants pull matched pairs together and push mismatched ones apart, which is what makes CLIP, SimCLR and two-tower recommenders work. The loss defines the geometry of the embedding space, and that geometry is the product</li>
+<li><strong>Quantile loss where uncertainty is the deliverable.</strong> Demand planning, energy load, staffing: a point forecast is unusable and an interval is actionable, so the model is trained at several quantiles at once. Nothing about the architecture changes — only the loss</li>
+<li><strong>CTC for unaligned sequences.</strong> Speech and handwriting have targets that do not line up with inputs frame by frame. CTC marginalises over all alignments inside the loss, which removed the need for hand-aligned training data and reshaped the field</li>
+<li><strong>The pattern worth noticing:</strong> in every one of these, the loss encodes a structural fact about the problem — the imbalance, the preference ordering, the desired geometry, the uncertainty requirement, the missing alignment. Architecture search gets the attention; changing the objective is often the larger lever</li>
+</ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>Three loss metrics exist for classifiers: classification error, MSE, and average cross-entropy (ACE). <strong>Classification error is too crude</strong> — two networks with the same accuracy can be wildly different in quality because it ignores how confident each prediction was. <strong>MSE is better but still flawed</strong> — it wastes gradient on incorrect output neurons, and critically, its gradient contains a σ'(z) = ŷ(1−ŷ) term that shrinks toward zero as predictions get confident, causing training to stall. <strong>ACE is best</strong> — it only grades you on the probability assigned to the true class, and when paired with softmax/sigmoid, the derivative of the activation function cancels out of the gradient completely, leaving ∂L/∂z = ŷ − y. No stalling, no wasted signal. The probability interpretation is also clean: minimizing ACE is maximum likelihood estimation under a Categorical distribution. After training, you can switch back to reporting classification accuracy — that's ultimately what you care about for stakeholders.</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used MSE loss for my classifier." — Cross-entropy is strictly better for classification: it directly optimises the probability assigned to the true class, avoids the vanishing-gradient stall, and has a cleaner probabilistic interpretation.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you use Huber loss instead of MSE?" — Answer: when regression targets have outliers. MSE penalises outliers quadratically — one bad data point can dominate the gradient. Huber behaves like MSE for small errors (|y−ŷ| &lt; δ) and like MAE for large errors, bounding the maximum gradient contribution from any single example. δ is a hyperparameter tuned on the validation set.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the likelihood framing.</strong> "Every loss encodes a noise assumption: squared error is Gaussian and fits the conditional mean, absolute error is Laplace and fits the median, cross-entropy is Bernoulli. So choosing a loss is choosing what statistic you want the model to predict." That single sentence answers a whole family of questions and sounds like modelling rather than recall.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why not MSE for classification?" — Two reasons, and give both. It spends gradient on the non-target outputs, which carry no information about the decision. And its gradient carries a σ′(z) = ŷ(1−ŷ) factor that collapses as predictions sharpen — 0.25 at ŷ = 0.5 but 0.0475 at ŷ = 0.95 — so training stalls exactly when the model is getting good. <strong>Cross-entropy with a sigmoid or softmax output cancels that factor exactly, leaving ∂L/∂z = ŷ − y</strong>, and that cancellation is by design, not luck.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "MSE, MAE, or Huber?" — Talk about gradients rather than loss values. MSE's per-example gradient grows with the error, so one point at error 100 outweighs a hundred points at error 1; MAE and Huber cap it. Huber is the default when unsure, and δ is the error size at which you stop trusting the point — so it lives in the target's units.</p>
+<p style="margin-top:8px"><strong>Volunteer the loss-versus-metric distinction:</strong> you train on cross-entropy and report AUC, because accuracy is not differentiable; and a falling loss with a flat metric usually means growing confidence on already-correct examples. Knowing that state exists is a strong signal of having actually watched training runs.</p>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using MSE for classification</strong> — MSE wastes gradient on incorrect output neurons and stalls as predictions get confident (σ'(z)→0). Always use cross-entropy for classification tasks</li>
-  <li><strong>Confusing loss function and evaluation metric</strong> — you train with cross-entropy but evaluate with accuracy/F1/AUC-ROC. These are different things; the training loss need not be the business metric. Never train directly on accuracy (non-differentiable)</li>
-  <li><strong>Using MSE for skewed regression targets</strong> — if revenue predictions have a handful of extreme values, those dominate MSE and warp the model. Log-transform targets or use Huber/MAE for robustness</li>
-  <li><strong>Not normalizing multi-task losses</strong> — in multi-task learning, two tasks with different loss scales cause one task to dominate training. Always normalise individual losses (divide by their scale) and weight them explicitly before summing</li>
-  <li><strong>Forgetting numerical stability of log(0)</strong> — log(0) = -∞ causes NaN in cross-entropy. Always clip predictions: log(max(ŷ, 1e-7)) in custom loss implementations</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (object detection — Focal Loss):</strong> introduced by Facebook AI (RetinaNet), Focal Loss down-weights easy negatives: FL = −(1−ŷ)^γ · log(ŷ). At γ=2, a well-classified example (ŷ=0.9) contributes 100× less than a misclassified one — forces the model to focus on hard examples in extreme class imbalance</li>
-  <li><strong>OpenAI (RLHF — reward model loss):</strong> Bradley-Terry pairwise ranking loss used to train reward models from human preference pairs: L = −log σ(r(preferred) − r(rejected)); the reward model learned from this loss then drives PPO training</li>
-  <li><strong>Spotify / Netflix (recommendation — contrastive loss):</strong> InfoNCE / NT-Xent loss trains embedding models to pull similar items together and push dissimilar ones apart — the basis of SimCLR, CLIP, and modern two-tower retrieval models</li>
-  <li><strong>Finance (quantile regression loss):</strong> pinball loss enables prediction intervals; predicting the 10th and 90th percentiles of demand gives inventory planners uncertainty bounds rather than just a point estimate</li>
-</ul></div>
-  <div class="card-title">▶ Run It: ACE vs MSE vs Classification Error (3-class example)</div>
-  <div class="code-runner" id="runner-loss">
+<div class="card cc"><div class="card-title">▶ Run it: ACE vs MSE vs classification error</div>
+<div class="card-body">The three-class example above, executable. Change the probabilities and watch which measures notice the difference and which one cannot.</div>
+<div class="code-runner" id="runner-loss">
     <div class="code-runner-header">
       <span>🐍 Python · numpy</span>
       <div class="runner-btns">
@@ -201,30 +244,7 @@ print("MSE also ranks B lower (better): 0.34 < 0.81 ✓ (but wastes signal)")
     </textarea>
     <pre class="code-output">Click ▶ Run to execute…</pre>
   </div>
-
-
-<div class="anim-wrap"><div class="anim-title">What each loss punishes, and how hard</div>
-<svg viewBox="0 0 500 170" xmlns="http://www.w3.org/2000/svg">
-<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
-<line x1="48" y1="122" x2="240" y2="122" stroke="#4e5a7a" stroke-width="1"/>
-<line x1="48" y1="122" x2="48" y2="24" stroke="#4e5a7a" stroke-width="1"/>
-<text x="144.0" y="138.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">residual</text>
-<text x="39" y="73.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" transform="rotate(-90 39 73.0)">penalty</text>
-<path d="M48.0,24.0 L50.1,28.3 L52.3,32.5 L54.4,36.6 L56.5,40.6 L58.7,44.6 L60.8,48.4 L62.9,52.1 L65.1,55.7 L67.2,59.3 L69.3,62.7 L71.5,66.1 L73.6,69.3 L75.7,72.4 L77.9,75.5 L80.0,78.4 L82.1,81.3 L84.3,84.1 L86.4,86.7 L88.5,89.3 L90.7,91.8 L92.8,94.1 L94.9,96.4 L97.1,98.6 L99.2,100.7 L101.3,102.6 L103.5,104.5 L105.6,106.3 L107.7,108.0 L109.9,109.6 L112.0,111.1 L114.1,112.5 L116.3,113.8 L118.4,115.0 L120.5,116.1 L122.7,117.2 L124.8,118.1 L126.9,118.9 L129.1,119.6 L131.2,120.3 L133.3,120.8 L135.5,121.2 L137.6,121.6 L139.7,121.8 L141.9,122.0 L144.0,122.0 L146.1,122.0 L148.3,121.8 L150.4,121.6 L152.5,121.2 L154.7,120.8 L156.8,120.3 L158.9,119.6 L161.1,118.9 L163.2,118.1 L165.3,117.2 L167.5,116.1 L169.6,115.0 L171.7,113.8 L173.9,112.5 L176.0,111.1 L178.1,109.6 L180.3,108.0 L182.4,106.3 L184.5,104.5 L186.7,102.6 L188.8,100.7 L190.9,98.6 L193.1,96.4 L195.2,94.1 L197.3,91.8 L199.5,89.3 L201.6,86.7 L203.7,84.1 L205.9,81.3 L208.0,78.4 L210.1,75.5 L212.3,72.4 L214.4,69.3 L216.5,66.1 L218.7,62.7 L220.8,59.3 L222.9,55.7 L225.1,52.1 L227.2,48.4 L229.3,44.6 L231.5,40.6 L233.6,36.6 L235.7,32.5 L237.9,28.3 L240.0,24.0" fill="none" stroke="#f06767" stroke-width="2.4" stroke-linecap="round"/>
-<path d="M48.0,24.0 L50.1,26.6 L52.3,29.2 L54.4,31.8 L56.5,34.5 L58.7,37.1 L60.8,39.7 L62.9,42.3 L65.1,44.9 L67.2,47.5 L69.3,50.1 L71.5,52.7 L73.6,55.4 L75.7,58.0 L77.9,60.6 L80.0,63.2 L82.1,65.8 L84.3,68.4 L86.4,71.0 L88.5,73.7 L90.7,76.3 L92.8,78.9 L94.9,81.5 L97.1,84.1 L99.2,86.7 L101.3,89.3 L103.5,91.9 L105.6,94.6 L107.7,97.2 L109.9,99.8 L112.0,102.4 L114.1,104.9 L116.3,107.3 L118.4,109.5 L120.5,111.5 L122.7,113.3 L124.8,114.9 L126.9,116.4 L129.1,117.7 L131.2,118.9 L133.3,119.8 L135.5,120.6 L137.6,121.2 L139.7,121.7 L141.9,121.9 L144.0,122.0 L146.1,121.9 L148.3,121.7 L150.4,121.2 L152.5,120.6 L154.7,119.8 L156.8,118.9 L158.9,117.7 L161.1,116.4 L163.2,114.9 L165.3,113.3 L167.5,111.5 L169.6,109.5 L171.7,107.3 L173.9,104.9 L176.0,102.4 L178.1,99.8 L180.3,97.2 L182.4,94.6 L184.5,91.9 L186.7,89.3 L188.8,86.7 L190.9,84.1 L193.1,81.5 L195.2,78.9 L197.3,76.3 L199.5,73.7 L201.6,71.0 L203.7,68.4 L205.9,65.8 L208.0,63.2 L210.1,60.6 L212.3,58.0 L214.4,55.4 L216.5,52.7 L218.7,50.1 L220.8,47.5 L222.9,44.9 L225.1,42.3 L227.2,39.7 L229.3,37.1 L231.5,34.5 L233.6,31.8 L235.7,29.2 L237.9,26.6 L240.0,24.0" fill="none" stroke="#22d3a0" stroke-width="2.4" stroke-linecap="round"/>
-<text x="224.0" y="40.0" fill="#f06767" font-size="9" text-anchor="end" font-family="DM Sans">MSE</text>
-<text x="224.0" y="92.0" fill="#22d3a0" font-size="9" text-anchor="end" font-family="DM Sans">Huber</text>
-<text x="144.0" y="140.0" fill="#4e5a7a" font-size="8.3" text-anchor="middle" font-family="DM Sans">one outlier at r=50 costs MSE 2500, Huber 49.5</text>
-<line x1="300" y1="122" x2="470" y2="122" stroke="#4e5a7a" stroke-width="1"/>
-<line x1="300" y1="122" x2="300" y2="24" stroke="#4e5a7a" stroke-width="1"/>
-<text x="385.0" y="138.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">p (true class)</text>
-<path d="M300.0,24.0 L301.9,26.1 L303.8,40.9 L305.7,49.5 L307.6,55.7 L309.4,60.4 L311.3,64.3 L313.2,67.6 L315.1,70.4 L317.0,72.9 L318.9,75.2 L320.8,77.2 L322.7,79.1 L324.6,80.8 L326.4,82.4 L328.3,83.8 L330.2,85.2 L332.1,86.5 L334.0,87.7 L335.9,88.9 L337.8,90.0 L339.7,91.0 L341.6,92.0 L343.4,92.9 L345.3,93.8 L347.2,94.7 L349.1,95.5 L351.0,96.4 L352.9,97.1 L354.8,97.9 L356.7,98.6 L358.6,99.3 L360.4,100.0 L362.3,100.6 L364.2,101.3 L366.1,101.9 L368.0,102.5 L369.9,103.1 L371.8,103.6 L373.7,104.2 L375.6,104.7 L377.4,105.2 L379.3,105.8 L381.2,106.3 L383.1,106.8 L385.0,107.2 L386.9,107.7 L388.8,108.2 L390.7,108.6 L392.6,109.0 L394.4,109.5 L396.3,109.9 L398.2,110.3 L400.1,110.7 L402.0,111.1 L403.9,111.5 L405.8,111.9 L407.7,112.3 L409.6,112.6 L411.4,113.0 L413.3,113.4 L415.2,113.7 L417.1,114.1 L419.0,114.4 L420.9,114.7 L422.8,115.1 L424.7,115.4 L426.6,115.7 L428.4,116.0 L430.3,116.3 L432.2,116.6 L434.1,116.9 L436.0,117.2 L437.9,117.5 L439.8,117.8 L441.7,118.1 L443.6,118.4 L445.4,118.7 L447.3,119.0 L449.2,119.2 L451.1,119.5 L453.0,119.8 L454.9,120.0 L456.8,120.3 L458.7,120.5 L460.6,120.8 L462.4,121.0 L464.3,121.3 L466.2,121.5 L468.1,121.8 L470.0,122.0" fill="none" stroke="#5ba4fb" stroke-width="2.4" stroke-linecap="round"/>
-<path d="M300.0,24.0 L301.9,28.3 L303.8,44.5 L305.7,54.3 L307.6,61.4 L309.4,67.1 L311.3,71.7 L313.2,75.7 L315.1,79.2 L317.0,82.3 L318.9,85.0 L320.8,87.5 L322.7,89.8 L324.6,91.8 L326.4,93.7 L328.3,95.5 L330.2,97.1 L332.1,98.6 L334.0,100.1 L335.9,101.4 L337.8,102.6 L339.7,103.8 L341.6,104.9 L343.4,105.9 L345.3,106.9 L347.2,107.8 L349.1,108.6 L351.0,109.4 L352.9,110.2 L354.8,110.9 L356.7,111.6 L358.6,112.2 L360.4,112.9 L362.3,113.4 L364.2,114.0 L366.1,114.5 L368.0,115.0 L369.9,115.4 L371.8,115.9 L373.7,116.3 L375.6,116.7 L377.4,117.0 L379.3,117.4 L381.2,117.7 L383.1,118.0 L385.0,118.3 L386.9,118.6 L388.8,118.8 L390.7,119.1 L392.6,119.3 L394.4,119.5 L396.3,119.7 L398.2,119.9 L400.1,120.1 L402.0,120.3 L403.9,120.4 L405.8,120.6 L407.7,120.7 L409.6,120.8 L411.4,120.9 L413.3,121.0 L415.2,121.1 L417.1,121.2 L419.0,121.3 L420.9,121.4 L422.8,121.5 L424.7,121.5 L426.6,121.6 L428.4,121.6 L430.3,121.7 L432.2,121.7 L434.1,121.8 L436.0,121.8 L437.9,121.8 L439.8,121.9 L441.7,121.9 L443.6,121.9 L445.4,121.9 L447.3,121.9 L449.2,122.0 L451.1,122.0 L453.0,122.0 L454.9,122.0 L456.8,122.0 L458.7,122.0 L460.6,122.0 L462.4,122.0 L464.3,122.0 L466.2,122.0 L468.1,122.0 L470.0,122.0" fill="none" stroke="#b97cf8" stroke-width="2.4" stroke-linecap="round"/>
-<text x="456.0" y="44.0" fill="#5ba4fb" font-size="9" text-anchor="end" font-family="DM Sans">BCE</text>
-<text x="400.0" y="104.0" fill="#b97cf8" font-size="9" text-anchor="end" font-family="DM Sans">focal γ=2</text>
-<text x="385.0" y="140.0" fill="#b97cf8" font-size="8.3" text-anchor="middle" font-family="DM Sans">focal flattens the easy region</text>
-<text x="250.0" y="160.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Pick the loss for the shape of the failure you care about: tails (Huber) or a drowned minority class (focal).</text>
-</svg></div>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Loss functions written out and their gradients checked numerically. The Huber and focal cases are the ones worth remembering — one for outliers, one for imbalance.</div>

@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C8 done (25 topics), C9–C20 remaining (30 topics)** |
+| **Prose quality** | **C1–C9 done (28 topics), C10–C20 remaining (27 topics)** |
 
-### Prose progress: 25 / 55
+### Prose progress: 28 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -35,7 +35,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C6  17 gradient-boosting · 18 xgboost · 19 clustering · 20 dimred
 - [x] C7  21 feature-engineering · 22 imbalanced · 23 regularization
 - [x] C8  24 hyperparameter-tuning · 25 ensemble-methods
-- [ ] C9  26 mlp · 27 activations · 28 loss-functions
+- [x] C9  26 mlp · 27 activations · 28 loss-functions
 - [ ] C10 29 backpropagation · 30 optimizers · 31 weight-init
 - [ ] C11 32 cnns · 33 rnns-lstms
 - [ ] C12 34 attention · 35 transformers · 36 transfer-distillation
@@ -140,7 +140,8 @@ python3 tools/assets.py cdf20c9 11-linear-logistic
 
 ## 4. Asset retention — the one thing that has actually gone wrong
 
-Two interactive widgets were nearly lost during C2/C3:
+Three widget-retention traps have bitten so far. The first two nearly lost a
+widget during C2/C3:
 
 * **`06-bias-variance`** — its Bias-Variance Explorer wrapper carries a
   `style` attribute, so matching the literal `<div class="anim-wrap">` missed it.
@@ -148,8 +149,23 @@ Two interactive widgets were nearly lost during C2/C3:
   the wrapper div, so a div-depth walk alone dropped the script and left a dead
   widget.
 
-`tools/assets.py` handles both. **Use `blocks()` from it; never hand-roll the
-regex.** And always run:
+The third was found in C9 and is subtler, because it duplicates rather than drops:
+
+* **`28-loss-functions` / `29-backpropagation`** — the old regex matched
+  `code-runner\b`, and `\b` matches at the hyphen in `code-runner-header`. So a
+  widget's own header came back as a **separate block nested inside the widget**,
+  and substituting both placeholders duplicated the header. `blocks()` now
+  requires the class name to end — `(?=["\s])` — and additionally drops any span
+  wholly contained in another, so nesting cannot duplicate again regardless of
+  future class names.
+
+**Do not "fix" `counts()`.** It deliberately counts raw string occurrences, so
+`runner=2` for a *single* widget (one `code-runner` plus one
+`code-runner-header`) is correct and expected. Changing it would break
+comparability with the `cdf20c9` baseline.
+
+`tools/assets.py` handles all three. **Use `blocks()` from it; never hand-roll
+the regex.** And always run:
 
 ```bash
 python3 tools/assets.py cdf20c9 <topics...>

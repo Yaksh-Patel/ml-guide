@@ -1,13 +1,22 @@
 <section class="section" id="sec-nn_basics">
 <div class="sec-title">Perceptron &amp; Multi-Layer Perceptron</div>
-<div class="sec-desc">From the simplest possible model (a weighted sum) to the universal function approximator that powers modern AI — the difference is just layers and non-linearities.</div>
-<div class="card"><div class="card-title">Perceptron — The Atom</div>
-<div class="formula math-formula">$$\begin{aligned}
-z = w_1x_1 + w_2x_2 + ... + w_nx_n + b = w^Tx + b \\
-output = activation(z)
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Learned by updating weights toward correct outputs (perceptron learning rule). Can only learn linearly separable patterns — hence the need to stack layers.</div></div>
-<!-- MLP Architecture Animation -->
+<div class="sec-desc">A neural network is a stack of linear maps with a non-linearity wedged between each pair. Take the non-linearities out and the whole tower algebraically collapses into a single matrix — no matter how many layers you built. That collapse is the cleanest way to see what the activation function is <em>for</em>, and what depth actually buys you.</div>
+
+<div class="card cb"><div class="card-title">The perceptron, and the wall it hit</div>
+<div class="card-body">A perceptron is a weighted sum passed through a threshold. Geometrically it draws one hyperplane and reports which side you are on — so it can learn any pattern that a single straight cut separates, and nothing else.</div>
+<div class="formula math-formula">$$z = w^{T}x + b, \qquad \text{output} = \text{activation}(z)$$</div>
+<div class="card-body" style="margin-top:8px">AND and OR are one cut each, so a perceptron handles both. <strong>XOR is not</strong>, and that is not a limitation of the training rule — no single straight line separates {(0,1), (1,0)} from {(0,0), (1,1)}, so no perceptron exists that computes it. Minsky and Papert made this precise in 1969 and the field's enthusiasm collapsed for a decade.</div>
+<div class="card-body" style="margin-top:8px">The fix is one hidden layer, and it is small enough to write out completely. Two ReLU units:</div>
+<div class="formula math-formula">$$h_1 = \text{ReLU}(x_1 + x_2 - 0.5), \qquad h_2 = \text{ReLU}(x_1 + x_2 - 1.5), \qquad y = 2h_1 - 6h_2$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>x₁, x₂</th><th>h₁ = ReLU(x₁+x₂−0.5)</th><th>h₂ = ReLU(x₁+x₂−1.5)</th><th>y = 2h₁ − 6h₂</th><th>XOR</th></tr>
+<tr><td>0, 0</td><td>0.0</td><td>0.0</td><td><strong>0</strong></td><td>0 ✓</td></tr>
+<tr><td>0, 1</td><td>0.5</td><td>0.0</td><td><strong>1</strong></td><td>1 ✓</td></tr>
+<tr><td>1, 0</td><td>0.5</td><td>0.0</td><td><strong>1</strong></td><td>1 ✓</td></tr>
+<tr><td>1, 1</td><td>1.5</td><td>0.5</td><td><strong>0</strong></td><td>0 ✓</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Read what the hidden units learned to be: <strong>h₁ fires when <em>at least one</em> input is on, h₂ fires only when <em>both</em> are on.</strong> That is OR and AND — two linear separations — and XOR is then their difference. The hidden layer did not find a cleverer straight line; it built new features, and in that new space the problem became linearly separable. That is what every hidden layer does, and everything below is that idea repeated.</div></div>
+
 <div class="anim-wrap"><div class="anim-title">Multi-Layer Perceptron — forward pass signal flow</div>
 <svg viewBox="0 0 520 210" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -80,37 +89,75 @@ output = activation(z)
 </circle>
 <text x="260" y="200" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">⚡ Each connection has a learnable weight w. Bias b shifts the activation.</text>
 </svg></div>
-<div class="card"><div class="card-title">Forward Pass — Layer by Layer</div>
-<div class="formula math-formula">$$\begin{aligned}
-h^1 = activation(W^1x + b^1) \\
-h^2 = activation(W^2h^1 + b^2) \\
-\hat{y}  = \text{softmax}(W^3h^2 + b^3) \quad \text{(classification)} \\
-\hat{y}  = W^3h^2 + b^3 \quad \text{(regression)}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Without activation functions, stacking linear layers collapses to a single linear layer: W₃(W₂(W₁x)) = Wx. The non-linearity is what enables learning non-linear decision boundaries.</div></div>
-<div class="box story"><div class="bl">📖 The Brilliant Intern</div><p>A neural network is a brilliant intern. 10M training examples + 6 months = outperforms everyone. 200 examples on day one = memorizes them exactly, fails on anything new. And it can never explain its decisions. "I just... feel it's a cat."</p></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cg"><div class="card-title">Without the non-linearity, depth is an expensive illusion</div>
+<div class="card-body">Stack two linear layers and the composition is still linear — the product of two matrices is a matrix:</div>
+<div class="formula math-formula">$$W_3\big(W_2(W_1x)\big) = \underbrace{(W_3W_2W_1)}_{\text{a single matrix}}x$$</div>
+<div class="card-body" style="margin-top:8px">Put numbers on the waste. A 784 → 256 → 256 → 10 network — the standard MNIST shape — holds <strong>269,322 parameters</strong> including biases. Strip the activations and every one of those collapses into an equivalent 784 × 10 map: <strong>7,840 effective degrees of freedom.</strong> You would be storing and training 269,322 numbers to express something a 34× smaller model expresses exactly.</div>
+<div class="card-body" style="margin-top:8px">So the activation is not a detail applied to a layer's output — <strong>it is the thing that makes the layer a layer.</strong> This is also the fastest way to diagnose a network that will not learn past linear-model performance: check that a non-linearity is actually present between every pair of weight matrices, because a missing one is silent.</div>
+<div class="card-body" style="margin-top:8px"><strong>Parameter counting</strong> is worth being fluent in, since it comes up constantly. A layer mapping m inputs to n outputs holds m·n weights plus n biases:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Layer</th><th>Weights</th><th>Biases</th><th>Total</th></tr>
+<tr><td>784 → 256</td><td>200,704</td><td>256</td><td>200,960</td></tr>
+<tr><td>256 → 256</td><td>65,536</td><td>256</td><td>65,792</td></tr>
+<tr><td>256 → 10</td><td>2,560</td><td>10</td><td>2,570</td></tr>
+<tr><td colspan="3"><strong>Total</strong></td><td><strong>269,322</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Note where the parameters live: the <em>first</em> layer holds 75% of them, because 784 inputs is wide. That is why the input representation dominates the memory budget of small MLPs, and why convolutions — which share weights across positions — were such a large win on images.</div></div>
+
+<div class="card cp"><div class="card-title">Why depth beats width</div>
+<div class="card-body">The universal approximation theorem says a single hidden layer can approximate any continuous function to arbitrary accuracy. It is often quoted as though it settles the architecture question. It does not, because it says nothing about <em>how wide</em> that layer has to be — and the answer can be exponential.</div>
+<div class="card-body" style="margin-top:8px">The clean example is a sawtooth. Each ReLU layer can fold the input space back on itself, and folding composes: L layers of a couple of units each produce roughly 2<sup>L</sup> linear segments. A single hidden layer has no folding to compose, so it needs one unit per segment.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Function with 2¹⁰ = 1,024 teeth</th><th>Units needed</th></tr>
+<tr><td>Deep — 10 layers, folding at each</td><td><strong>~20</strong></td></tr>
+<tr><td>Shallow — one hidden layer</td><td><strong>~1,024</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Depth is exponentially more parameter-efficient than width for compositional functions</strong> — and the functions we care about are compositional: pixels form edges, edges form textures, textures form parts, parts form objects. Each layer reuses what the layer below built, which is why the same total parameter count buys far more when arranged deep than wide.</div>
+<div class="card-body" style="margin-top:8px">The catch is that depth is a <em>representational</em> win and an <em>optimisation</em> cost. A deep network can express the function; getting gradient descent to find it is a separate problem, and the reason very deep networks were untrainable until residual connections, normalisation layers and better initialisation arrived. Expressiveness was never the bottleneck.</div></div>
+
+<div class="card ca"><div class="card-title">The forward pass, and reading the loss curve</div>
+<div class="formula math-formula">$$h^{(1)} = \phi\big(W^{(1)}x + b^{(1)}\big), \qquad h^{(2)} = \phi\big(W^{(2)}h^{(1)} + b^{(2)}\big), \qquad \hat y = g\big(W^{(3)}h^{(2)} + b^{(3)}\big)$$</div>
+<div class="card-body" style="margin-top:8px">φ is the hidden activation — ReLU or GELU. <strong>g is chosen by the task, not by preference:</strong> identity for regression, sigmoid for binary, softmax for single-label multi-class, independent sigmoids for multi-label. Never ReLU, which would clip half the output range.</div>
+<div class="card-body" style="margin-top:8px"><strong>Normalise the inputs.</strong> Beyond the conditioning argument that applies to any gradient method, there is a reason specific to the first layer: its weight gradient is proportional to the input value, so a feature measured in tens of thousands produces gradients four orders of magnitude larger than a feature in [0,1]. One learning rate cannot serve both, and the large-scale feature effectively sets the step size for the whole layer.</div>
+<div class="card-body" style="margin-top:8px">The validation loss curve is the primary instrument, and its shapes are diagnostic:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>What you see</th><th>What it means</th><th>What to do</th></tr>
+<tr><td>Train falls, validation rises</td><td>overfitting — the classic gap</td><td>regularise, augment, early-stop, or get more data</td></tr>
+<tr><td>Both plateau high</td><td>underfitting — a bias problem</td><td>more capacity, train longer, raise the learning rate. <strong>Not</strong> more regularisation</td></tr>
+<tr><td>Loss oscillates or spikes</td><td>learning rate too high</td><td>lower it, or add warmup and gradient clipping</td></tr>
+<tr><td>Loss flat from step one</td><td>nothing is learning</td><td>check for a missing non-linearity, dead ReLUs, unnormalised inputs, or a learning rate near zero</td></tr>
+<tr><td>Loss becomes NaN</td><td>numerical blow-up</td><td>look for log(0), division by a zero norm, or exploding gradients. Clip, and check the loss implementation</td></tr>
+<tr><td>Train loss won't reach ~0 on 10 samples</td><td>a bug, not a modelling problem</td><td><strong>overfit a tiny batch first</strong> — it is the single most useful sanity check available</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">That last row deserves emphasis: before any real training run, take ten examples and confirm the network can drive its loss to near zero on them. If it cannot memorise ten rows, the problem is wiring — a detached gradient, a label misalignment, a frozen layer — and no amount of tuning will fix it.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Using MLPs for small tabular datasets (&lt;100K rows)</strong> — XGBoost and Random Forest almost always outperform MLPs on structured tabular data at this scale. Neural networks need large data to overcome their optimization difficulty. Always benchmark against tree models first</li>
-  <li><strong>Not normalizing inputs</strong> — unnormalized inputs cause gradient imbalance across layers; some neurons receive huge gradients, others tiny ones. Always StandardScale or MinMaxScale inputs before any neural network</li>
-  <li><strong>"More layers = better"</strong> — depth enables abstraction but creates optimization difficulties (vanishing gradients, slower training). Start shallow (2–3 hidden layers), add depth only when clearly bottlenecked. BatchNorm + residual connections enable training of very deep networks</li>
-  <li><strong>Using sigmoid activations in hidden layers</strong> — sigmoid saturates (output near 0 or 1, gradient ≈ 0) causing vanishing gradients. Only use sigmoid at the output layer for binary classification. Hidden layers: ReLU or GELU</li>
-  <li><strong>Training without a validation loss curve</strong> — the validation loss curve is the primary diagnostic tool for neural networks. Always plot it: diverging train/val loss = overfitting; both high = underfitting; val loss oscillating = learning rate too high</li>
+<li><strong>Reaching for an MLP on small tabular data.</strong> Below roughly 100k rows, gradient-boosted trees almost always win, and the reason is structural rather than about tuning effort — see the next card. Benchmark against a tree model first; it takes minutes and it sets the bar</li>
+<li><strong>Forgetting to normalise inputs.</strong> Silent, and it makes one feature set the effective learning rate for the entire first layer</li>
+<li><strong>Sigmoid or tanh in hidden layers.</strong> Both saturate, so gradients die in depth. ReLU or GELU for hidden layers; sigmoid belongs at a binary output, and tanh belongs inside an LSTM cell where bounded state is the point</li>
+<li><strong>ReLU on the output layer.</strong> Clips every negative prediction to zero. Regression needs the whole real line, probabilities need sigmoid or softmax</li>
+<li><strong>Adding depth to fix underfitting when the loss is flat.</strong> A flat loss is usually a bug. Overfit ten samples first, then scale</li>
+<li><strong>Treating "universal approximator" as an argument for using one.</strong> It says a wide enough single layer <em>can</em> represent the function. It says nothing about whether you have the data to find it or the optimiser to reach it</li>
+<li><strong>Adding layers without normalisation or residuals.</strong> Past a handful of layers, plain stacks train badly. The machinery that makes depth trainable is not optional at depth</li>
+<li><strong>Skipping the seed and the loss curve.</strong> Neural network runs vary; without a fixed seed and a plotted curve you cannot tell a real improvement from a lucky initialisation</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card ca"><div class="card-title">Where MLPs win, and where they honestly do not</div>
 <ul class="bul">
-  <li><strong>Google (wide &amp; deep / DCN for recommendations):</strong> MLP component handles dense feature interactions in production recommender systems; the "deep" side of wide&amp;deep learns combinatorial feature interactions automatically</li>
-  <li><strong>Stripe (fraud — tabular neural nets):</strong> TabNet or standard MLP on engineered tabular features; competitive with XGBoost when features are continuous and dense, with the added benefit of integrated feature attention</li>
-  <li><strong>Booking.com:</strong> MLPs for price and availability prediction on tabular features; carefully validated against LightGBM; neural nets adopted only where they demonstrably win on validation metrics</li>
-  <li><strong>Physics / scientific ML:</strong> physics-informed neural networks (PINNs) use MLPs to approximate differential equation solutions — one of the few domains where neural nets dominate even small-data settings due to continuous function approximation needs</li>
+<li><strong>They lose on tabular data for a structural reason.</strong> Repeated head-to-head studies find boosted trees ahead on typical tabular problems, and the explanation is about inductive bias, not tuning: tree ensembles are piecewise-constant and axis-aligned, which matches tabular targets that jump at thresholds and have irregular, non-smooth structure. An MLP imposes smoothness that the data does not have, and it has no native handling for mixed types or missing values. Knowing <em>why</em> is more useful than knowing the benchmark</li>
+<li><strong>They are the component, not the model.</strong> The MLP rarely appears alone in modern systems — it is the feed-forward block inside every transformer layer, the "deep" half of wide-and-deep recommenders, and the head on top of a pretrained encoder. Most of the MLPs running in production today are two-layer blocks inside something larger</li>
+<li><strong>They win where the input is already a learned representation.</strong> Once a CNN or a language model has produced an embedding, a small MLP on top is exactly the right tool: the hard representational work is done, and what remains is a smooth mapping to the output</li>
+<li><strong>They win in scientific ML at small data.</strong> Physics-informed networks fit an MLP to a differential equation's solution, using the equation itself as part of the loss. Unusual because it is a small-data regime where neural nets dominate — the network's smoothness is exactly the right prior when you are approximating a smooth physical field</li>
+<li><strong>The honest summary:</strong> reach for an MLP when the input is perceptual, sequential, or already embedded, and when you have enough data to pay for the flexibility. On a spreadsheet with 20,000 rows, use the trees</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Universal approximation theorem: a single hidden layer with enough neurons can approximate any continuous function. But width scales poorly — depth is more efficient. Each layer learns increasingly abstract representations: pixels → edges → shapes → objects. For tabular data &lt;100K rows, XGBoost almost always wins. MLPs shine on unstructured data (images, text) and at massive scale. Standard recipe: ReLU/GELU activations + BatchNorm + dropout + AdamW + cosine LR schedule."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use a neural network for this tabular dataset." — Without benchmarking against XGBoost first, this signals unfamiliarity with where neural nets actually win. On tabular data, always establish tree model baselines before reaching for neural nets.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does depth help more than width?" — Answer: a deep network can represent exponentially more functions with the same parameter count as a shallow wide network. Each layer composes functions learned by previous layers — depth enables hierarchical feature reuse. Width at a single layer grows the function class linearly; depth grows it exponentially.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the collapse.</strong> "Without activations, W₃W₂W₁x is a single matrix — a 784-256-256-10 net has 269,322 parameters expressing something a 784×10 map expresses exactly, so all the depth is wasted. The non-linearity is what makes a layer a layer." Concrete, and it proves you understand the mechanism rather than the slogan.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does depth help more than width?" — Universal approximation guarantees one hidden layer suffices but says nothing about width, and the width required can be exponential. A sawtooth with 1,024 teeth needs about 20 units arranged deep and about 1,024 arranged flat, because layers <em>compose</em> — each folds what the one below produced. Then add the qualification that separates people: depth is a representational win and an optimisation cost, which is why residuals and normalisation had to be invented before deep networks were trainable.</p>
+<p style="margin-top:8px"><strong>Have XOR ready.</strong> A single perceptron is one hyperplane, so XOR is impossible — not hard, impossible. Two hidden ReLU units solve it because they learn OR and AND, and XOR is their difference. Being able to state the units' roles shows you understand hidden layers as feature construction rather than as extra capacity.</p>
+<p style="margin-top:8px"><strong>The practical answer they want to hear:</strong> "On tabular data I benchmark XGBoost first, because trees are axis-aligned and piecewise-constant and tabular targets usually are too." And volunteer the debugging habit: <strong>overfit ten samples before launching a real run</strong> — if the network cannot memorise ten rows, it is a wiring bug, not a hyperparameter.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>
