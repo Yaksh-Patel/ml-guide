@@ -1,28 +1,67 @@
 <section class="section" id="sec-creditrisk">
 <div class="sec-title">Credit Risk &amp; Scorecards</div>
-<div class="sec-desc">The intersection of statistics, banking regulation, and ML — where interpretability is mandated, not optional, and the cost of errors is asymmetric.</div>
-<div class="card"><div class="card-title">The PD-LGD-EAD Framework</div>
-<div class="formula math-formula">$$\begin{aligned}
-Expected Loss = PD \times LGD \times EAD \\
-PD  = Probability of Default (what we model) \\
-LGD = Loss Given Default (% of exposure lost) \\
-EAD = Exposure at Default (outstanding balance)
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Credit scoring primarily models PD. A score maps to PD via a calibrated model. Regulatory frameworks (Basel III, IFRS 9) require banks to model all three components for capital requirements.</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Scorecard Development (Traditional)</div>
-<ol class="num"><li><strong>Data preparation:</strong> observation point (vintage), outcome window (12 months), performance definition (90+ DPD)</li><li><strong>WOE (Weight of Evidence):</strong> log(Events%/Non-Events%) per bin</li><li><strong>IV (Information Value):</strong> Σ(Events% − NonEvents%) × WOE. IV&lt;0.02 weak, &gt;0.5 too perfect (suspicious)</li><li><strong>Logistic regression</strong> on WOE-transformed features → interpretable coefficients</li><li><strong>Calibration:</strong> align predicted PD with observed default rates</li><li><strong>Validation:</strong> Gini/AUC, KS stat, PSI for drift, stability indices</li></ol></div>
-<div class="card cg"><div class="card-title">WOE/IV — The Risk Analytics Staple</div>
-<div class="formula math-formula">$$\begin{aligned}
-WOE_i = \ln(Events_i/TotalEvents \div NonEvents_i/TotalNon) \\
-IV = \Sigma_i (Events_i% - NonEvents_i%) \times WOE_i \\
-WOE encoding converts ordinal/nominal to a numeric scale ordered by default risk
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Monotonic binning: bins ordered by risk — ensures scorecard logic is intuitive</li><li>IV used for variable selection — comparable across different types of variables</li><li>WOE-transformed features automatically handle non-linearity and missing values</li><li>Regulatory teams love it — every feature's impact is explicit and monotonic</li></ul></div>
-</div>
+<div class="sec-desc">The one domain in this atlas where interpretability is a legal requirement rather than a preference, the probability must be honest because it gets multiplied by money, and the training data is systematically biased by the decisions your previous model made. Those three constraints — not the algorithms — are what make credit modelling its own discipline.</div>
+
+<div class="card cb"><div class="card-title">Expected loss, and why calibration is the whole job</div>
+<div class="card-body">Credit risk decomposes a loss into three estimable pieces, and the multiplication is what makes this domain different from ordinary classification:</div>
+<div class="formula math-formula">$$\underbrace{\text{EL}}_{\text{expected loss}} = \underbrace{\text{PD}}_{\text{prob. of default}} \times \underbrace{\text{LGD}}_{\text{loss given default}} \times \underbrace{\text{EAD}}_{\text{exposure at default}}$$</div>
+<div class="card-body" style="margin-top:8px">A £20,000 exposure with a 3% PD and 45% LGD carries an expected loss of <strong>£270</strong>. Now suppose the model is well-ranked but poorly calibrated and the true PD is 6%:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Stated PD</th><th>True PD</th><th>Provisioned EL</th><th>Actual EL</th><th>Shortfall</th></tr>
+<tr><td>3%</td><td>6%</td><td>£270</td><td>£540</td><td><strong>100% under-provisioned</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The ranking was perfect and the number was wrong, and only the number reaches the balance sheet.</strong> That is why calibration is not a refinement here — a model with excellent Gini and miscalibrated PDs will price correctly relative to itself and provision incorrectly in absolute terms, and the error scales with the size of the book. Every limit, price and provision is built on the absolute PD, which is the precise reason this domain distrusts models that only rank well.</div>
+<div class="card-body" style="margin-top:8px">It is also why <strong>resampling and class weighting are treated with suspicion in regulated models</strong>. Both deliberately change the base rate the model believes in, so both destroy calibration by construction. If you use them, recalibrate to the true observed default rate before the output goes anywhere near a provision.</div></div>
+
+<div class="card cg"><div class="card-title">Weight of evidence, computed</div>
+<div class="card-body">WoE replaces a bin with the log-odds of default within it, relative to the portfolio. The point is that it converts anything — ordinal, nominal, missing — into a single monotonic numeric scale that a logistic regression can use and a regulator can read.</div>
+<div class="formula math-formula">$$\text{WoE}_i = \ln\!\left(\frac{\text{bad}_i / \text{total bad}}{\text{good}_i / \text{total good}}\right), \qquad \text{IV} = \sum_i \big(\text{bad\%}_i - \text{good\%}_i\big)\cdot \text{WoE}_i$$</div>
+<div class="card-body" style="margin-top:8px">Worked on 10,000 accounts with 500 defaults — a 5% base rate — binned by credit utilisation:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Utilisation</th><th>n</th><th>Bad</th><th>Bad rate</th><th>bad%</th><th>good%</th><th>WoE</th><th>IV contribution</th></tr>
+<tr><td>0–30%</td><td>4,000</td><td>120</td><td>3.00%</td><td>0.240</td><td>0.408</td><td><strong>−0.532</strong></td><td>0.0895</td></tr>
+<tr><td>30–60%</td><td>3,000</td><td>130</td><td>4.33%</td><td>0.260</td><td>0.302</td><td>−0.150</td><td>0.0063</td></tr>
+<tr><td>60–90%</td><td>2,000</td><td>130</td><td>6.50%</td><td>0.260</td><td>0.197</td><td>+0.278</td><td>0.0176</td></tr>
+<tr><td>90%+</td><td>1,000</td><td>120</td><td>12.00%</td><td>0.240</td><td>0.093</td><td><strong>+0.952</strong></td><td>0.1403</td></tr>
+<tr><td colspan="7"><strong>Information value</strong></td><td><strong>0.254</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Read three things off that table. <strong>Negative WoE means safer than the portfolio average</strong> and positive means riskier, so the sign carries meaning and the coefficient on a WoE feature should come out positive. <strong>IV = 0.254 is a strong single predictor</strong> — the conventional bands are below 0.02 useless, 0.1–0.3 strong, and above 0.5 suspicious, because a single variable that separates that well is usually a proxy for the outcome rather than a cause of it.</div>
+<div class="card-body" style="margin-top:8px">And the third, which people misread: <strong>monotonicity is required in the bad <em>rate</em>, not in the bad count share.</strong> Above, bins 1 and 4 have the same 0.240 share of bads while their default rates are 3% and 12% — the rates rise monotonically, which is what makes the scorecard defensible. Binning is chosen to enforce that monotonic rate, and a bin that breaks it is merged with a neighbour, because a scorecard where more utilisation sometimes means less risk cannot survive review no matter what it does for Gini.</div></div>
+
 <div class="card ca"><div class="card-title">Collections &amp; Behavioral Scoring</div>
 <div class="card-body">Unlike application scoring (predict if new customer will default), behavioral scoring updates monthly using payment history — far more predictive.</div>
 <ul class="bul" style="margin-top:8px"><li><strong>Features:</strong> DPD (days past due) history, utilization rate, payment-to-minimum ratio, number of missed EMIs, balance trends</li><li><strong>Triggers:</strong> predict which accounts to call proactively (early intervention)</li><li><strong>Segmentation:</strong> early delinquency (1–30 DPD) vs late (90+ DPD) — different propensity models, different treatment strategies</li><li><strong>Roll-rate analysis:</strong> what % of 30-DPD accounts roll to 60-DPD? Key input to provisioning models</li></ul></div>
+
+<div class="card cr"><div class="card-title">Reject inference: your training data is a biased sample</div>
+<div class="card-body">This is the structural problem unique to lending and the one most often missing from a candidate's answer. <strong>You only observe repayment behaviour for applicants you approved.</strong> The ones you declined have no outcome — not a missing label, but an outcome that was never allowed to happen.</div>
+<div class="card-body" style="margin-top:8px">So the training sample is exactly the population your previous policy selected as good risks, and the model learns the relationship between features and default <em>within the accept region only</em>. Two consequences follow:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>The model cannot know what it does not approve.</strong> If the old cutoff declined everyone below a score, the data contains no evidence about them, and the new model's behaviour there is extrapolation dressed as prediction</li>
+<li><strong>Measured performance is optimistic about the decision you actually make.</strong> Your Gini is computed on approved accounts, but the model is applied to all applicants — a population it has never been evaluated on</li>
+</ul>
+<div class="card-body" style="margin-top:8px">The remedies, in increasing order of honesty:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>What it does</th><th>Limitation</th></tr>
+<tr><td><strong>Ignore it</strong></td><td>model on approved accounts only</td><td>the default, and it silently bakes in the previous policy's blind spots</td></tr>
+<tr><td><strong>Reject inference</strong> — parcelling, augmentation, fuzzy assignment</td><td>assigns inferred outcomes to declined applications from the accepted relationship</td><td>the inference uses the very relationship you could not observe, so it cannot create information — it propagates an assumption</td></tr>
+<tr><td><strong>Bureau outcome data</strong></td><td>look up whether declined applicants defaulted elsewhere</td><td>genuinely new information, and the best available answer where the data is obtainable</td></tr>
+<tr><td><strong>A deliberate random accept sample</strong></td><td>approve a small random slice below the cutoff to generate unbiased outcomes</td><td>real losses, deliberately incurred — and the only method that truly removes the bias</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>That last row is the honest one and the reason this problem persists:</strong> the only clean fix costs money by design, so it has to be justified as the price of knowing where your cutoff should be. Lenders that run one treat it as a permanent research budget rather than a one-off study.</div>
+<div class="card-body" style="margin-top:8px">The related timing constraint: the <strong>performance window</strong> must be long enough for defaults to mature. With a 90-days-past-due definition and a 12-month window, an account opened 4 months ago cannot yet be labelled — so recent, most-relevant data is unusable, and every scorecard is trained on a world at least a year old. That lag is not a modelling flaw, it is the shape of the problem, and it is why population stability monitoring matters as much as it does.</div></div>
+
+<div class="card ca"><div class="card-title">Monitoring: PSI computed, and why it leads performance</div>
+<div class="card-body">Gini tells you whether the model still discriminates. It can only tell you that <em>after</em> outcomes mature — which, per the window above, is a year late. PSI tells you whether the population has moved, and it is available immediately.</div>
+<div class="formula math-formula">$$\text{PSI} = \sum_i \big(\text{actual\%}_i - \text{expected\%}_i\big)\cdot\ln\!\left(\frac{\text{actual\%}_i}{\text{expected\%}_i}\right)$$</div>
+<div class="card-body" style="margin-top:8px">Score bands that held 25% of applicants each at development, compared against today:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Scenario</th><th>Band distribution now</th><th>PSI</th><th>Action</th></tr>
+<tr><td>Mild drift</td><td>15 / 25 / 30 / 30</td><td><strong>0.069</strong></td><td>below 0.10 — stable, keep monitoring</td></tr>
+<tr><td>Large drift</td><td>10 / 20 / 30 / 40</td><td><strong>0.228</strong></td><td>0.10–0.25 — investigate now, rebuild imminent</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Note the shape of the formula: it is symmetrised relative entropy, so it penalises movement in either direction and grows quickly once a band's share halves or doubles. The conventional bands — under 0.10 stable, 0.10–0.25 investigate, above 0.25 rebuild — are convention rather than theory, but they are the convention a validator will apply.</div>
+<div class="card-body" style="margin-top:8px"><strong>The reason this matters more than it looks:</strong> PSI is a leading indicator and Gini is a lagging one. A shift in the applicant mix shows up in PSI this month and in default performance next year. Teams that monitor only discrimination discover the problem three quarters after it started, which is also three quarters of mispriced lending. Track <strong>CSI per feature</strong> alongside it — a stable overall score can hide two features drifting in offsetting directions, and knowing <em>which</em> input moved is what makes the fix tractable.</div></div>
+
 <div class="card"><div class="card-title">Model Validation &amp; Regulatory Compliance</div>
 <table class="tbl"><tr><th>Test</th><th>What It Checks</th><th>Threshold</th></tr>
 <tr><td>Gini / AUC</td><td>Discrimination power</td><td>Gini &gt; 30% (application), &gt; 40% (behavioral)</td></tr>
@@ -31,15 +70,22 @@ WOE encoding converts ordinal/nominal to a numeric scale ordered by default risk
 <tr><td>CSI (Characteristic Stability Index)</td><td>Has each feature's distribution shifted?</td><td>Same thresholds as PSI</td></tr>
 <tr><td>Calibration test</td><td>Does predicted PD match observed default rate?</td><td>Binomial test per score band</td></tr>
 <tr><td>Backtesting</td><td>How would model have performed on historical vintage?</td><td>Gini within 5% of current = stable</td></tr></table></div>
+
 <div class="card"><div class="card-title">IFRS 9 &amp; Basel Modeling</div>
 <ul class="bul"><li><strong>IFRS 9 staging:</strong> Stage 1 (no significant deterioration) → Stage 2 (significant increase in credit risk) → Stage 3 (default). Models predict stage transitions.</li><li><strong>Lifetime PD (IFRS 9):</strong> probability of defaulting at any point over the remaining life of the loan. Requires scenario-conditional forecasting (macro overlays).</li><li><strong>Point-in-time (PIT) vs Through-the-cycle (TTC):</strong> IFRS 9 requires PIT (current conditions); Basel requires TTC (long-run average). Different calibration targets.</li><li><strong>Macro overlays:</strong> adjust base PD for GDP growth, unemployment rate, interest rate scenarios</li></ul></div>
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Observation point and performance window leakage</strong> — the #1 credit modelling mistake. If you observe features at time t but your label includes events before t, you've leaked. Define performance window strictly: label = did the customer default in months t+1 to t+12? Features = everything observable at time t</li>
-  <li><strong>Using point-in-time vs through-the-cycle incorrectly</strong> — IFRS 9 requires point-in-time (PIT) PD estimates: current economic conditions reflected. Basel IRB requires through-the-cycle (TTC): long-run average rates. Using a PIT model for capital calculation underestimates requirements in benign periods and vice versa. Know which target you're calibrating for</li>
-  <li><strong>Ignoring PSI thresholds</strong> — PSI &lt; 0.1: no significant population shift. 0.1–0.2: moderate shift, investigate. &gt; 0.2: major shift, recalibrate or retrain. Many teams only monitor model performance (Gini/AUC) and miss population drift that will degrade performance in 2–3 months</li>
-  <li><strong>Applying SMOTE to credit scoring data</strong> — credit data has temporal structure; SMOTE creates synthetic examples that may not respect economic causality. Prefer class_weight or scale_pos_weight with XGBoost; avoid synthetic oversampling in regulated models where every training example must be explainable</li>
-  <li><strong>Not monotone-constraining income features</strong> — regulatory requirement: higher income should never decrease creditworthiness. Without monotone_constraints in XGBoost/LightGBM, tree splits can create non-monotone relationships that pass model validation but fail regulatory review</li>
+<li><strong>Observation point and performance window not cleanly separated.</strong> Features must be strictly as-at the observation date and the label strictly from the window after it. Any overlap is leakage, and in credit it is the most common one — often via a field that gets updated when an account deteriorates</li>
+<li><strong>Ignoring reject inference entirely.</strong> Your sample is the population your last policy approved. The model has no evidence about the region you are proposing to lend into</li>
+<li><strong>Quoting AUC as the headline.</strong> Not wrong, but the domain speaks Gini (2·AUC − 1) and KS. AUC 0.75 is Gini 0.50; the application-scorecard floor of Gini 0.30 is AUC 0.65. Using the local vocabulary signals domain familiarity</li>
+<li><strong>Trusting a well-ranked, uncalibrated PD.</strong> It goes into a multiplication. Ranking is enough to sort a queue and only calibration survives being multiplied by exposure</li>
+<li><strong>Resampling or class weighting without recalibrating.</strong> Both change the implied base rate on purpose. Fine for ranking, disqualifying for provisioning</li>
+<li><strong>Confusing point-in-time with through-the-cycle.</strong> IFRS 9 wants PIT — current conditions reflected. Basel IRB wants TTC — a long-run average. A PIT model used for capital under-states requirements in good times and over-states them in bad, which is procyclical in exactly the way the rules exist to prevent</li>
+<li><strong>Unconstrained GBMs.</strong> Without monotone constraints a tree will happily learn that a band of higher income is riskier because of noise in one segment. It may improve Gini and it will not pass review. Constrain the direction of every variable where the direction is a policy commitment</li>
+<li><strong>Monitoring performance but not population.</strong> Gini lags by the length of your outcome window. PSI and CSI are available now</li>
+<li><strong>Non-monotonic bins.</strong> Merge them. A scorecard where more utilisation sometimes means less risk is indefensible regardless of its statistics</li>
+<li><strong>Using a feature you cannot justify to a regulator.</strong> Legality is not the only test — proxies for protected characteristics fail on disparate impact even when the attribute itself is absent, and postcode is the classic case</li>
 </ul></div>
 
 <div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
@@ -50,10 +96,11 @@ WOE encoding converts ordinal/nominal to a numeric scale ordered by default risk
   <li><strong>HSBC / Barclays (IFRS 9 provisioning):</strong> PD × LGD × EAD models for each loan segment; macro-conditional scenario models (base/adverse/optimistic) weighted to compute expected credit losses; quarterly model validation by independent risk function</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Scorecard development: (1) Define observation point and performance window precisely — leakage is the #1 risk; (2) WOE binning with monotonic constraint — regulatory requirement; (3) Feature selection via IV (&gt;0.1 = useful), then logistic regression for interpretability; (4) Calibrate PDs against observed default rates using isotonic regression; (5) Monthly monitoring via PSI (features) and CSI (score distribution) — automated alerts at PSI &gt; 0.10. Gini/KS track performance; PSI/CSI track population stability — you need both."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used AUC-ROC as my primary credit model metric." — KS statistic is the credit industry standard for single-threshold model quality; Gini coefficient (= 2×AUC - 1) is standard for overall discrimination. AUC-ROC is used but rarely stated as the primary metric in credit contexts — signalling familiarity with KS/Gini shows domain knowledge.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between PD, LGD, and EAD?" — PD (probability of default): likelihood the borrower defaults in the performance window. LGD (loss given default): fraction of the exposure lost if they do default (1 − recovery rate). EAD (exposure at default): outstanding balance at the time of default (for revolving credit, this includes undrawn commitments). Expected Loss = PD × LGD × EAD. IFRS 9 requires lifetime expected loss for Stage 2/3 accounts, not just 12-month EL.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Open on the three constraints, because they explain every technique.</strong> "Interpretability is mandated rather than preferred; the probability is multiplied by exposure so it must be calibrated and not merely well-ranked; and the training data is biased by the previous policy's decisions. WoE plus logistic regression, monotone constraints, and reject inference are all consequences of those three."</p>
+<p style="margin-top:8px"><strong>Be able to compute WoE and IV.</strong> WoE is the log of (bin's share of bads / bin's share of goods), so negative is safer than average and positive is riskier; IV sums (bad% − good%)·WoE across bins, and 0.1–0.3 is a strong predictor while above 0.5 usually means a proxy for the outcome. Then the detail that shows real experience: <strong>monotonicity is required in the bad rate, not the bad count share</strong> — two bins can hold the same share of defaults at very different default rates.</p>
+<p style="margin-top:8px"><strong>Raise reject inference unprompted.</strong> You only observe outcomes for approved applicants, so the model learns the accept region and extrapolates beyond it, and your Gini is measured on a population that is not the one you apply the model to. Name the remedies honestly: bureau outcome data is the best obtainable information, inference techniques propagate an assumption rather than adding information, and <strong>the only clean fix is deliberately approving a small random sample below the cutoff — which costs real losses by design.</strong></p>
+<p style="margin-top:8px"><strong>On monitoring, make the leading/lagging distinction.</strong> With a 90+ DPD definition and a 12-month window, Gini cannot tell you anything for a year — so PSI is the early warning. Have the arithmetic: bands moving from 25/25/25/25 to 10/20/30/40 gives PSI 0.228, in the investigate-now range. And track CSI per feature, because a stable overall score can hide two features drifting in offsetting directions. <strong>Speak Gini and KS, not AUC.</strong></p>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">The two numbers a scorecard lives by: WoE and PSI</div>

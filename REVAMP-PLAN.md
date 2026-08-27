@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C15 done (43 topics), C16–C20 remaining (12 topics)** |
+| **Prose quality** | **C1–C16 done (45 topics), C17–C20 remaining (10 topics)** |
 
-### Prose progress: 43 / 55
+### Prose progress: 45 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -42,7 +42,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C13 37 tokenization · 38 bert · 39 llms-rlhf
 - [x] C14 40 rag · 41 vector-databases
 - [x] C15 42 agentic-ai · 43 multimodal
-- [ ] C16 44 time-series · 45 credit-risk
+- [x] C16 44 time-series · 45 credit-risk
 - [ ] C17 46 gnns · 47 bipartite-graphs
 - [ ] C18 48 causal-inference · 49 responsible-ai
 - [ ] C19 50 data-engineering · 51 mlops · 52 system-design

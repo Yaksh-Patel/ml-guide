@@ -1,65 +1,21 @@
 <section class="section" id="sec-timeseries">
 <div class="sec-title">Time Series Modeling</div>
-<div class="sec-desc">Forecasting and anomaly detection where temporal ordering matters — random splits destroy the structure, and stationarity is the prerequisite most beginners skip.</div>
-<div class="card"><div class="card-title">Stationarity — The Prerequisite</div>
-<div class="card-body">A time series is stationary if its mean, variance, and autocorrelation structure are constant over time. Most raw series are non-stationary (trends, seasonality).</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Test: Augmented Dickey-Fuller (ADF) test} \\
-H_0\text{: series has unit root (non-stationary)} \\
-p < 0.05\text{: reject }H_0 \rightarrow \text{series is stationary} \\
-\text{Transformations: differencing, }\log\text{, seasonal decomposition (STL)}
-\end{aligned}$$</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">ARIMA (Statistical)</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{ARIMA}(p,d,q)\text{:} \\
-p = \text{autoregressive terms (AR): lag } p \text{ correlations} \\
-d = \text{differencing order (to achieve stationarity)} \\
-q = \text{moving average terms (MA): lag } q \text{ error correlations} \\
-\text{SARIMA}(p,d,q)(P,D,Q)_m\text{: seasonal variant}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Identify p, d, q from ACF/PACF plots</li><li>or auto.arima() / pmdarima for automatic selection</li><li>Best for: univariate, short-term, linear relationships</li><li>Weakness: struggles with non-linear patterns, multiple seasonalities</li></ul></div>
-<div class="card cg"><div class="card-title">Prophet (Facebook/Meta)</div>
-<div class="formula math-formula">$$\begin{aligned}
-y(t) = \text{trend}(t) + \text{seasonality}(t) + \text{holidays}(t) + \text{noise} \\
-\text{trend} = \text{piecewise linear or logistic growth} \\
-\text{seasonality} = \text{Fourier series decomposition}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Handles daily, weekly, yearly seasonality automatically</li><li>Robust to missing data and outliers</li><li>Easy to add custom holidays and changepoints</li><li>Interpretable decomposition — great for business users</li><li>Best for: business metrics, web traffic, sales forecasting</li></ul></div>
-</div>
-<div class="card"><div class="card-title">ML / Deep Learning Approaches</div>
-<table class="tbl"><tr><th>Method</th><th>Key Idea</th><th>Best For</th></tr>
-<tr><td>XGBoost on lag features</td><td>Engineer lags, rolling stats, date features → tabular ML</td><td>Tabular TS with many series; strong baseline</td></tr>
-<tr><td>LSTM / GRU</td><td>Sequence model with memory; handles non-linear patterns</td><td>Complex multivariate; single or few series</td></tr>
-<tr><td>Temporal Fusion Transformer</td><td>Attention + gate mechanisms for TS; interprets variable importance</td><td>Multi-horizon, multi-variate forecasting</td></tr>
-<tr><td>N-BEATS / N-HiTS</td><td>Deep residual networks specifically designed for TS</td><td>Univariate, M4/M5 competition-level</td></tr>
-<tr><td>TimesFM / MOIRAI</td><td>Foundation models for zero-shot time series forecasting</td><td>No training data available; cold start</td></tr></table></div>
-<div class="card"><div class="card-title">Time Series Evaluation — Critical Rules</div>
-<ul class="bul"><li><strong>Never random split:</strong> always use temporal splits — train before validation date, validate before test date</li><li><strong>Walk-forward validation:</strong> retrain on expanding window, validate on next period</li><li><strong>Metrics:</strong> MAE (interpretable), MAPE (if no near-zero values), sMAPE (symmetric), RMSE (penalizes peaks)</li><li><strong>Leakage danger:</strong> future statistics (mean over full series, etc.) in features</li></ul></div>
-<div class="box story"><div class="bl">📖 EMI Collection Analogy</div><p>Predicting which customers will miss their next EMI: use lag features (days since last payment, rolling 3-month payment rate), seasonal patterns (salary cycle — payments spike on 1st), macroeconomic indicators. ARIMA fails here because it's univariate. XGBoost on lag features + Prophet seasonal decomposition wins.</p></div>
+<div class="sec-desc">Every other topic here assumes rows are exchangeable. Here they are not, and almost every mistake in the field is that assumption leaking back in — a shuffled split, a centred rolling window, a feature computed over the whole series. The models are the easy part; the discipline is making sure nothing in your pipeline knows something it could not have known at the time.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using random train/test split on time series</strong> — the #1 time series mistake. Random splitting leaks future data into training, producing absurdly optimistic metrics. Always use a strict temporal split: train on past, validate on a future period, test on the most recent period</li>
-  <li><strong>Creating lag features that use future values</strong> — subtle leakage. If you compute a 7-day rolling mean at time t using days t-3 to t+3, you've leaked future values. Always use exclusively past data: rolling_mean(t-7 to t-1), never centred windows in training features</li>
-  <li><strong>"ARIMA is obsolete"</strong> — ARIMA remains a strong baseline for short-horizon univariate forecasting and is interpretable. For multivariate or long-horizon problems, ML methods win. Always benchmark against ARIMA and seasonal naive (last year same period) — they are surprisingly hard to beat</li>
-  <li><strong>Not testing for stationarity before ARIMA</strong> — ARIMA assumes a stationary series. Non-stationary data (trending, changing variance) needs differencing (ARIMA's 'd' parameter) or log transformation first. Always run an ADF test; reject stationarity before differencing</li>
-  <li><strong>Ignoring data collection artifacts</strong> — weekends, public holidays, reporting delays, and fiscal quarters cause artificial patterns that a model shouldn't learn as signal. Always visualise the series for outliers and calendar effects before modelling</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Uber (demand forecasting):</strong> TFT (Temporal Fusion Transformer) for city-level ride demand — combines LSTM-based temporal processing with attention over static metadata (city type, day-of-week) and multi-horizon outputs; deployed globally for dynamic pricing and driver positioning</li>
-  <li><strong>Amazon (inventory management):</strong> DeepAR (autoregressive RNN) trained jointly over thousands of related time series; learns cross-series patterns (correlated demand across product categories) that univariate ARIMA cannot capture</li>
-  <li><strong>Meta (Prophet):</strong> open-sourced their internal Prophet model — additive decomposition (trend + seasonality + holidays) with automatic changepoint detection; non-technical teams can use it without time series expertise; widely used for business KPI forecasting</li>
-  <li><strong>Credit risk / banking:</strong> ARIMA + macro overlays for IFRS 9 lifetime PD forecasting; regulatory requirement that models be interpretable and auditable prevents use of black-box ML for regulatory capital calculations</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "My time series stack: (1) EDA with STL decomposition — understand trend, seasonality, residuals; (2) ADF test for stationarity; (3) ARIMA / seasonal naive as hard-to-beat baselines; (4) XGBoost on lag features (lag 1, 7, 28 days + rolling means) as a strong ML baseline; (5) TFT or N-HiTS for complex multivariate / long-horizon. Walk-forward validation is non-negotiable — random splits produce fantasy metrics. Always check for calendar artifacts (holidays, weekends, reporting delays) in exploratory analysis."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I split the time series randomly 80/20." — This is temporal leakage. Future data trains the model; validation metrics are meaningless. Always: train = past, validation = future, test = most recent period.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you create features for a time series ML model?" — Answer: lag features (y at t-1, t-7, t-28), rolling statistics (mean/std over past 7/30/90 days), calendar features (hour, day-of-week, month, is_holiday), and target-encoded categorical context (store_id, product_category). All features must use only past data relative to the prediction point — no future leakage. Lag features implicitly encode autocorrelation that ARIMA models explicitly; ML models discover this from data.</p>
-</div>
+<div class="card cb"><div class="card-title">The baseline you have to beat, and the metric that tells you</div>
+<div class="card-body">Forecasting has an unusually strong trivial baseline, and skipping it is how teams ship models that are worse than nothing. <strong>Seasonal naive</strong> predicts that this period equals the same period one season ago — this Tuesday looks like last Tuesday, this December like last December. It has no parameters and it is genuinely hard to beat.</div>
+<div class="card-body" style="margin-top:8px">So the honest scoreboard is a <em>ratio</em> against it. MASE — mean absolute scaled error — divides your error by the naive forecast's error on the same data:</div>
+<div class="formula math-formula">$$\text{MASE} = \frac{\text{MAE}(\text{model})}{\text{MAE}(\text{seasonal naive})}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>MASE</th><th>Meaning</th></tr>
+<tr><td>0.8</td><td>20% better than naive — a real result</td></tr>
+<tr><td>1.0</td><td>you have reproduced the baseline with more machinery</td></tr>
+<tr><td>1.2</td><td><strong>worse than doing nothing</strong>, and you cannot tell from MAE alone</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Report MASE, or report MAE alongside the naive MAE.</strong> A bare MAE of 8 is uninterpretable — it is excellent if naive scores 20 and embarrassing if naive scores 6. This is the single cheapest safeguard in forecasting and it is routinely skipped, which is why the M-competitions kept finding that simple methods beat elaborate ones.</div>
+<div class="box warn"><div class="bl">MAPE is the most-used and most-broken forecast metric</div>
+<p>It has two failures that change decisions. <strong>It explodes near zero:</strong> actual 1, forecast 2 scores 100%, while actual 100, forecast 101 scores 1% — the same absolute error, a hundredfold difference in penalty. So any series with small or zero values is dominated by its quietest periods, and MAPE is undefined outright at zero.</p>
+<p style="margin-top:8px"><strong>And it is asymmetric in a specific direction.</strong> Under-forecasting is bounded: forecast 0 against an actual of 100 scores 100% and you cannot do worse. Over-forecasting is unbounded: forecast 300 against 100 scores 200%. <strong>So minimising MAPE systematically biases you toward under-forecasting</strong> — which for inventory means stockouts, for staffing means understaffing, and for capacity means outages. If you optimise MAPE you have chosen that bias without deciding to. Use MAE, MASE, or a quantile loss where the asymmetry is set deliberately.</p></div></div>
 
 <div class="anim-wrap"><div class="anim-title">Forward-chaining validation, and the rolling-window leak</div>
 <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
@@ -80,6 +36,81 @@ y(t) = \text{trend}(t) + \text{seasonality}(t) + \text{holidays}(t) + \text{nois
 <text x="250.0" y="174.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans">df.rolling(28).mean() includes today. Always .shift(1) first, or your CV score will be beautiful and fake.</text>
 <text x="250.0" y="190.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Baseline to beat: seasonal naive, y[t−7]. More models lose to it than anyone admits.</text>
 </svg></div>
+
+<div class="card cr"><div class="card-title">Leakage, which here is arithmetic rather than judgement</div>
+<div class="card-body">Temporal leakage is easier to create than in any other setting, because most convenient library defaults are wrong for ordered data. Four specific mechanisms:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Mechanism</th><th>What happens</th></tr>
+<tr><td><strong>Shuffled split</strong></td><td>The model trains on next month and is tested on last month. Scores look superb and mean nothing. Any <code>train_test_split</code> without <code>shuffle=False</code> does this</td></tr>
+<tr><td><strong>Centred rolling window</strong></td><td>A 7-day mean at time t computed from t−3 to t+3 contains three days of future. Pandas' <code>rolling()</code> is trailing by default, which is correct — but <code>center=True</code> and any <code>.interpolate()</code> across a gap are not</td></tr>
+<tr><td><strong>Whole-series statistics</strong></td><td>Scaling by the series mean and standard deviation, or target-encoding a category on the full history, puts the future into every row. The scaler must be fitted on the training window only</td></tr>
+<tr><td><strong>Revision and reporting lag</strong></td><td>The subtlest one. GDP, ad spend and CRM fields are <em>revised after the fact</em>, so today's database value for last month is not the value that existed last month. Training on revised data and serving on unrevised data is a leak no split can catch</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">That last row is the one that survives careful reviewers, and the fix is a discipline rather than a code change: <strong>ask for every feature what its value was <em>as at</em> the prediction time</strong>, not what it is now. Systems that get this right store data with both an event time and a knowledge time, which is exactly what a feature store's point-in-time correctness guarantees.</div>
+<div class="box warn"><div class="bl">forward-chaining, and what it costs you</div>
+<p>The correct validation is forward-chaining: train on [0, t], validate on (t, t+h], step forward, repeat. Every fold trains only on its own past, and averaging the folds gives an honest estimate — with two consequences worth stating.</p>
+<p style="margin-top:8px">First, <strong>k folds means k model fits</strong>, so it is k times the cost of a single split. Second, and more subtly, <strong>every fold trains on less data than your final model will</strong> — the earliest fold may have a fraction of the history — so forward-chaining CV tends to <em>underestimate</em> the deployed model's accuracy. That is the right direction to be wrong in, and it is worth saying out loud when someone asks why the live model beats its backtest.</p></div></div>
+
+<div class="card cg"><div class="card-title">Stationarity: what it is for, and how to stop</div>
+<div class="card-body">A series is stationary when its mean, variance and autocorrelation do not depend on <em>when</em> you look. It matters because classical methods estimate one set of parameters for the whole series — if the mean is drifting, there is no single mean to estimate, and the model is fitting a moving target.</div>
+<div class="card-body" style="margin-top:8px">The Augmented Dickey–Fuller test has a null hypothesis of <em>non</em>-stationarity, which is the direction people get backwards: <strong>p &lt; 0.05 lets you reject non-stationarity</strong>, so a small p-value is the good outcome. A large p-value is not proof of a unit root, merely failure to rule one out — which is why KPSS, whose null is the opposite, is often run alongside it.</div>
+<div class="card-body" style="margin-top:8px">Differencing is the usual remedy and the usual overreach:</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>d = 1</strong> removes a linear trend. Almost always enough for business series</li>
+<li><strong>d = 2</strong> removes a changing trend, and is where you should get suspicious</li>
+<li><strong>Over-differencing injects noise.</strong> Differencing amplifies high-frequency variation, so an unnecessary difference makes the series harder to forecast while passing the stationarity test. The symptom is a large negative spike at lag 1 in the ACF of the differenced series</li>
+<li><strong>Prefer a log or Box–Cox transform for changing <em>variance</em></strong>, and differencing only for changing level. They are different problems and differencing does not fix a variance that grows with the level</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Tree-based models do not need stationarity</strong> — and they have the opposite problem. A tree predicts a leaf mean, so it cannot extrapolate past the range it was trained on: a model trained on a growing series will under-forecast every future period, structurally. The fix is the same transformation for a different reason — <strong>model differences or ratios rather than levels</strong>, so the target stays inside the training range even as the level rises.</div></div>
+
+<div class="card"><div class="card-title">ML / Deep Learning Approaches</div>
+<table class="tbl"><tr><th>Method</th><th>Key Idea</th><th>Best For</th></tr>
+<tr><td>XGBoost on lag features</td><td>Engineer lags, rolling stats, date features → tabular ML</td><td>Tabular TS with many series; strong baseline</td></tr>
+<tr><td>LSTM / GRU</td><td>Sequence model with memory; handles non-linear patterns</td><td>Complex multivariate; single or few series</td></tr>
+<tr><td>Temporal Fusion Transformer</td><td>Attention + gate mechanisms for TS; interprets variable importance</td><td>Multi-horizon, multi-variate forecasting</td></tr>
+<tr><td>N-BEATS / N-HiTS</td><td>Deep residual networks specifically designed for TS</td><td>Univariate, M4/M5 competition-level</td></tr>
+<tr><td>TimesFM / MOIRAI</td><td>Foundation models for zero-shot time series forecasting</td><td>No training data available; cold start</td></tr></table></div>
+
+<div class="card cp"><div class="card-title">Features, and the horizon you forgot to check</div>
+<div class="card-body">Handing an ordered problem to a gradient-boosted model works well and is often the strongest baseline after seasonal naive. The features are formulaic:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Lags</strong> at the periods that matter — t−1, t−7, t−28 for daily data. These are what let a tabular model see autocorrelation that ARIMA models explicitly</li>
+<li><strong>Rolling statistics</strong> over trailing windows — mean, standard deviation, min/max over the past 7, 30, 90 days. The standard deviation is often more predictive than the mean, because volatility regime-shifts before level does</li>
+<li><strong>Calendar features</strong>, cyclically encoded so hour 23 sits next to hour 0 rather than 23 units away</li>
+<li><strong>Known-future covariates</strong> — holidays, promotions, scheduled events. These are legitimately available at prediction time and are frequently the largest single lift</li>
+</ul>
+<div class="box warn"><div class="bl">a lag of 1 is only available at horizon 1</div>
+<p>The mistake that survives every leakage review: building features with a lag-1 term and then forecasting 7 days ahead. At the moment you predict day t+7, you do <strong>not</strong> know day t+6 — so <code>lag_1</code> does not exist for that prediction. Backtests pass because the historical frame has every column filled in; production silently receives a missing or stale value.</p>
+<p style="margin-top:8px"><strong>Every feature must be available at the horizon you actually forecast.</strong> For a 7-day horizon your shortest usable lag is 7. The alternatives are recursive forecasting (predict t+1, feed it back in, and accept compounding error) or training a separate model per horizon — which is what most production systems do, because it is honest about what is knowable.</p></div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Any shuffled split.</strong> The defining error. <code>shuffle=False</code>, or <code>TimeSeriesSplit</code></li>
+<li><strong>No naive baseline.</strong> Without it, a MAE is an uninterpretable number and you cannot tell whether the project succeeded</li>
+<li><strong>Optimising MAPE.</strong> Explodes near zero and biases toward under-forecasting, so it converts a metric choice into a stockout policy</li>
+<li><strong>Features unavailable at the forecast horizon.</strong> A lag-1 feature in a 7-day-ahead model. Backtests pass, production breaks</li>
+<li><strong>Scaling or encoding on the full series.</strong> Fit inside the training window, exactly as for any other model</li>
+<li><strong>Ignoring data revisions.</strong> If a source restates history, your training data never existed at prediction time. Ask what each value was <em>as at</em> the prediction date</li>
+<li><strong>Trees on a trending target.</strong> They cannot extrapolate; they will under-forecast growth forever. Difference the target</li>
+<li><strong>Reading a large ADF p-value as proof of a unit root.</strong> Failure to reject is not evidence for the null. Pair it with KPSS</li>
+<li><strong>Over-differencing.</strong> Passes the test, injects noise, and shows up as a big negative lag-1 autocorrelation</li>
+<li><strong>Treating calendar artefacts as signal.</strong> Weekend gaps, month-end batch postings, fiscal boundaries and reporting delays produce patterns that are properties of your data pipeline, not the world. Plot the series before modelling it</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Uber (demand forecasting):</strong> TFT (Temporal Fusion Transformer) for city-level ride demand — combines LSTM-based temporal processing with attention over static metadata (city type, day-of-week) and multi-horizon outputs; deployed globally for dynamic pricing and driver positioning</li>
+  <li><strong>Amazon (inventory management):</strong> DeepAR (autoregressive RNN) trained jointly over thousands of related time series; learns cross-series patterns (correlated demand across product categories) that univariate ARIMA cannot capture</li>
+  <li><strong>Meta (Prophet):</strong> open-sourced their internal Prophet model — additive decomposition (trend + seasonality + holidays) with automatic changepoint detection; non-technical teams can use it without time series expertise; widely used for business KPI forecasting</li>
+  <li><strong>Credit risk / banking:</strong> ARIMA + macro overlays for IFRS 9 lifetime PD forecasting; regulatory requirement that models be interpretable and auditable prevents use of black-box ML for regulatory capital calculations</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the baseline, not the model.</strong> "First thing I fit is seasonal naive, and I report MASE — my MAE divided by the naive MAE — because a bare MAE is uninterpretable. MASE above 1 means the model is worse than assuming this Tuesday looks like last Tuesday." That answer immediately signals you have done this rather than read about it, and it is the reason the M-competitions keep finding simple methods win.</p>
+<p style="margin-top:8px"><strong>Be specific about leakage mechanisms.</strong> Shuffled splits, centred rolling windows, whole-series scaling — and then the one that separates candidates: <strong>data revisions.</strong> Sources restate history, so today's stored value for last month is not what existed last month, and no train/test split can catch it. The question to ask of every feature is what its value was <em>as at</em> the prediction time.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How would you validate a forecasting model?" — Forward-chaining: train on [0, t], validate on (t, t+h], roll forward. Then volunteer the cost and the bias: k folds is k fits, and every fold trains on less data than the final model will, so the estimate is conservative. Being able to say which direction your validation errs in is a strong signal.</p>
+<p style="margin-top:8px"><strong>The feature-engineering trap worth raising unprompted:</strong> every feature must exist at the horizon you forecast. A lag-1 term in a 7-day-ahead model is unavailable at prediction time — so either train one model per horizon, or forecast recursively and accept the compounding error. And note that <strong>MAPE's asymmetry is a business decision in disguise</strong>: it caps under-forecasting at 100% and leaves over-forecasting unbounded, so optimising it chooses stockouts.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The three things that make time series different: you must not shuffle, you must test for stationarity, and your baseline is harder to beat than you think.</div>
