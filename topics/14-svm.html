@@ -1,18 +1,17 @@
 <section class="section" id="sec-svm">
 <div class="sec-title">Support Vector Machines (SVM)</div>
-<div class="sec-desc">Find the hyperplane that maximizes the margin between classes — geometrically principled, theoretically elegant, and surprisingly powerful in high dimensions.</div>
-<div class="card"><div class="card-title">Core Idea — Maximum Margin Hyperplane</div>
-<div class="formula math-formula">$$\begin{aligned}
-&\text{Decision boundary: } \mathbf{w}^T\mathbf{x} + b = 0 \\
-&\text{Margin} = \tfrac{2}{\|\mathbf{w}\|} \rightarrow \text{minimize } \|\mathbf{w}\|^2 \\
-&\text{Hard margin: } \min \tfrac{1}{2}\|\mathbf{w}\|^2 \;\text{s.t.}\; y_i(\mathbf{w}^T\mathbf{x}_i+b) \geq 1 \\
-&\text{Soft margin: } \min \tfrac{1}{2}\|\mathbf{w}\|^2 + C\textstyle\sum_i\xi_i \;\text{s.t.}\; y_i(\mathbf{w}^T\mathbf{x}_i+b) \geq 1-\xi_i
-\end{aligned}$$</div>
+<div class="sec-desc">Every other classifier here asks "which boundary fits the data?" — a question with infinitely many answers. SVM asks "which boundary is furthest from everybody?", which has exactly one. That change of question is why it generalises on the small, wide datasets where flexible models memorise: a few hundred patients and twenty thousand genes is the regime SVM was built for.</div>
 
+<div class="card cb"><div class="card-title">The margin, and why the objective is what it is</div>
+<div class="card-body">If two classes are separable, infinitely many hyperplanes divide them, and a perceptron returns whichever one it happened to stumble into — including ones passing a hair's breadth from a training point. SVM picks the unique boundary that maximises the <strong>margin</strong>: the width of the empty corridor between the classes.</div>
+<div class="card-body" style="margin-top:8px">A hyperplane is <em>w</em>ᵀ<em>x</em> + b = 0. Scaling <em>w</em> and b by the same constant describes the identical plane, so the scale is free and we fix it by convention — require the closest points on each side to satisfy |<em>w</em>ᵀ<em>x</em> + b| = 1. With that normalisation the geometry falls out:</div>
+<div class="formula math-formula">$$\text{margin} = \frac{2}{\|w\|} \qquad\Longrightarrow\qquad \max_{w}\frac{2}{\|w\|} \;\;\equiv\;\; \min_{w}\ \tfrac{1}{2}\|w\|^2 \;\;\text{s.t.}\;\; y_i(w^{T}x_i+b)\ge 1$$</div>
+<div class="card-body" style="margin-top:8px">Put numbers on it. If <em>w</em> = (3, 4) then ‖<em>w</em>‖ = 5 and the margin is 2/5 = <strong>0.4</strong>. Halve the weights to (1.5, 2) and ‖<em>w</em>‖ = 2.5, so the margin doubles to <strong>0.8</strong>. <strong>Smaller weights mean a wider corridor</strong> — which is worth pausing on, because ½‖w‖² is precisely an L2 penalty. The margin story and the regularisation story are not two ideas that happen to agree; they are the same equation read from two directions.</div>
+<div class="box warn"><div class="bl">the framing that unifies this with logistic regression</div>
+<p>Rewrite the soft-margin problem as an unconstrained loss and SVM stops looking exotic:</p>
+<div class="formula math-formula">$$\underbrace{\sum_i \max\big(0,\ 1 - y_i f(x_i)\big)}_{\text{hinge loss}} \;+\; \underbrace{\lambda\|w\|^2}_{\text{L2 penalty}}$$</div>
+<p style="margin-top:8px">Logistic regression is log loss + L2. SVM is <strong>hinge loss + L2</strong>. The entire difference between the two models is the loss function — and the specific thing hinge loss does is go <em>exactly</em> to zero once a point is correctly classified beyond the margin. Log loss never quite reaches zero, so every point keeps nudging the fit forever. That single property is where support vectors come from.</p></div></div>
 
-
-<div class="card-body" style="margin-top:8px"><strong>Support vectors:</strong> the training points closest to the boundary — the only ones that matter. Remove any other point and the boundary doesn't change.</div></div>
-<!-- SVM animation -->
 <div class="anim-wrap"><div class="anim-title">SVM: maximum margin hyperplane with support vectors</div>
 <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
 <!-- data points class 1 (blue circles) -->
@@ -45,46 +44,71 @@
 <circle cx="260" cy="120" r="11" fill="none" stroke="#f5a623" stroke-width="2" stroke-dasharray="3,2"/>
 <text x="200" y="185" fill="#4e5a7a" font-size="10" text-anchor="middle" font-family="DM Sans">Dashed rings = support vectors (only these define the margin)</text>
 </svg></div>
-<div class="g2">
-<div class="card ca"><div class="card-title">The Kernel Trick</div>
-<div class="card-body">Map features to higher-dimensional space where they become linearly separable — implicitly, without explicitly computing the mapping.</div>
-<div class="formula math-formula">$$\begin{aligned}
-K(\mathbf{x},\mathbf{z}) &= \varphi(\mathbf{x})^T\varphi(\mathbf{z}) \quad \text{(inner product in feature space)} \\
-\text{Linear:} &\quad K = \mathbf{x}^T\mathbf{z} \\
-\text{Polynomial:} &\quad K = (\mathbf{x}^T\mathbf{z} + c)^d \\
-\text{RBF/Gaussian:} &\quad K = \exp(-\gamma|\mathbf{x}-\mathbf{z}|^2) \quad\text{(most common)} \\
-\text{Sigmoid:} &\quad K = \tanh(\alpha\mathbf{x}^T\mathbf{z} + c)
-\end{aligned}$$</div>
 
-
-
-
-<div class="card-body" style="margin-top:6px"><strong>RBF kernel:</strong> effectively infinite-dimensional feature space. γ controls radius of influence (high γ = narrow, overfits; low γ = wide, underfits).</div></div>
-<div class="card"><div class="card-title">C Parameter (Soft Margin)</div>
-<ul class="bul"><li><strong>High C:</strong> small margin, few misclassifications — overfits</li><li><strong>Low C:</strong> large margin, allows more errors — underfits</li><li>C is the regularization trade-off: margin size vs misclassification penalty</li><li>Tune C and γ via grid search with cross-validation</li></ul>
-</div>
-</div>
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Not scaling features before SVM</strong> — SVM is the most scale-sensitive model: the margin calculation depends on Euclidean distances. Un-scaled features completely distort the decision boundary. Always StandardScaler</li>
-  <li><strong>"C is regularization strength"</strong> — partially wrong. C is the inverse of regularization: large C = less regularization (harder margin, more likely to overfit); small C = more regularization (softer margin). This is opposite to sklearn's alpha in linear models</li>
-  <li><strong>Using RBF kernel without tuning γ</strong> — γ controls the width of the RBF kernel. Too small: decision boundary too smooth (underfitting); too large: each training point becomes its own island (overfitting). Always tune C and γ together via grid search</li>
-  <li><strong>Applying kernel SVM to large datasets</strong> — kernel SVM requires storing the kernel matrix (n×n) and solving a quadratic program: O(n²) memory and O(n³) time. For n &gt; 50K, use LinearSVC (SGD-based) or switch to XGBoost</li>
-  <li><strong>Expecting calibrated probabilities from SVM</strong> — SVM's decision function outputs a margin score, not a probability. sklearn's probability=True applies Platt scaling (fits a logistic regression on CV outputs) — expensive and imperfect. Use logistic regression if probabilities are needed</li>
+<div class="card cg"><div class="card-title">Support vectors: the model is a handful of rows</div>
+<div class="card-body">Because hinge loss is flat at zero for comfortably-classified points, those points contribute nothing to the gradient and nothing to the solution. Only points sitting <em>on</em> the margin or violating it have non-zero weight. These are the support vectors, and the consequence is unusual:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Delete every non-support-vector and refit — you get a bit-identical boundary.</strong> Most of your training data is not in the model in any sense. Very few algorithms can say that</li>
+<li><strong>Prediction cost is O(n<sub>sv</sub> · d), not O(n · d).</strong> A fit on 5,000 points that keeps 50 support vectors is a model made of 1% of the dataset — compact to ship and fast to serve</li>
+<li><strong>The support-vector count is a diagnostic worth reading.</strong> If nearly every point is a support vector, the model has not found any structure — it is memorising, and your C or γ is wrong. A healthy fit keeps a small minority</li>
+<li><strong>It is also the outlier sensitivity.</strong> A single mislabelled point sitting deep in the wrong class becomes a support vector by definition and drags the boundary. Robustness comes only from letting C be small enough to ignore it</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card cp"><div class="card-title">The kernel trick: what it actually avoids</div>
+<div class="card-body">Solved in its dual form, the optimisation touches the data <em>only</em> through inner products between pairs of points — never through individual coordinates. That is the opening. Swap each inner product xᵢᵀxⱼ for a kernel K(xᵢ, xⱼ) and you are fitting a linear model in some richer feature space φ, without ever building φ.</div>
+<div class="formula math-formula">$$K(x,z) = \varphi(x)^{T}\varphi(z) \qquad\text{computed without ever evaluating } \varphi$$</div>
+<div class="card-body" style="margin-top:8px"><strong>The saving, with numbers.</strong> Take the quadratic kernel K(x,z) = (xᵀz)², whose explicit feature map holds every pairwise product of coordinates — d² of them. At d = 1,000 features, building φ(x) means writing down <strong>1,000,000 numbers per point</strong>. Computing K(x,z) directly means one dot product of length 1,000 and one squaring: about <strong>1,000 operations</strong>. Same answer, a thousandth of the work — and the gap widens with degree.</div>
+<div class="card-body" style="margin-top:8px">For the RBF kernel the argument stops being about efficiency and becomes about possibility. Expanding the exponential gives a weighted sum of polynomial kernels of <em>every</em> degree, so its feature space is <strong>infinite-dimensional</strong>. You could not compute φ(x) with unlimited time and memory. The kernel is not a shortcut to the feature map; it is the only access to it that exists.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Kernel</th><th>K(x, z)</th><th>Use when</th></tr>
+<tr><td><strong>Linear</strong></td><td>xᵀz</td><td>d is large relative to n — text, genomics. When features already outnumber rows the data is almost certainly separable without lifting, and <code>LinearSVC</code> scales to millions of rows</td></tr>
+<tr><td><strong>RBF / Gaussian</strong></td><td>exp(−γ‖x − z‖²)</td><td>the default for moderate n with unknown structure. Local, smooth, and controlled by one length scale</td></tr>
+<tr><td><strong>Polynomial</strong></td><td>(xᵀz + c)<sup>deg</sup></td><td>you specifically want feature interactions up to a fixed order. Numerically touchy at high degree</td></tr>
+<tr><td><strong>Sigmoid</strong></td><td>tanh(αxᵀz + c)</td><td>rarely — it is not positive semi-definite for all parameters, so the problem stops being convex. Mostly of historical interest</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Any function that is symmetric and positive semi-definite is a valid kernel (Mercer's condition), which is what guarantees the implied φ exists and keeps the problem convex. It is also why you can define kernels over things that are not vectors at all — string kernels over sequences, graph kernels over molecules — and reuse the entire machine.</div></div>
+
+<div class="card ca"><div class="card-title">C and γ do different jobs, and must be tuned together</div>
+<div class="card-body">These are the only two knobs that matter and the most common way to waste a day is to tune them one at a time.</div>
+<div class="card-body" style="margin-top:8px"><strong>C prices margin violations.</strong> The soft-margin objective is ½‖w‖² + C·Σξᵢ, where ξᵢ is how far point i intrudes into the margin. Divide through by C and the role becomes unmistakable:</div>
+<div class="formula math-formula">$$\frac{1}{2C}\|w\|^2 + \sum_i \xi_i \qquad\Longrightarrow\qquad \lambda = \frac{1}{2C}$$</div>
+<div class="card-body" style="margin-top:8px">So <strong>C is an inverse regularisation strength</strong>, exactly as in <code>LogisticRegression</code> — and it is derived here rather than memorised. Large C buys a hard margin that contorts to admit no errors; small C buys a wide margin that shrugs at outliers. C → ∞ is the hard-margin SVM, which on non-separable data has no solution at all.</div>
+<div class="card-body" style="margin-top:8px"><strong>γ sets how far one training point's influence reaches.</strong> In exp(−γ‖x−z‖²), a point at distance r contributes e<sup>−γr²</sup>. For two points 3 units apart:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>γ</th><th>Influence at distance 3</th><th>Behaviour</th></tr>
+<tr><td>0.01</td><td>e<sup>−0.09</sup> = <strong>0.914</strong></td><td>almost full influence — every point sees every other, boundary is nearly linear. Underfits</td></tr>
+<tr><td>1.0</td><td>e<sup>−9</sup> = <strong>0.00012</strong></td><td>influence is essentially gone at distance 3 — each point governs only its own tiny island. Overfits</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Large γ is the same failure as k = 1 in KNN, reached by a different route: the boundary wraps individually around training points. You can see it without a validation set, because the support-vector count balloons toward n.</div>
+<div class="box warn"><div class="bl">why a 1-D search finds the wrong answer</div>
+<p>The two parameters compensate for each other. A too-wiggly kernel (high γ) can be partly restrained by a slack budget (low C), and a too-smooth kernel by a strict one. So sweeping C at a fixed γ finds the best C <em>for that γ</em>, which is a point on a ridge, not the summit. <strong>Always search the two-dimensional grid</strong>, log-spaced — C and γ each over roughly 10⁻³ to 10³. The optimum usually sits on a diagonal band, and seeing that band is how you know the grid was wide enough.</p></div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Computer vision (pre-deep learning era):</strong> SVM with histogram-of-oriented-gradients (HOG) features was the dominant object detection method until 2012; many production vision systems ran SVMs through the 2010s</li>
-  <li><strong>Bioinformatics / genomics:</strong> still used for protein structure classification and cancer subtype prediction — datasets are small (hundreds of patients) but high-dimensional (thousands of gene expression features), exactly the SVM sweet spot</li>
-  <li><strong>Text classification (small data):</strong> LinearSVC on TF-IDF features is a strong baseline for document classification; comparable to Naive Bayes but with a margin-based objective that often generalises better with more features</li>
-  <li><strong>Anomaly detection (one-class SVM):</strong> One-Class SVM finds a decision boundary enclosing the "normal" class in kernel space; used for intrusion detection and manufacturing defect detection where anomalies are not present in training data</li>
+<li><strong>Not scaling.</strong> RBF is a function of ‖x − z‖², so this is the KNN problem again — the widest-range column decides the distance. Worse here: <strong>γ is a single length scale shared by every feature</strong>, so unless features are commensurate no γ can be right for all of them. sklearn's <code>gamma='scale'</code> (1/(d·Var(X))) adapts to overall spread but not to per-feature disparity; the scaler is still required</li>
+<li><strong>Reading C as "regularisation strength".</strong> It is the inverse. Large C means <em>less</em> regularisation, which is the opposite of <code>alpha</code> in <code>Ridge</code> and trips people who use both in one project</li>
+<li><strong>Kernel SVM on a large dataset.</strong> The kernel matrix is n×n. At n = 50,000 that is 2.5 billion float64 entries — <strong>20 GB of RAM before training starts</strong> — and the solver is between O(n²) and O(n³). This, not accuracy, is why boosting displaced SVM on large tabular data. Past ~50k rows use <code>LinearSVC</code>, a kernel approximation like Nyström or random Fourier features, or a different model family</li>
+<li><strong>Expecting probabilities.</strong> <code>decision_function</code> returns a signed distance from the boundary, which is unbounded and not a probability. <code>probability=True</code> quietly runs 5-fold internal cross-validation and fits Platt scaling — roughly five times the training cost, and the calibrated output can even disagree in sign with <code>decision_function</code> near the boundary. If you need a probability, start with logistic regression</li>
+<li><strong>Leaving γ at a default with an unscaled X.</strong> The two defaults interact: <code>gamma='scale'</code> is computed from the data's variance, so changing your preprocessing silently changes your kernel width</li>
+<li><strong>Using RBF when d &gt; n.</strong> With more features than rows the data is nearly always linearly separable already. Lifting it further adds capacity you cannot afford and cannot validate. Try the linear kernel first — on text and genomics it usually wins outright</li>
+<li><strong>Multi-class without noticing the cost.</strong> SVM is binary at heart; sklearn's <code>SVC</code> fits one-vs-one, which is K(K−1)/2 models. For 10 classes that is 45 fits, and the training time surprises people who benchmarked on a binary problem</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "SVM with RBF kernel is powerful for small-to-medium datasets with non-linear boundaries — it implicitly works in a high-dimensional feature space via the kernel trick (avoid computing explicit feature maps). The margin maximisation objective gives it excellent generalisation on small datasets. Key constraints: O(n²–n³) training, O(n_sv × d) prediction (number of support vectors can be large). For n &gt; 50K, LinearSVC scales linearly. Always StandardScale first — SVM is the most scale-sensitive common model."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "SVM outputs probabilities." — It doesn't natively. probability=True in sklearn adds costly Platt scaling. If you need calibrated probabilities, logistic regression is a better starting point.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What are support vectors?" — Answer: the subset of training points that lie on or within the margin boundary. Only these points determine the decision boundary — all other training points could be removed without changing it. The model's complexity is O(n_sv), not O(n), which is why SVMs generalise well: sparse representation of the decision boundary.</p>
+<div class="card ca"><div class="card-title">Where it is still the right choice</div>
+<ul class="bul">
+<li><strong>Small n, large d — the sweet spot it was made for.</strong> A few hundred patients against twenty thousand gene-expression features is a setting where boosting and neural nets have far too much capacity. Margin maximisation gives generalisation guarantees that depend on the margin rather than the dimension, so SVM degrades gracefully where model complexity normally explodes. Genomics and proteomics still run it for exactly this reason</li>
+<li><strong>Text classification on modest corpora.</strong> <code>LinearSVC</code> on TF-IDF remains a genuinely strong, seconds-to-train baseline. High-dimensional sparse data is separable, so the linear kernel is the correct choice and the whole n² problem disappears</li>
+<li><strong>One-Class SVM for novelty detection.</strong> Fit a boundary enclosing the normal data when you have no examples of the anomaly at all — intrusion detection, manufacturing defects. The margin framing extends naturally to "what does normal look like", which is not something a discriminative classifier can express when only one class exists</li>
+<li><strong>The historical fact worth knowing.</strong> HOG features plus a linear SVM was the dominant object detector until 2012. Understanding why it lost — the features were hand-designed and the kernel could not scale to millions of images — is more useful than the algorithm itself, because it is the argument for representation learning in one sentence</li>
+<li><strong>What it does not do any more:</strong> large-scale tabular prediction. Boosting wins on accuracy, training time, native categorical handling, missing values, and calibrated probabilities. Choosing SVM there needs a reason beyond preference</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Open with the objective, not the kernel.</strong> "SVM maximises the margin, which is equivalent to minimising ‖w‖² subject to correct classification. Written as an unconstrained problem it is hinge loss plus L2 — so it is logistic regression with a different loss, and the flat region of hinge loss is what makes the solution sparse in support vectors." That answer connects it to something the interviewer already knows instead of treating it as a special case.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Explain the kernel trick." — Say what it <em>avoids</em>. The dual only touches data through inner products, so replacing that inner product computes in a richer space without constructing it. Then give the number: a quadratic kernel on 1,000 features implies a million-dimensional map, and K costs about a thousand operations instead. Close with RBF being infinite-dimensional, so the map cannot be built at all.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What are support vectors?" — Points on or inside the margin; delete everything else and the boundary is unchanged. Add the practical read: if almost every point is a support vector, the model is memorising and your C/γ are wrong.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why doesn't anyone use kernel SVM at scale?" — The n×n kernel matrix. 50,000 rows is 20 GB before you start, and the solve is O(n²)–O(n³). Naming the memory wall specifically is much stronger than "it's slow".</p>
+<p style="margin-top:8px"><strong>Do not say</strong> "SVM gives probabilities" (it gives a signed distance; <code>probability=True</code> bolts on Platt scaling at 5× cost) or "C is the regularisation strength" (it is 1/λ — and you can derive that by dividing the objective through by C).</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

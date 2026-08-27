@@ -1,60 +1,31 @@
 <section class="section" id="sec-dtree">
 <div class="sec-title">Decision Trees</div>
-<div class="sec-desc">Recursive binary partitioning of feature space — the building block of all tree-based ensemble methods, and the only non-linear model that's truly self-explanatory.</div>
-<div class="card"><div class="card-title">Split Criteria</div>
-<div class="g2" style="margin-top:8px">
-<div><div class="card-title" style="font-size:13px">Gini Impurity</div>
+<div class="sec-desc">The only model you can hand to a risk committee and have them follow the reasoning without a translator — and the atom that every gradient-boosted ensemble is built from. Learn one split properly and Random Forest, XGBoost and LightGBM stop being black boxes and start being bookkeeping over a thing you already understand.</div>
+
+<div class="card cb"><div class="card-title">One split, and the admission hiding inside it</div>
+<div class="card-body">A tree asks a sequence of yes/no questions, each carving the remaining data into two purer groups. Fitting is the search for those questions: at every node, try <em>every</em> feature crossed with <em>every</em> threshold, score each candidate by how much impurity it removes, and take the winner.</div>
+<div class="formula math-formula">$$\text{gain} = \underbrace{I(\text{parent})}_{\text{impurity before}} - \sum_{c \in \{L,R\}} \underbrace{\frac{n_c}{n}}_{\text{share of rows}} I(\text{child}_c)$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Then it commits and never reconsiders.</strong> The split that looks best right now is kept regardless of what it does to the splits available below it. That is not an implementation shortcut — finding the optimal tree is NP-hard, so every tree you have ever fitted is a greedy heuristic, and the phrase "the tree found the important features" is doing more work than it should.</div>
+<div class="card-body" style="margin-top:8px">Nothing here involves distance or magnitude, only order. Splits ask "is x ≤ t", so <strong>any monotonic transform of a feature produces an identical tree</strong> — log it, square it, convert dollars to yen, the fit does not move. That is the real reason trees need no scaling, and it is a genuine structural difference from SVM and KNN rather than a convenience.</div></div>
+
+<div class="card cg"><div class="card-title">Gini and entropy, with the arithmetic done</div>
+<div class="card-body">Both measure how mixed a node is: zero when every row shares a label, maximal at an even split. Gini is the probability that two rows drawn from the node disagree; entropy is the bits needed to encode a label.</div>
+<div class="formula math-formula">$$\text{Gini} = 1 - \sum_i p_i^2 \qquad\qquad H = -\sum_i p_i \log_2 p_i$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Node composition</th><th>Gini</th><th>Entropy</th></tr>
+<tr><td>50 / 50 — maximally mixed</td><td>1 − (0.5² + 0.5²) = <strong>0.500</strong></td><td><strong>1.000</strong> bit</td></tr>
+<tr><td>90 / 10</td><td>1 − (0.81 + 0.01) = <strong>0.180</strong></td><td><strong>0.469</strong></td></tr>
+<tr><td>100 / 0 — pure</td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Now score a real split.</strong> A parent of 100 rows at 50/50 has Gini 0.500. A candidate threshold sends 60 rows left (45 positive, 15 negative) and 40 rows right (5 positive, 35 negative):</div>
 <div class="formula math-formula">$$\begin{aligned}
-Gini = 1 - \sum_i p_i^2 \\
-\text{Range: } [0,\; 0.5]. \text{ Lower = purer.} \\
-Gini = 0 \rightarrow \text{leaf has only one class}
-\end{aligned}$$</div></div>
-<div><div class="card-title" style="font-size:13px">Entropy / Information Gain</div>
-<div class="formula math-formula">$$\begin{aligned}
-H = -\sum_i p_i \log_2(p_i) \\
-IG = H(\text{parent}) - \sum_i w_i \cdot H(\text{child}_i) \\
-\text{Choose split that maximizes } IG
-\end{aligned}$$</div></div>
-</div>
-<div class="card-body" style="margin-top:8px"><strong>Gini vs Entropy:</strong> Gini is computationally cheaper; Entropy is more principled (information-theoretic). In practice, results are nearly identical. sklearn uses Gini by default.</div></div>
-<div class="g2">
-<div class="card cg"><div class="card-title">Strengths</div>
-<ul class="bul"><li>Fully interpretable — literally draw the tree</li><li>No feature scaling needed (rank-based splits)</li><li>Handles mixed data types natively</li><li>Captures non-linear relationships and interactions</li><li>No distributional assumptions</li><li>Handles missing values (with impurity trick)</li></ul></div>
-<div class="card cr"><div class="card-title">Weaknesses</div>
-<ul class="bul"><li>High variance — small data change = completely different tree</li><li>Overfits without pruning (grows until leaves are pure)</li><li>Cannot extrapolate beyond training range</li><li>Biased toward high-cardinality features in split selection</li><li>Piecewise constant predictions — stepped, not smooth</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Pruning &amp; Controlling Complexity</div>
-<table class="tbl"><tr><th>Parameter</th><th>Effect</th><th>Typical Value</th></tr>
-<tr><td>max_depth</td><td>Max levels in tree</td><td>3–8 (3 for interpretable)</td></tr>
-<tr><td>min_samples_split</td><td>Min samples to split a node</td><td>2–20</td></tr>
-<tr><td>min_samples_leaf</td><td>Min samples in a leaf</td><td>1–20</td></tr>
-<tr><td>max_features</td><td>Features to consider per split</td><td>√d or log₂(d)</td></tr>
-<tr><td>ccp_alpha</td><td>Cost-complexity pruning strength</td><td>Find via CV</td></tr></table></div>
-<div class="box story"><div class="bl">📖 20 Questions Analogy</div><p>A decision tree plays 20 Questions: "Is income &gt; 50K?" → "Is credit score &gt; 700?" → "Has ever defaulted?" Each question splits the universe into purer subsets. Best questions are the ones that most cleanly separate the classes — those are the high information gain splits.</p></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using a single deep tree in production</strong> — a fully grown tree memorizes training data and generalizes poorly. Single trees are only used when strict interpretability is required (depth ≤ 3); otherwise, use an ensemble</li>
-  <li><strong>Gini vs Entropy debate</strong> — in practice, they almost always produce the same trees. Do not waste interview time defending one over the other; mention sklearn uses Gini by default and results are empirically equivalent</li>
-  <li><strong>Not pruning before deploying an interpretable tree</strong> — an unpruned depth-15 tree is not interpretable. Depth 3–4 gives &lt;16 leaves — a human can actually read it. Use ccp_alpha with CV to find the optimal pruned size</li>
-  <li><strong>Assuming feature importance from a single tree is reliable</strong> — a single tree's feature importance is noisy (different random splits → different importances). Aggregate over a Random Forest for stability</li>
-  <li><strong>Decision trees for regression extrapolation</strong> — trees predict the mean of training leaf members; they cannot predict beyond the training range. For extrapolation, linear models are required</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Banking / credit (Basel III compliance):</strong> depth-3 or depth-4 decision trees as the required interpretable component of credit decision systems; regulators demand the ability to explain any individual decision</li>
-  <li><strong>Healthcare diagnostics:</strong> decision trees for clinical decision support — the tree structure maps directly to a clinical protocol that nurses and doctors can follow without a computer</li>
-  <li><strong>XGBoost / LightGBM internals:</strong> every boosted model is a collection of shallow decision trees (depth 3–6); understanding tree splitting is prerequisite to understanding any tree-based ensemble</li>
-  <li><strong>A/B test segmentation:</strong> decision trees used to find subgroups where a treatment effect is strongest (heterogeneous treatment effects) — called "uplift trees" in growth and marketing</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Decision trees are the most interpretable non-linear model — I can show a risk committee the literal decision logic. But a single unconstrained tree has unacceptably high variance (small data perturbations change the entire structure). My rule: depth-3 trees for regulatory interpretability; deeper trees only as base learners inside an ensemble (Random Forest, XGBoost) where averaging/boosting controls the variance. Split criterion is usually Gini — empirically equivalent to entropy but faster to compute."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll grow the tree until leaves are pure, then prune." — This is expensive and often leads to over-pruning. Prefer setting max_depth and min_samples_leaf directly, or use cost-complexity pruning (ccp_alpha) tuned via CV.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does a decision tree have high variance?" — Answer: greedy recursive splitting is unstable — a slightly different training set can produce a completely different top split, leading to an entirely different tree. Ensembles (bagging, boosting) address this by averaging over many such trees.</p>
-</div>
-
+I_L &= 1 - (0.75^2 + 0.25^2) = 0.3750 \\
+I_R &= 1 - (0.125^2 + 0.875^2) = 0.2188 \\
+\text{weighted} &= 0.6(0.3750) + 0.4(0.2188) = 0.3125 \\
+\text{gain} &= 0.500 - 0.3125 = \mathbf{0.1875}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">That 0.1875 is the number the split is chosen by, and — weighted by how many rows passed through the node — it is also exactly what gets accumulated into <code>feature_importances_</code>. Knowing that the importance <em>is</em> summed training-time impurity gain is what makes its biases predictable rather than mysterious.</div>
+<div class="card-body" style="margin-top:8px"><strong>On Gini versus entropy: they almost never disagree.</strong> The two curves have the same shape and differ by a scale factor over most of the range; published comparisons find them producing identical trees the large majority of the time. Gini is the sklearn default because it skips a logarithm. Do not spend interview minutes defending a choice worth a fraction of a percent.</div>
 <div class="anim-wrap"><div class="anim-title">One split, measured by the impurity it buys</div>
 <svg viewBox="0 0 500 198" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
@@ -81,6 +52,74 @@ IG = H(\text{parent}) - \sum_i w_i \cdot H(\text{child}_i) \\
 <text x="122.0" y="168.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">importance number.</text>
 <text x="250.0" y="188.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Which is why high-cardinality features score highly whether or not they generalise.</text>
 </svg></div>
+</div>
+
+<div class="card cp"><div class="card-title">Why importances favour high-cardinality features</div>
+<div class="card-body">This is the mechanism behind the warning that a random ID column ranks near the top of <code>feature_importances_</code>, and it is a multiple-comparisons problem hiding inside the split search.</div>
+<div class="card-body" style="margin-top:8px">Count the candidates each feature offers at a node of n rows:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Feature</th><th>Thresholds tried</th><th>Consequence</th></tr>
+<tr><td>binary flag</td><td><strong>1</strong></td><td>one chance to look good</td></tr>
+<tr><td>categorical, 5 levels</td><td>a handful</td><td>a few chances</td></tr>
+<tr><td>continuous, 1,000 distinct values</td><td><strong>999</strong></td><td>999 chances for one to fit noise well</td></tr>
+<tr><td>unique ID, one per row</td><td><strong>n − 1</strong></td><td>can isolate any single row — perfect purity, zero signal</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The search takes the <em>maximum</em> gain over candidates, and a maximum over 999 noisy draws is systematically larger than a maximum over one. So the feature wins on opportunity rather than on information. <strong>The gain is measured on training data at fitting time, so nothing in the procedure can detect the difference.</strong></div>
+<div class="card-body" style="margin-top:8px">Two consequences worth carrying: an ID-like column will happily reach the top of your importance chart, and impurity importance is computed on the training set, so it rewards precisely the overfitting you were hoping it would expose. Use permutation importance on held-out data, or SHAP.</div></div>
+
+<div class="card cr"><div class="card-title">High variance, and why it compounds instead of averaging out</div>
+<div class="card-body">"Trees are unstable" understates it. The instability has a specific mechanism and it is the entire reason ensembles of trees work so well.</div>
+<div class="card-body" style="margin-top:8px">At the root the search compares candidate splits whose gains may differ in the third decimal — 0.1875 against 0.1873. That gap is well inside sampling noise, so resample the data and the runner-up wins. <strong>Every split below is then fitted to a different partition of the data</strong>, so the tree does not merely differ at the top: it differs everywhere. A near-tie at the root propagates into a structurally unrecognisable model.</div>
+<div class="box warn"><div class="bl">the practical read</div>
+<p>Fit a depth-8 tree, drop 5% of the rows at random, refit, and compare. The two trees frequently share almost no split beyond the first level while scoring within a point of each other on validation. <strong>That is variance you can see</strong> — and it means "the tree told us income is the key driver" is a statement about one bootstrap sample, not about the data. If a stakeholder needs a stable answer, aggregate over an ensemble; a single tree cannot provide one.</p></div>
+<div class="card-body" style="margin-top:8px">Averaging attacks exactly this kind of error, which is why bagging gives such an outsized return on trees specifically and very little on a stable model like linear regression.</div></div>
+
+<div class="card ca"><div class="card-title">Piecewise constant: the failure mode with a number</div>
+<div class="card-body">A regression tree predicts the <em>mean of the training rows in the leaf</em>. Its output is therefore a staircase, and beyond the outermost split the last step continues flat forever.</div>
+<div class="card-body" style="margin-top:8px">Train on y = 2x for x ∈ [0, 10], where the true value at x = 50 is 100. Ask the tree for x = 50 and it routes the query to its rightmost leaf and returns that leaf's mean — <strong>about 19, and no amount of extra depth, data or tuning changes it.</strong> The prediction is capped by the training range as a matter of structure, not of fit quality.</div>
+<div class="box warn"><div class="bl">where this bites in production</div>
+<p>Any target with a trend. Forecast revenue with a tree on a growing business and it will systematically under-predict every future period, because next quarter is outside the range it saw. The fix is to remove the trend before the tree sees it — model differences or ratios rather than levels, or fit the trend with a linear model and let the tree handle the residual. <strong>This applies to every tree ensemble too: Random Forest and XGBoost inherit it in full.</strong></p></div></div>
+
+<div class="card cb"><div class="card-title">Controlling complexity: stop early, or grow and cut back</div>
+<div class="card-body">An unconstrained tree grows until every leaf is pure, which means it has memorised the training set. There are two families of remedy and they are not equivalent.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Parameter</th><th>What it does</th><th>Typical</th></tr>
+<tr><td><code>max_depth</code></td><td>hard cap on levels. Blunt but predictable, and the one to reach for first</td><td>3–8 (3 if a human must read it)</td></tr>
+<tr><td><code>min_samples_leaf</code></td><td>refuses leaves below a size, so no prediction rests on three rows. Often more effective than depth</td><td>1–20, or ~1% of n</td></tr>
+<tr><td><code>min_samples_split</code></td><td>refuses to split a node that is already small</td><td>2–20</td></tr>
+<tr><td><code>max_features</code></td><td>considers a random feature subset per split. Mostly matters inside ensembles</td><td>√d or log₂d</td></tr>
+<tr><td><code>ccp_alpha</code></td><td>post-pruning: grow fully, then cut back branches that do not pay for themselves</td><td>choose by CV</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Cost-complexity pruning is worth understanding rather than treating as a magic number.</strong> It minimises R(T) + α·|T| — error plus a rent of α per leaf. Sweep α upward and leaves get evicted in a deterministic order, generating a nested sequence of trees from the full one down to a stump; you then pick among that sequence by cross-validation. It beats pre-pruning when a weak split is required to enable a strong one below it, which a depth cap or a gain threshold would have blocked before it could prove itself.</div>
+<div class="card-body" style="margin-top:8px"><strong>Put a number on "interpretable".</strong> Depth 3 permits at most 2³ = <strong>8 leaves</strong> — printable on one page and genuinely readable. Depth 15 permits up to 2¹⁵ = <strong>32,768</strong>. Nobody has ever interpreted a depth-15 tree; if interpretability is the reason you chose this model, the depth cap is the thing that delivers it.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Shipping one deep tree.</strong> You take the interpretability penalty of a complex model and the accuracy penalty of a single unstable one. A tree is worth using alone only at depth ≤ 4, where a human genuinely reads it; past that, use an ensemble</li>
+<li><strong>Quoting a single tree's feature importances.</strong> Doubly unreliable — cardinality-biased by construction, and unstable across resamples because the tree itself is. Aggregate over a forest at minimum, and prefer permutation importance on held-out data</li>
+<li><strong>Expecting a tree to extrapolate.</strong> It returns a leaf mean, so predictions are bounded by the training range. Trending targets need detrending first</li>
+<li><strong>Arguing Gini versus entropy.</strong> They produce the same tree nearly always. Time spent here is time not spent on <code>min_samples_leaf</code>, which actually changes the model</li>
+<li><strong>Believing trees need no missing-value handling.</strong> sklearn's <code>DecisionTreeClassifier</code> historically raised on NaN, and surrogate splits are not implemented. LightGBM and XGBoost do learn a default direction per split; sklearn's tree is not the same animal, so check rather than assume</li>
+<li><strong>One-hot encoding a high-cardinality categorical.</strong> Each level becomes a binary column offering one weak split, so the tree must spend many levels reassembling a group it could have split once. Depth is consumed on bookkeeping. Prefer native categorical support or a target/ordinal encoding fitted inside the CV fold</li>
+<li><strong>Reading the tree as causal.</strong> "Income &gt; 50K on the left branch" describes where the data separated, not what would happen if you raised someone's income. Correlated features also mean the runner-up split — nearly as good — tells a completely different story</li>
+<li><strong>Using class-balanced accuracy without <code>class_weight</code>.</strong> On imbalanced data, impurity is already near-minimal at the root, so no split looks worthwhile and you get a stump that predicts the majority class</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where a single tree is still the right answer</div>
+<ul class="bul">
+<li><strong>When the model has to be defensible line by line.</strong> Credit and clinical settings sometimes require that any individual decision be traced without an approximation layer. A depth-3 tree <em>is</em> its own explanation — no SHAP, no surrogate, no "the model weighted these features". That is a property nothing else on this list has</li>
+<li><strong>As a protocol humans execute without a computer.</strong> Clinical triage rules and operational checklists are decision trees rendered as flowcharts. The constraint is not accuracy but whether a nurse can follow it at 3am, which caps depth at about three questions</li>
+<li><strong>As the unit inside every boosted model.</strong> XGBoost and LightGBM are collections of depth-3-to-6 trees. Their headline features — <code>gamma</code>, <code>min_child_weight</code>, histogram binning, monotone constraints — are all modifications to the split search described above. This topic is the prerequisite, and most XGBoost confusion is really unresolved tree confusion</li>
+<li><strong>For segment discovery.</strong> Fit a shallow tree on treatment effect rather than outcome and the leaves are interpretable subgroups where an intervention works hardest — uplift trees, and the basis of causal forests. Here the tree is a communication device: stakeholders act on "under-30s in these three cities", not on a coefficient vector</li>
+<li><strong>As a diagnostic on your own data.</strong> A depth-2 tree that hits 0.99 AUC has found leakage, and it names the column for you. It is the fastest leak detector available and takes seconds to run</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Expect:</strong> "Why do decision trees have high variance?" — Give the mechanism, not the adjective. Splits are chosen greedily by comparing gains that can differ by less than sampling noise; when the runner-up wins the root on a resample, every subsequent split is fitted to a different partition, so the whole structure changes. The error compounds downward instead of averaging out — which is exactly why bagging pays off so well on trees and so little on linear models.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why is impurity feature importance biased?" — Because a continuous feature offers hundreds of candidate thresholds and a binary flag offers one, and the split search takes the maximum over candidates. It is multiple comparisons: more chances to fit noise, measured on training data. That is why a unique ID column ranks highly. Then give the fix — permutation importance on held-out data, or SHAP.</p>
+<p style="margin-top:8px"><strong>Have the worked split ready.</strong> Parent 50/50 has Gini 0.5; a split into 45/15 and 5/35 gives weighted impurity 0.6(0.375) + 0.4(0.219) = 0.3125, a gain of 0.1875. Being able to compute one live separates people who have used trees from people who have read about them.</p>
+<p style="margin-top:8px"><strong>Volunteer the extrapolation limit</strong> — a tree predicts a leaf mean, so it cannot forecast beyond its training range, and every tree ensemble inherits that. <strong>Do not say</strong> "trees need no preprocessing" without qualifying it (scaling genuinely does not matter; high-cardinality categoricals and missing values very much do), and do not spend time on Gini versus entropy.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">A tree fitted and then read back as rules. The impurity drop at each split is the feature-importance number, which is exactly why those importances are biased toward high-cardinality features.</div>

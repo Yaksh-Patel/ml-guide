@@ -23,15 +23,15 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C4 done (13 topics), C5–C20 remaining (42 topics)** |
+| **Prose quality** | **C1–C5 done (16 topics), C6–C20 remaining (39 topics)** |
 
-### Prose progress: 13 / 55
+### Prose progress: 16 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
 - [x] C3  08 eval-metrics · 09 confusion-roc · 10 calibration
 - [x] C4  11 linear-logistic · 12 knn · 13 naive-bayes
-- [ ] C5  14 svm · 15 decision-trees · 16 random-forest
+- [x] C5  14 svm · 15 decision-trees · 16 random-forest
 - [ ] C6  17 gradient-boosting · 18 xgboost · 19 clustering · 20 dimred
 - [ ] C7  21 feature-engineering · 22 imbalanced · 23 regularization
 - [ ] C8  24 hyperparameter-tuning · 25 ensemble-methods
