@@ -1,6 +1,6 @@
 <section class="section" id="sec-llm">
 <div class="sec-title">LLMs, SLMs &amp; RLHF</div>
-<div class="sec-desc">The current frontier — massive language models that emergently acquire reasoning, coding, and instruction-following capabilities at scale. Understanding architecture, alignment, prompt engineering, hallucination, and agentic patterns is now the core applied ML skill.</div>
+<div class="sec-desc">A pretrained language model predicts likely next tokens, which is not the same as being useful, truthful or safe — and no amount of pretraining closes that gap, because the objective does not mention any of those things. Everything in this topic after the architecture is about that gap: alignment changes what the model optimises for, prompting steers it within a single forward pass, and retrieval supplies what its weights do not contain.</div>
 
 <!-- PART 1 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Architecture &amp; Scaling</div>
@@ -15,10 +15,19 @@
   <li><strong>SwiGLU activation</strong> in FFN — gated linear unit; empirically outperforms GELU</li>
   <li><strong>Flash Attention</strong> — IO-aware tiling: 4× faster attention, 10× less memory, no accuracy loss</li>
 </ul></div>
+<div class="card ca"><div class="card-title">Chinchilla, with the arithmetic done</div>
+<div class="card-body">The result is usually quoted as "about 20 tokens per parameter". Its force is in what that implies about models trained before it:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Model</th><th>Parameters</th><th>Tokens trained</th><th>Chinchilla-optimal tokens</th><th>Verdict</th></tr>
+<tr><td>GPT-3</td><td>175B</td><td>300B</td><td><strong>3.5T</strong></td><td><strong>~12× undertrained</strong></td></tr>
+<tr><td>Chinchilla</td><td>70B</td><td>1.4T</td><td>1.4T</td><td>at the optimum — and it beat GPT-3</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>A model 2.5× smaller beat one 2.5× larger, on the same compute budget, by training on 4.7× more data.</strong> That is the whole result, and it redirected the field: for a fixed compute budget, parameters had been over-weighted relative to data. Every subsequent model got smaller relative to its training set.</div>
+<div class="card-body" style="margin-top:8px"><strong>And then the field deliberately left the optimum.</strong> Chinchilla optimises <em>training</em> compute, but a deployed model's cost is dominated by inference — which depends on parameter count and not at all on how many tokens it was trained on. So it is rational to overtrain a smaller model well past 20:1 in order to serve it cheaply forever, which is why current small models are trained on token counts many times Chinchilla-optimal. <strong>Chinchilla-optimal is the right answer to a question most people deploying a model are not asking.</strong></div></div>
 <div class="card cg"><div class="card-title">Scaling Laws (Chinchilla)</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Chinchilla optimal: } N_{tokens} \approx 20 \times N_{params} \\
-\text{Llama-3 8B trained on 15T tokens (5× Chinchilla)} \\
+\text{Llama-3 8B trained on 15T tokens (5}\times\text{ Chinchilla)} \\
 L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 \end{aligned}$$</div>
 <ul class="bul" style="margin-top:8px">
@@ -41,6 +50,12 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 <div class="card-body" style="margin-top:8px">The KL penalty prevents "reward hacking" — without it the policy generates degenerate, high-scoring outputs that fool the reward model. PPO requires running the LLM during training (on-policy) — computationally expensive.</div></div>
 
 <div class="g2">
+<div class="card cr"><div class="card-title">Why the KL penalty is the whole safety of RLHF</div>
+<div class="card-body">RLHF optimises a <em>learned</em> reward model, and a learned reward model is an approximation with holes in it. Optimise it hard enough and the policy will find the holes — this is reward hacking, and it is the default outcome rather than an edge case.</div>
+<div class="formula math-formula">$$\max_{\pi}\ \mathbb{E}\big[r_\phi(x,y)\big] - \beta\, \mathrm{KL}\big(\pi \,\|\, \pi_{\text{ref}}\big)$$</div>
+<div class="card-body" style="margin-top:8px">The second term is a leash to the pretrained model. Without it the policy drifts to whatever maximises the proxy — outputs that score highly and are degenerate: excessive hedging, padding with agreeable filler, a particular flattering register, or in the classic failure mode, text that stops resembling language at all while the reward climbs. <strong>The reward going up is not evidence the model is improving; past a point it is evidence the reward model is being exploited.</strong></div>
+<div class="card-body" style="margin-top:8px">So β is not a tuning nicety, it is the constraint that keeps the policy inside the region where the reward model was trained and is therefore meaningful. Note what this implies: <strong>RLHF cannot make a model better than its reward model can recognise</strong>, and the reward model inherits every bias of the humans who labelled the comparisons — which is where sycophancy comes from. It is trained on what raters <em>preferred</em>, and raters prefer confident, agreeable answers.</div>
+<div class="card-body" style="margin-top:8px">DPO's appeal is that the same objective can be solved in closed form over preference pairs, removing the separate reward model and the RL loop — β survives as the same deviation budget. Its limitation is the flip side: being offline, it only ever sees responses already in the dataset, so it cannot discover a better response the way an on-policy method can.</div></div>
 <div class="card cp"><div class="card-title">DPO — Direct Preference Optimization</div>
 <div class="formula math-formula">$$\mathcal{L}_\text{DPO} = -\mathbb{E}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$</div>
 <ul class="bul" style="margin-top:8px">
@@ -189,7 +204,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </table></div>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>Confusing SFT and alignment</strong> — SFT (supervised fine-tuning) teaches format and instruction-following patterns from demonstration data. RLHF/DPO teaches values — which of two responses is preferred. You need both stages: SFT for capability, alignment for safety and quality</li>
   <li><strong>Fine-tuning to inject facts</strong> — fine-tuning encodes behavioural patterns, not reliable factual knowledge. Facts injected via SFT hallucinate when queried slightly differently. Use RAG for knowledge retrieval; fine-tune for reasoning style and output format</li>
@@ -206,10 +221,12 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
   <li><strong>Google (Gemini):</strong> RLHF with Gemini-based reward models; multimodal instruction following across text, images, video, audio — the reward model must evaluate preference across modalities, a significant extension of standard RLHF</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>What to say:</strong> "The LLM training pipeline: pretraining (next-token prediction at scale) → SFT (teach instruction format from demonstrations) → alignment (RLHF or DPO, teach values from preference pairs). DPO is now preferred over PPO for most fine-tuning — no reward model needed, just preference pairs, single-stage offline optimisation. For production: 4-bit quantisation (AWQ/GPTQ) + vLLM for continuous batching + RAG for knowledge freshness. Hallucination is the core failure mode — mitigated by RAG grounding, structured outputs (JSON mode), and self-consistency sampling."</p>
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to update its knowledge." — Fine-tuning teaches behavioural patterns, not reliable factual knowledge. Injected facts hallucinate on paraphrase. Knowledge should live in a retrieval system (RAG), not in model weights.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "When would you choose DPO over PPO?" — Answer: DPO for most fine-tuning use cases — no reward model to train and maintain, offline optimisation from existing preference pairs, single GPU feasible. PPO when you need to generate new rollouts online (the model can improve on trajectories it generates itself), when the reward signal is complex (multi-dimensional), or when you need maximum alignment performance at frontier scale where online RL signal drives the last 5–10% of quality.</p>
+<p style="margin-top:8px"><strong>Have Chinchilla as arithmetic, not a slogan.</strong> About 20 tokens per parameter, so GPT-3 at 175B and 300B tokens was roughly 12× undertrained — Chinchilla at 70B on 1.4T beat it on the same compute. Then the part that matters commercially: Chinchilla optimises <em>training</em> compute, while a deployed model's cost is inference, which does not care how long it trained. So overtraining a smaller model far past 20:1 is rational, and current small models do exactly that.</p>
+<p style="margin-top:8px"><strong>On RLHF, lead with the KL term.</strong> You are optimising a learned reward model, which has holes, and a policy optimised hard enough will find them — so rising reward is not evidence of improvement past a point. β leashes the policy to the pretrained model, keeping it where the reward model is still meaningful. Two consequences worth stating: <strong>RLHF cannot exceed what its reward model can recognise</strong>, and sycophancy is not a bug but the direct result of training on what human raters preferred.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

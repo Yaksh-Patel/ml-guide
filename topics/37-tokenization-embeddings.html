@@ -1,55 +1,31 @@
 <section class="section" id="sec-tokenization">
 <div class="sec-title">Tokenization &amp; Embeddings</div>
-<div class="sec-desc">Before any model can process text, it must be converted to vectors. The tokenization and embedding strategy profoundly affects what the model can learn.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Tokenization Methods</div>
-<table class="tbl"><tr><th>Method</th><th>Unit</th><th>Vocab Size</th><th>Used By</th></tr>
-<tr><td>Word-level</td><td>Whole words</td><td>50K–200K</td><td>Old approaches</td></tr>
-<tr><td>Character-level</td><td>Single chars</td><td>~100</td><td>CharCNN, some multilingual</td></tr>
-<tr><td>BPE</td><td>Byte-pair merged subwords</td><td>30K–60K</td><td>GPT-2/3/4, RoBERTa</td></tr>
-<tr><td>WordPiece</td><td>Likelihood-based subwords</td><td>30K</td><td>BERT, DistilBERT</td></tr>
-<tr><td>SentencePiece</td><td>Subwords from raw text</td><td>32K</td><td>T5, Llama, multilingual</td></tr></table>
-<div class="card-body" style="margin-top:8px"><strong>BPE:</strong> starts with characters, merges most frequent adjacent pairs repeatedly. "unhappiness" → ["un", "happy", "ness"]. Handles unknown words gracefully as subwords.</div></div>
-<div class="card cg"><div class="card-title">Word Embeddings</div>
-<ul class="bul"><li><strong>Word2Vec:</strong> predict surrounding words (CBOW) or center word from context (Skip-gram). Same word → same embedding regardless of context.</li><li><strong>GloVe:</strong> factorize word co-occurrence matrix. Captures global statistics.</li><li><strong>FastText:</strong> extends Word2Vec with character n-grams — handles OOV words and morphology.</li><li><strong>Contextual (BERT etc.):</strong> same word gets different embeddings in different contexts. "bank" in "river bank" vs "savings bank" → different vectors.</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Embedding Space Properties</div>
-<div class="formula math-formula">$$\begin{aligned}
-king - man + woman \approx queen \quad \text{[Word2Vec analogy]} \\
-cosine_similarity(Paris, France) \approx cosine_similarity(Berlin, Germany) \\
-Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Embeddings encode semantic relationships. Arithmetic in embedding space reflects semantic relationships — the famous "king - man + woman = queen" property. This emerges purely from co-occurrence statistics, not explicit semantic rules.</div></div>
-<div class="card"><div class="card-title">Sentence &amp; Document Embeddings</div>
-<table class="tbl"><tr><th>Method</th><th>How</th><th>Best For</th></tr>
-<tr><td>Average word embeddings</td><td>Mean of word2vec vectors</td><td>Simple baseline; surprisingly competitive</td></tr>
-<tr><td>[CLS] token (BERT)</td><td>First token's hidden state after fine-tuning</td><td>Classification with fine-tuning</td></tr>
-<tr><td>Mean pooling (BERT)</td><td>Average of all token hidden states</td><td>Sentence similarity without fine-tuning</td></tr>
-<tr><td>Sentence-BERT (SBERT)</td><td>Siamese BERT fine-tuned for semantic similarity</td><td>Semantic search, clustering</td></tr>
-<tr><td>OpenAI text-embedding-3</td><td>Proprietary fine-tuned embeddings</td><td>RAG, search, classification</td></tr></table></div>
+<div class="sec-desc">Two conversions sit before every language model, and both leak. Tokenization chops text into a fixed vocabulary, which decides what the model can even see — it is why models are bad at arithmetic and why non-English costs more per word. Embeddings then place those tokens in a geometry where distance is supposed to mean similarity. Most retrieval failures are one of these two steps behaving exactly as designed and not as assumed.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using [CLS] token as a sentence embedding without fine-tuning</strong> — BERT's [CLS] token is only meaningful as a sentence representation after task-specific fine-tuning (it was trained on NSP, not semantic similarity). For off-the-shelf sentence embeddings, use mean pooling of all token hidden states or SBERT — empirically much better than raw [CLS]</li>
-  <li><strong>Comparing embeddings from different models</strong> — embedding spaces are model-specific and not comparable. Cosine similarity between a BERT embedding and an OpenAI embedding is meaningless. Always embed queries and documents with the same model</li>
-  <li><strong>Ignoring tokenization boundary effects</strong> — BPE tokenises "unhappiness" as ["un", "happiness"] but "unhappy" as ["unhappy"] — subtle changes in word form can produce very different token sequences. For tasks sensitive to character-level patterns (NER, dates, numbers), verify tokenization before assuming the model handles them well</li>
-  <li><strong>"More dimensions = better embedding"</strong> — larger embedding dimensions capture more information but increase storage and retrieval cost. Matryoshka Representation Learning (MRL, used in OpenAI text-embedding-3) trains embeddings that can be truncated to any dimension while retaining quality — you can use 256-dim instead of 3072-dim at modest quality cost</li>
-  <li><strong>Not normalising embeddings before cosine similarity</strong> — cosine similarity = dot product of unit-normalised vectors. If vectors are not L2-normalised, dot product and cosine similarity diverge. Always normalise embeddings before using them in ANN indexes or cosine comparisons</li>
-</ul></div>
+<div class="card cb"><div class="card-title">Why subwords: the trade tokenization is resolving</div>
+<div class="card-body">Tokenization is a compromise between two failure modes, and seeing both makes the subword answer inevitable.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Granularity</th><th>Vocabulary</th><th>"unhappiness"</th><th>Failure mode</th></tr>
+<tr><td><strong>Characters</strong></td><td>~100</td><td>11 tokens</td><td>nothing is ever unknown, and sequences are so long the model spends its context on spelling</td></tr>
+<tr><td><strong>Words</strong></td><td>200K+</td><td>1 token</td><td>short sequences, and every unseen word — typo, name, "unhappinesses" — becomes <code>[UNK]</code>, an information hole</td></tr>
+<tr><td><strong>Subwords (BPE)</strong></td><td>30K–100K</td><td><strong>2–3 tokens</strong></td><td>common words are single tokens, rare words decompose, <strong>and nothing is ever out-of-vocabulary</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">BPE gets there greedily: start from characters, repeatedly find the most frequent adjacent pair in the corpus and merge it into a new token, stopping at the target vocabulary size. Frequent words get merged into single tokens because they occur often; rare words are left as assemblies of frequent pieces. <strong>The vocabulary is therefore a compression artefact of the training corpus</strong>, which is the root of everything in the next card.</div>
+<div class="card-body" style="margin-top:8px">The variants differ in the merge criterion rather than the idea. <strong>WordPiece</strong> (BERT) merges the pair that most increases corpus likelihood rather than the most frequent one. <strong>SentencePiece</strong> operates on raw bytes with no pre-tokenisation step, which is what makes it work for languages that do not delimit words with spaces. <strong>Byte-level BPE</strong> (GPT-2 onward) uses bytes as the base alphabet, so any possible input is representable and <code>[UNK]</code> stops existing entirely.</div></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>OpenAI (text-embedding-3):</strong> MRL-trained embeddings usable at any dimension from 256 to 3072; the standard embedding model for RAG and semantic search in the OpenAI ecosystem; internally fine-tuned on massive retrieval datasets</li>
-  <li><strong>Google (Universal Sentence Encoder / Gecko):</strong> dual-encoder architecture trained on massive web data for semantic similarity; the embedding backbone behind Google's passage retrieval in Search and Bard/Gemini RAG</li>
-  <li><strong>Spotify (podcast search):</strong> SBERT fine-tuned on podcast transcripts for semantic search; user query embedded at search time, episode embeddings pre-computed and indexed with FAISS — retrieval under 5ms at scale</li>
-  <li><strong>Airbnb (listing search):</strong> dual-encoder model trained on (query, clicked listing) pairs; listing embeddings computed offline and indexed; query embedding computed at search time and used for ANN retrieval — production semantic search system serving millions of queries/day</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "BPE tokenization handles OOV gracefully — 'ChatGPT' tokenises as ['Chat','G','PT'] and the model works with it. Word2Vec's limitation is polysemy — 'bank' gets one static embedding regardless of context. BERT's contextual embeddings fix this but are expensive to compute. For semantic search in production: SBERT (or BGE-M3 for multilingual) + FAISS for ANN retrieval — pre-compute document embeddings offline, embed queries at inference time, retrieve top-k in &lt;10ms. Always L2-normalise embeddings before cosine comparison."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used the [CLS] token embedding from BERT for sentence similarity." — [CLS] without fine-tuning is a poor sentence representation. SBERT's mean-pooled embeddings consistently outperform raw [CLS] for semantic similarity — a well-known empirical finding.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does BPE tokenization work?" — Answer: start with character vocabulary. Repeatedly find the most frequent adjacent byte pair and merge it into a new token. Repeat for V iterations (V = vocabulary size target). Result: common words become single tokens; rare words are split into frequent subword pieces. This gives good coverage without OOV and keeps vocabulary size manageable (~50K tokens for most LLMs).</p>
-</div>
+<div class="card cr"><div class="card-title">The consequences people meet in production</div>
+<div class="card-body">Because the vocabulary was fit to a corpus, anything unlike that corpus costs more tokens — and tokens are simultaneously the context limit, the latency and the bill.</div>
+<div class="card-body" style="margin-top:8px"><strong>The rule of thumb worth memorising:</strong> for English, roughly <strong>4 characters or 0.75 words per token</strong>. So 1,000 tokens is about 4,000 characters or 750 words. Now watch it break:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Non-English text costs 2–3× more tokens per word</strong> because the merges were learned mostly from English. The same document translated is a larger prompt, a longer latency and a bigger bill — and it consumes context window faster, so a model's advertised limit is effectively smaller in some languages than others. This is a fairness and cost issue, not a curiosity</li>
+<li><strong>Numbers tokenise inconsistently.</strong> Depending on the tokeniser, "1234" may become ["123","4"] or ["12","34"] while "1235" becomes something else entirely. The model therefore never sees a stable representation of a numeral's digits, which is a large part of why LLMs are unreliable at arithmetic. Newer tokenisers deliberately split digits individually to fix this</li>
+<li><strong>Whitespace is part of the token.</strong> In byte-level BPE, " the" and "the" are <em>different tokens</em>. A prompt that ends with a trailing space can therefore change the output, and a hand-built few-shot template with inconsistent spacing degrades quality for no visible reason</li>
+<li><strong>Character-level tasks are structurally hard.</strong> Asking a model to reverse a string or count letters is asking it to work below its own perceptual unit. It does not see "strawberry" as ten letters; it sees two or three opaque tokens</li>
+<li><strong>Morphological boundaries are not respected.</strong> BPE splits by frequency, not by meaning, so "unhappy" may be one token while "unhappiness" splits in a place no linguist would choose. For NER, dates and codes, inspect the tokenisation before assuming the model can see the structure</li>
+</ul>
+<div class="box warn"><div class="bl">check the tokeniser, not the character count</div>
+<p>"Our documents are under 512 characters so BERT is fine" is a category error — 512 characters is not 512 tokens, and specialised text runs well above the English average. Financial, medical and legal jargon, identifiers, and code all tokenise densely.</p>
+<p style="margin-top:8px">Run your actual corpus through the actual tokeniser and look at the <em>length distribution</em>, not the mean. Silent truncation at the model's limit removes the end of every long document, and it shows up later as a mysterious accuracy ceiling on exactly the cases that matter most.</p></div></div>
 
 <div class="anim-wrap"><div class="anim-title">Byte-pair encoding, four merges in</div>
 <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
@@ -100,6 +76,65 @@ Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
 <text x="140.0" y="164.0" fill="#4e5a7a" font-size="8.3" text-anchor="end" font-family="DM Sans">final</text>
 <text x="250.0" y="190.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">No word is ever out-of-vocabulary, and &quot;low&quot; is now shared with &quot;lower&quot;, &quot;slow&quot;, &quot;flow&quot;.</text>
 </svg></div>
+
+<div class="card cg"><div class="card-title">Static embeddings, and the analogy result that is oversold</div>
+<div class="card-body">Word2Vec and GloVe assign one fixed vector per word, learned from co-occurrence. The remarkable finding was that the geometry ends up carrying relational structure nobody put there:</div>
+<div class="formula math-formula">$$\text{vec}(\text{king}) - \text{vec}(\text{man}) + \text{vec}(\text{woman}) \approx \text{vec}(\text{queen})$$</div>
+<div class="box warn"><div class="bl">the caveat that is almost always omitted</div>
+<p>That result only works because the search for the nearest vector <strong>excludes the three input words.</strong> Leave them in and the nearest neighbour of the computed point is usually "king" itself — the arithmetic moves you a short distance from where you started, and "king" is still closer than "queen".</p>
+<p style="margin-top:8px">The relational structure is real and weaker than the demonstration implies. Worth knowing because it is a clean example of a famous result whose framing does some of the work, and because the same caution applies to reading structure off any embedding space.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>The fatal limitation is polysemy.</strong> One vector per word means "bank" gets a single point that must serve river banks and savings banks at once — so it lands somewhere between, useful for neither. Contextual models fix this by construction: the representation is a function of the whole sentence, so "bank" in "river bank" and "bank" in "savings bank" are simply different vectors. That is the entire reason static embeddings were superseded.</div>
+<div class="card-body" style="margin-top:8px"><strong>FastText</strong> is worth remembering as the useful middle: it represents a word as the sum of its character n-grams, so it can embed a word it has never seen and it handles morphologically rich languages far better. Still static, but not helpless in the face of a typo.</div></div>
+
+<div class="card"><div class="card-title">Embedding Space Properties</div>
+<div class="formula math-formula">$$\begin{aligned}
+king - man + woman \approx queen \quad \text{[Word2Vec analogy]} \\
+cosine_similarity(Paris, France) \approx cosine_similarity(Berlin, Germany) \\
+Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Embeddings encode semantic relationships. Arithmetic in embedding space reflects semantic relationships — the famous "king - man + woman = queen" property. This emerges purely from co-occurrence statistics, not explicit semantic rules.</div></div>
+
+<div class="card cp"><div class="card-title">Sentence embeddings: why [CLS] disappoints</div>
+<div class="card-body">A very common mistake is to take BERT's <code>[CLS]</code> vector as a sentence embedding and find it performs badly at similarity. It is not a bug — the token was never trained for that job.</div>
+<div class="card-body" style="margin-top:8px"><code>[CLS]</code> was supervised by next-sentence prediction, a nearly trivial binary task, so nothing ever pushed it to be a faithful summary of meaning. <strong>Mean pooling over token states beats raw <code>[CLS]</code> consistently</strong>, and a model actually trained on a similarity objective beats both:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>Use when</th></tr>
+<tr><td>Averaged static word vectors</td><td>a baseline. Surprisingly hard to beat on short texts, and free</td></tr>
+<tr><td>Raw <code>[CLS]</code> from a pretrained encoder</td><td><strong>essentially never</strong> — it was trained on NSP, not similarity</td></tr>
+<tr><td>Mean pooling of token states (mask out padding)</td><td>a reasonable off-the-shelf sentence vector with no training</td></tr>
+<tr><td><strong>Sentence-BERT / bi-encoders</strong></td><td>the right answer for semantic search — trained with a contrastive objective so cosine distance means what you want</td></tr>
+<tr><td>Cross-encoder (both texts in one forward pass)</td><td>reranking the top-k. Much more accurate and cannot be pre-indexed, since it scores <em>pairs</em></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The bi-encoder versus cross-encoder split is the architecture of every production search system.</strong> A bi-encoder embeds documents offline so retrieval is one ANN lookup; a cross-encoder must run the model on every candidate pair, which is impossible over millions of documents and excellent over the fifty a bi-encoder returned. Retrieve wide and cheap, rerank narrow and expensive.</div>
+<div class="card-body" style="margin-top:8px"><strong>Storage is a real design constraint.</strong> One million documents at 1,536 dimensions in fp32 is <strong>6.1 GB</strong> of vectors before any index overhead. Matryoshka-trained embeddings are built so they can be truncated — the same vectors at 256 dimensions are <strong>1.02 GB</strong>, a 6× saving for a modest quality cost, and you can store the short version for the first-pass search and the long one only where precision matters.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Comparing embeddings from different models.</strong> Each model has its own arbitrary geometry, so cosine similarity between a vector from one encoder and one from another is meaningless. Query and corpus must be embedded by the same model — and re-embedding the whole corpus is the real cost of changing embedding models</li>
+<li><strong>Not L2-normalising before cosine similarity.</strong> Cosine <em>is</em> the dot product of unit vectors. Feed unnormalised vectors to an index configured for inner product and you have silently ranked by magnitude as well as direction — and magnitude often encodes document length</li>
+<li><strong>Using raw <code>[CLS]</code> for similarity.</strong> Trained on NSP; use mean pooling, or a model trained for the purpose</li>
+<li><strong>Assuming character counts predict token counts.</strong> They do not, and specialised text is worse. Tokenise your corpus and look at the distribution</li>
+<li><strong>Expecting reliable arithmetic or character manipulation.</strong> Digits tokenise inconsistently and the model cannot see letters. Use a tool call for arithmetic rather than tuning prompts</li>
+<li><strong>Ignoring trailing whitespace in prompts and few-shot templates.</strong> " the" and "the" are different tokens; inconsistent spacing measurably degrades output</li>
+<li><strong>Chunking documents without overlap for RAG.</strong> A hard split at a fixed token count will cut sentences and separate a claim from its qualifier. Overlap, and prefer splitting on structural boundaries over exact token counts</li>
+<li><strong>Treating cosine similarity as relevance.</strong> High similarity means the embedding model considered the texts alike, which frequently means topically alike rather than answer-bearing. This is why reranking exists</li>
+<li><strong>Adding tokens to a tokeniser without resizing the embedding matrix.</strong> The new ids index past the end of the table. This one does error, eventually, and usually in a confusing place</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>OpenAI (text-embedding-3):</strong> MRL-trained embeddings usable at any dimension from 256 to 3072; the standard embedding model for RAG and semantic search in the OpenAI ecosystem; internally fine-tuned on massive retrieval datasets</li>
+  <li><strong>Google (Universal Sentence Encoder / Gecko):</strong> dual-encoder architecture trained on massive web data for semantic similarity; the embedding backbone behind Google's passage retrieval in Search and Bard/Gemini RAG</li>
+  <li><strong>Spotify (podcast search):</strong> SBERT fine-tuned on podcast transcripts for semantic search; user query embedded at search time, episode embeddings pre-computed and indexed with FAISS — retrieval under 5ms at scale</li>
+  <li><strong>Airbnb (listing search):</strong> dual-encoder model trained on (query, clicked listing) pairs; listing embeddings computed offline and indexed; query embedding computed at search time and used for ANN retrieval — production semantic search system serving millions of queries/day</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Explain subwords as the resolution of a trade-off.</strong> "Character-level never has unknown words but the sequences are so long the model spends its context on spelling; word-level is compact but every unseen word becomes <code>[UNK]</code>. BPE merges frequent adjacent pairs until it hits a vocabulary budget, so common words are single tokens, rare words decompose into frequent pieces, and nothing is out-of-vocabulary." That framing explains why the answer looks the way it does.</p>
+<p style="margin-top:8px"><strong>Then show you have hit the consequences.</strong> The vocabulary is fitted to a corpus, so non-English text costs 2–3× more tokens per word — a cost, latency and effective-context-window difference, not a curiosity. Digits tokenise inconsistently, which is a real part of why arithmetic is unreliable. And know the rule of thumb: about 4 characters or 0.75 words per token in English.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How would you build semantic search?" — Bi-encoder to embed the corpus offline, ANN index, embed the query at request time, retrieve top-k, then <strong>rerank with a cross-encoder</strong>. The reason for two stages is the point: a cross-encoder scores pairs so it cannot be pre-indexed, but it is far more accurate over a shortlist. Mention L2-normalising before cosine, and that changing embedding model means re-embedding everything.</p>
+<p style="margin-top:8px"><strong>Two things that stand out.</strong> That raw <code>[CLS]</code> is a poor sentence embedding <em>because</em> it was supervised by next-sentence prediction rather than similarity — the reason, not just the fact. And if king − man + woman comes up, note that the analogy only resolves to "queen" when the input words are excluded from the nearest-neighbour search; leave them in and you get "king" back.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">BPE merges learned from a tiny corpus, so the algorithm is visible rather than described — then the three properties of embeddings that interviews actually test.</div>

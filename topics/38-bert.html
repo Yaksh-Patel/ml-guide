@@ -1,59 +1,18 @@
 <section class="section" id="sec-bert">
 <div class="sec-title">BERT &amp; Encoder Models</div>
-<div class="sec-desc">Pre-training on masked language modeling gives BERT bidirectional context — the fundamental advantage over GPT-style autoregressive models for understanding tasks.</div>
-<div class="card"><div class="card-title">BERT Pre-Training Objectives</div>
-<div class="g2" style="margin-top:8px">
-<div><strong style="color:var(--text);font-size:13px">Masked Language Model (MLM)</strong>
-<div class="card-body" style="margin-top:4px">15% of tokens randomly masked. Predict them from bidirectional context. Forces model to understand each word from left AND right context. Unlike GPT which only sees left context.</div>
-<div class="formula math-formula">$$\begin{aligned}
-Input: "The_{MASK} sat on the mat" \\
-Target: predict "cat" from all other tokens
-\end{aligned}$$</div></div>
-<div><strong style="color:var(--text);font-size:13px">Next Sentence Prediction (NSP)</strong>
-<div class="card-body" style="margin-top:4px">50% actual next sentence, 50% random. Binary classification. Teaches sentence-level relationships. (Controversial — RoBERTa showed removing NSP helps.)</div></div>
-</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">BERT Architecture</div>
-<ul class="bul"><li>Encoder-only Transformer — bidirectional</li><li>BERT-base: 12 layers, 12 heads, 768 hidden, 110M params</li><li>BERT-large: 24 layers, 16 heads, 1024 hidden, 340M params</li><li>Input: [CLS] + sentence + [SEP] + sentence2 + [SEP]</li><li>[CLS] token: aggregate representation for classification</li></ul></div>
-<div class="card cg"><div class="card-title">BERT Variants</div>
-<table class="tbl"><tr><th>Model</th><th>Key Difference</th><th>Best For</th></tr>
-<tr><td>RoBERTa</td><td>No NSP, larger batches, more data</td><td>Generally better than BERT</td></tr>
-<tr><td>DistilBERT</td><td>60% smaller, 97% of BERT performance</td><td>Production latency constraints</td></tr>
-<tr><td>ALBERT</td><td>Cross-layer parameter sharing, factorized embeddings</td><td>Smaller memory footprint</td></tr>
-<tr><td>DeBERTa</td><td>Disentangled attention, enhanced mask decoder</td><td>SOTA on NLU benchmarks</td></tr>
-<tr><td>SciBERT</td><td>Pre-trained on scientific text</td><td>Scientific NLP tasks</td></tr>
-<tr><td>FinBERT</td><td>Pre-trained on financial text</td><td>Financial sentiment, NLU</td></tr></table></div>
-</div>
-<div class="card"><div class="card-title">Fine-Tuning BERT for Downstream Tasks</div>
-<table class="tbl"><tr><th>Task</th><th>Architecture</th><th>Training Signal</th></tr>
-<tr><td>Text classification</td><td>[CLS] → linear → softmax</td><td>Cross-entropy on labels</td></tr>
-<tr><td>Named Entity Recognition</td><td>Each token → linear → softmax</td><td>Token-level BIO labels</td></tr>
-<tr><td>Question Answering</td><td>Each token → linear → start/end scores</td><td>Span extraction labels</td></tr>
-<tr><td>Semantic similarity</td><td>Siamese BERT; cosine of [CLS] embeddings</td><td>Contrastive / triplet loss</td></tr>
-<tr><td>Sentence embedding</td><td>Mean pooling of token embeddings</td><td>NLI, STS tasks</td></tr></table></div>
+<div class="sec-desc">BERT's bet was that <em>understanding</em> needs to see both directions at once, so it gave up the ability to generate in exchange for it. The bet was right for its tasks and it cost BERT the future, because the objective that enables bidirectionality also throws away most of its training signal. Both halves of that trade are worth understanding — encoder models are still the correct tool for retrieval and classification, and the reason they stopped scaling is the more interesting lesson.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using BERT for text generation</strong> — BERT is encoder-only with bidirectional attention; it has no autoregressive decoding mechanism. For generation, use GPT-style decoder-only models. BERT is for: classification, NER, extractive QA, and embeddings</li>
-  <li><strong>Fine-tuning all BERT layers at a high learning rate</strong> — BERT's pretrained representations are fragile; a high global learning rate overwrites them. Use differential learning rates: lower LR (1e-5) for early layers, higher (3e-5) for upper layers, highest for the new task head (1e-4)</li>
-  <li><strong>"[CLS] token is always the best sentence representation"</strong> — for tasks fine-tuned with a [CLS] classification head, yes. For semantic similarity without fine-tuning, mean pooling of all token hidden states (ignoring [PAD] tokens) consistently outperforms raw [CLS]</li>
-  <li><strong>Using base BERT for domain-specific text</strong> — BERT-base trained on Wikipedia/BookCorpus performs poorly on domain-specific vocabulary (medical, legal, financial). Use BioBERT, FinBERT, LegalBERT or fine-tune on domain text before task fine-tuning (domain-adaptive pretraining)</li>
-  <li><strong>Ignoring the input length limit</strong> — BERT has a 512 token maximum. Documents longer than 512 tokens must be chunked (sliding window) or summarised before input. Truncating to 512 silently drops information — always check document lengths before deploying</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (Search, 2019):</strong> BERT deployed in Google Search for query understanding — the most impactful change to Google Search in 5 years at announcement; used to understand long-tail, conversational, and preposition-heavy queries where word order matters</li>
-  <li><strong>LinkedIn (content relevance):</strong> RoBERTa fine-tuned for feed post relevance scoring; used to rank which posts appear in each user's feed based on semantic relevance to their professional interests</li>
-  <li><strong>Amazon (product search):</strong> bi-encoder with BERT backbone for product retrieval; query and product title encoded separately, similarity at serving time — BERT's contextual representations outperform TF-IDF for long-tail product queries</li>
-  <li><strong>Healthcare NLP (ClinicalBERT):</strong> BERT fine-tuned on clinical notes for entity extraction (medications, diagnoses, procedures) and de-identification — contextual embeddings handle medical abbreviations and domain jargon far better than rule-based NER</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "BERT's key insight: bidirectionality matters for understanding. GPT predicts left-to-right — optimal for generation but suboptimal for classification because future context is unavailable. BERT masks 15% of tokens randomly and predicts them using both left and right context — full bidirectionality. For classification tasks, I add a linear head on [CLS] and fine-tune the full model with differential learning rates (lower LR for early layers, higher for task head). For domain-specific text, domain-adaptive pretraining (continue MLM on domain corpus) before task fine-tuning is a reliable boost."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I use BERT base on our 512-character financial documents." — First check token length; 512 characters ≠ 512 tokens. Financial jargon often tokenises to 1.5–2× more tokens than general English. Documents may silently truncate. Always tokenise and check the actual length distribution of your corpus.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between BERT and RoBERTa?" — Answer: RoBERTa is BERT trained better: 10× more data, no NSP objective (NSP was found to hurt), dynamic masking (different masks each epoch vs static), larger batches, longer training. RoBERTa consistently outperforms BERT on GLUE benchmarks. Choose RoBERTa over BERT-base as the default pretrained checkpoint; use domain-specific BERT variants when domain vocabulary is very different from Wikipedia.</p>
-</div>
+<div class="card cb"><div class="card-title">Masked language modelling, and the 80/10/10 rule</div>
+<div class="card-body">An autoregressive model predicts the next token, which means it must never see the future — so it is inherently one-directional. BERT wants both directions, so it cannot predict the next token; instead it corrupts the input and reconstructs it. Bidirectionality falls out for free, because a masked position can be inferred from either side.</div>
+<div class="card-body" style="margin-top:8px">The corruption recipe is oddly specific and every part of it has a reason. <strong>15% of tokens are selected</strong>, and of those:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Share of selected</th><th>Replacement</th><th>Why</th></tr>
+<tr><td><strong>80%</strong> (= 12% of all tokens)</td><td><code>[MASK]</code></td><td>the actual prediction task</td></tr>
+<tr><td><strong>10%</strong> (= 1.5%)</td><td>a random token</td><td>forces the model to use context even when a real-looking token is present — otherwise it would learn "only distrust <code>[MASK]</code>"</td></tr>
+<tr><td><strong>10%</strong> (= 1.5%)</td><td>left unchanged</td><td>keeps the representation of genuine tokens honest, since the model must still predict them correctly</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The reason for the mixture is a train/serve mismatch.</strong> <code>[MASK]</code> never appears at fine-tuning or inference time — real inputs have no masks. If pretraining only ever asked the model to fill in <code>[MASK]</code>, it would learn a skill it can never use again, and its representations of ordinary tokens would go unsupervised. The 10% random and 10% unchanged cases force it to build useful representations of <em>every</em> position, not just the marked ones.</div>
+<div class="card-body" style="margin-top:8px"><strong>Next-sentence prediction</strong> was the second objective: given two segments, classify whether the second followed the first. RoBERTa later showed that <strong>removing it improves results</strong> — the task is close to trivial, since a random second segment usually comes from a different document and is detectable on topic alone, so the model learned topic matching rather than discourse coherence. Its main legacy is the <code>[CLS]</code> token, which is why <code>[CLS]</code> makes such a poor sentence embedding: the only thing that ever supervised it was a task it could solve without understanding much.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Attention masks: the whole encoder-vs-decoder distinction</div>
 <svg viewBox="0 0 500 202" xmlns="http://www.w3.org/2000/svg">
@@ -119,6 +78,80 @@ Target: predict "cat" from all other tokens
 <text x="370.0" y="168.0" fill="#4e5a7a" font-size="8" text-anchor="middle" font-family="DM Sans"></text>
 <text x="250.0" y="192.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Bidirectional context is why BERT is strong at classification and cannot generate: it has already seen the answer.</text>
 </svg></div>
+
+<div class="card cr"><div class="card-title">The hidden cost: 15% signal</div>
+<div class="card-body">Here is the trade that decided the architecture's future, and it is one division.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>Training signal per sequence</th></tr>
+<tr><td><strong>Autoregressive (GPT-style)</strong></td><td>every position predicts the next token — <strong>100% of tokens</strong> produce a loss term</td></tr>
+<tr><td><strong>Masked (BERT-style)</strong></td><td>only the masked positions are predicted — <strong>15% of tokens</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Both models do a full forward and backward pass over the whole sequence. The autoregressive one extracts a prediction from every position; BERT throws away 85% of the possible supervision. <strong>Per unit of compute and per token of data, masked modelling is roughly 6.7× less sample-efficient in signal terms.</strong></div>
+<div class="card-body" style="margin-top:8px">That is a large part of why decoder-only models scaled and encoder-only models did not. When data and compute are the binding constraints, an objective that uses every token wins — and it happens to give you generation for free, whereas bidirectionality buys accuracy on tasks you could also solve by fine-tuning a decoder. <strong>BERT was not out-competed on understanding; it was out-competed on scaling economics.</strong> Knowing that distinction is the point of this topic.</div>
+<div class="box warn"><div class="bl">and it still cannot generate — architecturally, not by degree</div>
+<p>Bidirectional attention means every position sees every other, including later ones. To generate left-to-right you must not see the future, so there is no ordering in which BERT can emit tokens: producing token 5 requires attending to tokens 6 onward, which do not exist yet.</p>
+<p style="margin-top:8px">This is not "BERT generates poorly" — it is that the forward pass is not defined for the task. Encoder-only for classification, extraction and embeddings; decoder-only for generation; encoder-decoder when input and output are genuinely different sequences.</p></div></div>
+
+<div class="card cg"><div class="card-title">The architecture, and checking the parameter count</div>
+<div class="card-body">BERT is a transformer encoder stack with a learned positional table and two special tokens. Its sizes are worth being able to reconstruct rather than recall, using the 12d²-per-layer rule:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>BERT-base</th><th>BERT-large</th></tr>
+<tr><td>Layers / heads / width</td><td>12 / 12 / 768</td><td>24 / 16 / 1024</td></tr>
+<tr><td>12d² per layer</td><td>7.08M</td><td>12.6M</td></tr>
+<tr><td>× layers</td><td>84.9M</td><td>302.0M</td></tr>
+<tr><td>+ token embeddings (30,522 × d)</td><td>23.4M</td><td>31.3M</td></tr>
+<tr><td><strong>Estimate</strong></td><td><strong>≈ 108M</strong></td><td><strong>≈ 333M</strong></td></tr>
+<tr><td>Usually quoted as</td><td>110M</td><td>340M</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The estimate lands within 2% — the remainder is biases, LayerNorm parameters, the 512 × d positional table and the pooler. <strong>Note that the embedding matrix is 22% of BERT-base</strong>, which is why ALBERT's factorised embeddings were an effective size reduction and why vocabulary size is a real architectural decision rather than a detail.</div>
+<div class="box warn"><div class="bl">the 512-token limit is a hard wall, not a soft one</div>
+<p>BERT uses a <em>learned absolute</em> positional embedding table with 512 rows. Position 512 has no vector — not a degraded one, none. So the limit is not a performance guideline, it is the edge of the model's domain, and this is exactly the contrast with rotary embeddings, whose angles can be interpolated to extend context.</p>
+<p style="margin-top:8px">Longer documents must be chunked with overlap, or handled by an architecture built for it (Longformer's sparse attention, or a model with relative positions). Silently truncating at 512 removes the end of every long document, and the resulting accuracy ceiling looks like a data problem.</p></div></div>
+
+<div class="card cg"><div class="card-title">BERT Variants</div>
+<table class="tbl"><tr><th>Model</th><th>Key Difference</th><th>Best For</th></tr>
+<tr><td>RoBERTa</td><td>No NSP, larger batches, more data</td><td>Generally better than BERT</td></tr>
+<tr><td>DistilBERT</td><td>60% smaller, 97% of BERT performance</td><td>Production latency constraints</td></tr>
+<tr><td>ALBERT</td><td>Cross-layer parameter sharing, factorized embeddings</td><td>Smaller memory footprint</td></tr>
+<tr><td>DeBERTa</td><td>Disentangled attention, enhanced mask decoder</td><td>SOTA on NLU benchmarks</td></tr>
+<tr><td>SciBERT</td><td>Pre-trained on scientific text</td><td>Scientific NLP tasks</td></tr>
+<tr><td>FinBERT</td><td>Pre-trained on financial text</td><td>Financial sentiment, NLU</td></tr></table></div>
+
+<div class="card"><div class="card-title">Fine-Tuning BERT for Downstream Tasks</div>
+<table class="tbl"><tr><th>Task</th><th>Architecture</th><th>Training Signal</th></tr>
+<tr><td>Text classification</td><td>[CLS] → linear → softmax</td><td>Cross-entropy on labels</td></tr>
+<tr><td>Named Entity Recognition</td><td>Each token → linear → softmax</td><td>Token-level BIO labels</td></tr>
+<tr><td>Question Answering</td><td>Each token → linear → start/end scores</td><td>Span extraction labels</td></tr>
+<tr><td>Semantic similarity</td><td>Siamese BERT; cosine of [CLS] embeddings</td><td>Contrastive / triplet loss</td></tr>
+<tr><td>Sentence embedding</td><td>Mean pooling of token embeddings</td><td>NLI, STS tasks</td></tr></table></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Reaching for BERT to generate text.</strong> Bidirectional attention makes autoregressive decoding undefined, not merely bad</li>
+<li><strong>Raw <code>[CLS]</code> as a sentence embedding.</strong> It was supervised only by next-sentence prediction. Mean-pool the token states, or use a model trained with a similarity objective</li>
+<li><strong>One high learning rate across all layers.</strong> Pretrained representations are the asset you are trying to keep; a large global rate overwrites them in the first few hundred steps. Low rate for early layers, higher for later ones, highest for the fresh head</li>
+<li><strong>Assuming 512 characters means 512 tokens.</strong> Specialised vocabulary tokenises densely. Measure the distribution of your actual corpus through the actual tokeniser</li>
+<li><strong>Base BERT on specialised text.</strong> Wikipedia and BookCorpus do not cover clinical or legal vocabulary, so those terms fragment into meaningless pieces. Use a domain checkpoint, or continue MLM pretraining on your own corpus before task fine-tuning — that intermediate step is reliably worth its cost</li>
+<li><strong>Forgetting to mask padding when mean-pooling.</strong> Averaging over pad positions drags every embedding toward the pad token's representation, and it varies with batch composition</li>
+<li><strong>Fine-tuning on a few hundred examples and expecting stability.</strong> Small-data BERT fine-tuning is notoriously seed-sensitive — different seeds give materially different results. Run several and report the spread, or freeze more of the model</li>
+<li><strong>Choosing BERT-base by default.</strong> RoBERTa is the same architecture trained properly and is a strictly better starting point; DeBERTa is better again on understanding benchmarks. There is rarely a reason to start from original BERT except reproducing a paper</li>
+<li><strong>Treating a cross-encoder as interchangeable with a bi-encoder.</strong> A cross-encoder scores pairs, so it cannot be pre-indexed. Excellent for reranking a shortlist, unusable for first-pass retrieval</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Google (Search, 2019):</strong> BERT deployed in Google Search for query understanding — the most impactful change to Google Search in 5 years at announcement; used to understand long-tail, conversational, and preposition-heavy queries where word order matters</li>
+  <li><strong>LinkedIn (content relevance):</strong> RoBERTa fine-tuned for feed post relevance scoring; used to rank which posts appear in each user's feed based on semantic relevance to their professional interests</li>
+  <li><strong>Amazon (product search):</strong> bi-encoder with BERT backbone for product retrieval; query and product title encoded separately, similarity at serving time — BERT's contextual representations outperform TF-IDF for long-tail product queries</li>
+  <li><strong>Healthcare NLP (ClinicalBERT):</strong> BERT fine-tuned on clinical notes for entity extraction (medications, diagnoses, procedures) and de-identification — contextual embeddings handle medical abbreviations and domain jargon far better than rule-based NER</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>State the trade, both directions.</strong> "BERT masks 15% of tokens and reconstructs them, which buys bidirectional context — every position sees left and right. The cost is that only 15% of positions produce a training signal, where an autoregressive model gets one from every token. That is roughly 6.7× less signal per sequence, and it is a large part of why decoder-only models scaled and encoder-only models did not." Very few candidates give the cost side, and it is the more interesting half.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why the 80/10/10 split?" — Because <code>[MASK]</code> never appears at fine-tuning time. If pretraining only asked the model to fill masks, it would learn a skill it can never use and leave representations of ordinary tokens unsupervised. The 10% random forces context use even when a plausible token is present; the 10% unchanged keeps real-token representations honest. Getting this right signals you have read the paper rather than a summary.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "BERT versus RoBERTa?" — RoBERTa is BERT trained properly: much more data, no NSP (it was found to hurt), dynamic masking rather than one fixed mask per example, larger batches, longer training. Same architecture, better recipe — which is itself the useful observation, because it means the original result was compute-limited rather than design-limited.</p>
+<p style="margin-top:8px"><strong>Volunteer two things.</strong> That the 512-token limit is a learned positional table with no row for position 512, so it is a hard wall rather than a soft degradation — and contrast with RoPE, whose angles interpolate. And that encoder models are still correct for retrieval, reranking and classification at scale, because you want one forward pass and a fixed-size vector rather than generation. <strong>Do not say</strong> BERT "generates poorly".</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Masked language modelling set up by hand — the 80/10/10 corruption rule is the part people misremember — plus the pooling choice that decides sentence-embedding quality.</div>

@@ -131,7 +131,7 @@
 <div class="formula math-formula">$$\begin{aligned}
 e_u &= f_\theta(u_\text{features}) \quad \text{[user tower — trained once per user per hour]} \\
 e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offline]} \\
-\hat{y} &= e_u \cdot e_i \quad \text{[dot product similarity → ANN retrieval]}
+\hat{y} &= e_u \cdot e_i \quad \text{[dot product similarity} \rightarrow \text{ANN retrieval]}
 \end{aligned}$$</div>
 <ul class="bul" style="margin-top:6px">
   <li>Train with <strong>in-batch negatives:</strong> other items in the same batch serve as negatives — no explicit negative sampling needed</li>

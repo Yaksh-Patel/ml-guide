@@ -77,7 +77,7 @@ probs = logits_per_image.softmax(dim=1)
 <div class="card-body">CLIP's image encoder (and most modern vision models) uses a Vision Transformer — treating an image as a sequence of patches, just like words in a sentence.</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Image } &\in \mathbb{R}^{H \times W \times C} \xrightarrow{\text{split}} N \text{ patches of size } P \times P \\
-N &= \frac{HW}{P^2} \quad \text{(e.g. 224×224 image, P=16 → 196 patches)} \\
+N &= \frac{HW}{P^2} \quad \text{(e.g. 224}\times\text{224 image, P=16} \rightarrow \text{196 patches)} \\
 \text{Patch}_i &\xrightarrow{\text{linear proj}} \mathbf{e}_i \in \mathbb{R}^d \quad \text{(patch embedding)} \\
 \text{Input} &= [\mathbf{e}_{\text{CLS}},\ \mathbf{e}_1 + \mathbf{p}_1,\ \mathbf{e}_2 + \mathbf{p}_2,\ \ldots,\ \mathbf{e}_N + \mathbf{p}_N]
 \end{aligned}$$</div>

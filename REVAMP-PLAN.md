@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C12 done (36 topics), C13–C20 remaining (19 topics)** |
+| **Prose quality** | **C1–C13 done (39 topics), C14–C20 remaining (16 topics)** |
 
-### Prose progress: 36 / 55
+### Prose progress: 39 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -39,7 +39,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C10 29 backpropagation · 30 optimizers · 31 weight-init
 - [x] C11 32 cnns · 33 rnns-lstms
 - [x] C12 34 attention · 35 transformers · 36 transfer-distillation
-- [ ] C13 37 tokenization · 38 bert · 39 llms-rlhf
+- [x] C13 37 tokenization · 38 bert · 39 llms-rlhf
 - [ ] C14 40 rag · 41 vector-databases
 - [ ] C15 42 agentic-ai · 43 multimodal
 - [ ] C16 44 time-series · 45 credit-risk
@@ -240,6 +240,19 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
 - **Diagram labels in a serif fallback.** 294 SVG `text` elements named DM
   Sans / Syne / Inter, which this build no longer loads. One CSS rule in the
   compat layer remaps them.
+- **Unsupported Unicode inside `\text{}`.** KaTeX's *text* mode rejects maths
+  symbols: `×`, `→`, `←`, `÷`, `≤`, `≥` and friends all warn (and would fail under
+  `strict:'error'`). Em dashes and en dashes are fine. Fixed in `39-llms-rlhf`,
+  `43-multimodal` and `52-system-design` by closing the text group and emitting
+  `\times` / `\rightarrow` in maths mode. **All 149 display formulas across all
+  56 topics now compile under `strict:'error'`** — re-run that check rather than
+  the default, because the default only warns:
+
+  ```bash
+  # in /tmp/domtest with katex installed
+  node kxstrict.mjs <repo>   # 0 hard failures, 0 strict warnings
+  ```
+
 - **Dollar amounts in prose rendering as maths.** KaTeX matches `$…$` inside a
   *single text node*, so two `$` in one sentence ("costs $5 … costs $500") render
   as inline maths. Fixed in `22-imbalanced` and `28-loss-functions` by wrapping each
