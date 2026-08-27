@@ -1,70 +1,19 @@
 <section class="section" id="sec-optim">
 <div class="sec-title">Optimization Algorithms</div>
-<div class="sec-desc">How parameters update — the choice of optimizer affects convergence speed, final performance, and training stability. Learning rate is the single most important hyperparameter.</div>
-<div class="card"><div class="card-title">SGD — Stochastic Gradient Descent</div>
-<div class="formula math-formula">$$\begin{aligned}
-\theta   \leftarrow \theta - \alpha\nabla L(\theta; x_{\text{batch}}) \quad \text{[vanilla]} \\
-v   \leftarrow \beta v - \alpha\nabla L(\theta; x_{\text{batch}}) \quad \text{[momentum]} \\
-\theta   \leftarrow \theta + v
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Vanilla SGD: update with gradient from mini-batch. Noisy but regularizing. Momentum: builds speed in consistent directions, dampens oscillations. β=0.9 is standard.</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">RMSprop</div>
-<div class="formula math-formula">$$\begin{aligned}
-s   \leftarrow \beta s + (1-\beta)\nabla L^2 \\
-\theta   \leftarrow \theta - \alpha\nabla L / (\sqrt{s + \varepsilon)}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:6px">Divides learning rate by running RMS of past gradients. Adapts learning rate per parameter. Good for RNNs — non-stationary objectives with noisy gradients.</div></div>
-<div class="card cg"><div class="card-title">Adam (Adaptive Moment Estimation)</div>
-<div class="formula math-formula">$$\begin{aligned}
-m   \leftarrow \beta_1 m + (1-\beta_1)\nabla L \quad \text{[1st moment / mean]} \\
-v   \leftarrow \beta_2 v + (1-\beta_2)(\nabla L)^2 \quad \text{[2nd moment / variance]} \\
-\hat{m} = m/(1-\beta_1^t) \\
-\hat{v} = v/(1-\beta_2^t) \\
-\theta   \leftarrow \theta - \alpha \cdot \hat{m}/(\sqrt{\hat{v} + \varepsilon} \\
-Defaults: \beta_1=0.9, \beta_2=0.999, \varepsilon=1e-8
-\end{aligned}$$</div></div>
-</div>
-<div class="card"><div class="card-title">Optimizer Comparison</div>
-<table class="tbl"><tr><th>Optimizer</th><th>Adaptive LR?</th><th>Best For</th><th>Watch Out</th></tr>
-<tr><td>SGD</td><td>No</td><td>CV tasks with proper LR schedule — often best final performance</td><td>Very sensitive to LR; needs tuning</td></tr>
-<tr><td>SGD+Momentum</td><td>No</td><td>CV; matches Adam with cosine LR</td><td>Same LR sensitivity</td></tr>
-<tr><td>RMSprop</td><td>Yes</td><td>RNNs, non-stationary problems</td><td>May not converge for all problems</td></tr>
-<tr><td>Adam</td><td>Yes</td><td>NLP, Transformers, default choice</td><td>L2 decay doesn't work as expected (use AdamW)</td></tr>
-<tr><td>AdamW</td><td>Yes</td><td>Transformers — decouples weight decay from gradient adaptation</td><td>Need to tune weight_decay separately</td></tr>
-<tr><td>Adamax</td><td>Yes</td><td>Embeddings with sparse gradients</td><td>Less commonly used</td></tr></table></div>
-<div class="card"><div class="card-title">Learning Rate Scheduling</div>
-<table class="tbl"><tr><th>Schedule</th><th>Description</th><th>When to Use</th></tr>
-<tr><td>Constant</td><td>Fixed LR</td><td>Quick experiments; often suboptimal</td></tr>
-<tr><td>Step decay</td><td>Reduce by factor every N epochs</td><td>Simple; works reasonably well</td></tr>
-<tr><td>Cosine annealing</td><td>Cosine decay with optional warm restarts</td><td>CV tasks with SGD</td></tr>
-<tr><td>Linear warmup + decay</td><td>Warm up then linear decay</td><td>Transformers; BERT; GPT</td></tr>
-<tr><td>OneCycleLR</td><td>Triangular LR with aggressive max</td><td>Fast convergence in fewer epochs</td></tr>
-<tr><td>Reduce on plateau</td><td>Halve LR when val loss stops improving</td><td>When you don't know the right schedule</td></tr></table></div>
-<div class="box story"><div class="bl">📖 Mountain Descent Analogy</div><p><strong>SGD:</strong> walking downhill blindly — fast but zigzags unpredictably. <strong>Momentum:</strong> rolling a ball — builds speed on gentle slopes. <strong>Adam:</strong> smart GPS-equipped hiker — adapts step size to terrain, big steps on flat ground, tiny steps on steep cliffs. Usually gets to the valley fastest — but SGD with a good schedule sometimes finds a better valley.</p></div>
+<div class="sec-desc">Gradient descent tells you which way is downhill. It says nothing about how far to step, and on a loss surface where curvature differs by orders of magnitude between directions, that omission is the whole problem. Every optimiser here is an answer to it — momentum accumulates a direction, adaptive methods give each parameter its own step size, and schedules change the answer over time.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Using Adam's built-in weight decay for regularization</strong> — Adam with L2 (weight_decay in PyTorch) does not apply weight decay correctly: the adaptive learning rates interact with the penalty, causing the effective decay to vary across parameters. Use AdamW (decoupled weight decay) for correct L2 regularization with Adam</li>
-  <li><strong>Not using learning rate warmup for transformers</strong> — starting with the full learning rate causes huge gradient updates at initialisation (attention weights are near-uniform, gradients are large). Always warm up for 1–5% of total training steps, then decay. SGD-based CNN training doesn't need warmup</li>
-  <li><strong>"Adam always converges faster than SGD"</strong> — true early in training, but Adam often converges to flatter (and sometimes worse) minima than SGD with momentum + careful schedule. For ResNets/image tasks, well-tuned SGD + cosine annealing often beats Adam on final test accuracy</li>
-  <li><strong>Forgetting to tune the learning rate for Adam</strong> — Adam's default lr=1e-3 is a reasonable starting point but is not universally optimal. The learning rate is still the most important hyperparameter even with adaptive optimizers. Always tune it</li>
-  <li><strong>Using the same learning rate for all parameter groups</strong> — in fine-tuning, lower learning rates for pretrained layers and higher rates for new layers is standard practice (differential learning rates). Using a single global rate either under-trains new layers or destroys pretrained representations</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>OpenAI / Anthropic / Google (LLM training):</strong> AdamW with β₁=0.9, β₂=0.95 (not the default 0.999), cosine decay with linear warmup — this specific recipe (from GPT-3 paper) is now standard across all large language model training runs; β₂=0.95 gives faster adaptation to gradient changes in long training runs</li>
-  <li><strong>Meta (PyTorch — FSDP training):</strong> gradient clipping (max_norm=1.0) applied before every AdamW step across all large-scale distributed training; prevents rare but catastrophic gradient spikes that can corrupt model state</li>
-  <li><strong>Google (vision — ViT, EfficientNet):</strong> SGD + momentum + cosine annealing for CNNs; AdamW for Vision Transformers — the optimizer choice is architecture-dependent, not a universal constant</li>
-  <li><strong>Hugging Face (fine-tuning LLMs):</strong> differential learning rates standard in Trainer API — top transformer layers get the base lr; bottom layers get lr × 0.1; new task-specific head gets lr × 10 — prevents catastrophic forgetting of pretrained representations</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "AdamW is my default for transformer training — decoupled weight decay is critical (Adam's built-in L2 doesn't apply correctly due to adaptive rate interaction). For ResNets and image classification, SGD + cosine annealing often achieves better final accuracy than Adam — Adam converges faster but to a slightly worse minimum. Learning rate is always the most important hyperparameter even with adaptive optimizers. For transformers: always warm up (1–5% of steps) to avoid catastrophic initialisation updates, then cosine decay."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I used Adam with weight_decay for L2 regularization." — That's the original Adam's L2, which doesn't work correctly. AdamW decouples the weight decay from the gradient update, applying it correctly. These are meaningfully different especially at large scale.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does Adam sometimes generalise worse than SGD?" — Answer: Adam adapts learning rates per parameter based on gradient history, which can cause it to over-fit to the gradient statistics of the training set. SGD with momentum finds sharper but more consistent minima; with the right schedule, these can generalise better. The "sharpness" of minima correlates with generalisation — Adam tends to find flatter but potentially worse generalising solutions on vision tasks.</p>
-</div>
+<div class="card cb"><div class="card-title">Momentum: an average with a memory you can measure</div>
+<div class="card-body">Plain SGD treats each minibatch gradient as the truth and steps along it, so in a narrow valley it bounces between the walls and creeps along the floor. Momentum accumulates an exponentially weighted average of past gradients and steps along <em>that</em>:</div>
+<div class="formula math-formula">$$v \leftarrow \beta v + (1-\beta)\nabla L, \qquad \theta \leftarrow \theta - \alpha v$$</div>
+<div class="card-body" style="margin-top:8px">The useful fact is that β has a concrete interpretation: <strong>the average spans roughly 1/(1−β) recent gradients.</strong></div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>β</th><th>Effective averaging window</th><th>Amplification in a consistent direction</th></tr>
+<tr><td>0.9 (standard)</td><td><strong>~10 steps</strong></td><td>up to <strong>10×</strong> the single-gradient step</td></tr>
+<tr><td>0.99</td><td>~100 steps</td><td>up to 100×</td></tr>
+<tr><td>0.999</td><td>~1,000 steps</td><td>up to 1,000×</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">That explains both of momentum's effects at once. Components that <strong>agree</strong> across steps — the valley floor — accumulate and get amplified up to 1/(1−β) times. Components that <strong>alternate</strong> — the walls — cancel in the average. So it simultaneously accelerates progress and damps oscillation, which is why it is not a heuristic bolted onto SGD but a strict improvement, and why β = 0.9 with 1/(1−β) = 10 is the near-universal default.</div>
+<div class="card-body" style="margin-top:8px">It also explains a common surprise: <strong>raising β requires lowering the learning rate.</strong> The effective step is roughly α/(1−β), so moving β from 0.9 to 0.99 multiplies the effective step by 10, and keeping α fixed usually diverges.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Optimiser paths down an ill-conditioned valley</div>
 <svg viewBox="0 0 500 198" xmlns="http://www.w3.org/2000/svg">
@@ -102,6 +51,97 @@ Defaults: \beta_1=0.9, \beta_2=0.999, \varepsilon=1e-8
 <text x="412.0" y="166.0" fill="#22d3a0" font-size="8.3" text-anchor="middle" font-family="DM Sans">per-coordinate scaling</text>
 <text x="250.0" y="188.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Adam adapts the step size per parameter, which is why it needs less tuning — and why SGD+momentum still wins some benchmarks.</text>
 </svg></div>
+
+<div class="card cg"><div class="card-title">Adam, and why its step size is unitless</div>
+<div class="card-body">Adam keeps two exponential averages per parameter — the mean of the gradient and the mean of its square — and divides one by the square root of the other:</div>
+<div class="formula math-formula">$$m \leftarrow \beta_1 m + (1-\beta_1)g, \qquad v \leftarrow \beta_2 v + (1-\beta_2)g^2, \qquad \theta \leftarrow \theta - \alpha\,\frac{\hat m}{\sqrt{\hat v} + \varepsilon}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Look at the units of that ratio.</strong> The numerator is a gradient; the denominator is the root-mean-square of a gradient. They cancel — so m̂/√v̂ is dimensionless, of order 1, <em>regardless of how large the gradients are</em>. The actual step taken is therefore about α, always.</div>
+<div class="card-body" style="margin-top:8px">That single property explains most of Adam's reputation. It means <strong>α transfers across architectures, layers and loss scales</strong>, where SGD's does not — a layer with tiny gradients still moves, and a layer with huge gradients does not explode. It is why 1e-3 is a usable default across wildly different models, and why Adam handles sparse gradients well: a rarely-seen embedding row has a small v, so its infrequent gradients are scaled up rather than lost.</div>
+<div class="card-body" style="margin-top:8px">It also explains the cost. Adam stores m and v per parameter, so training state is <strong>four times the model</strong>:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>7B-parameter model, fp32</th><th>Memory</th></tr>
+<tr><td>weights</td><td>28 GB</td></tr>
+<tr><td>gradients</td><td>28 GB</td></tr>
+<tr><td>Adam m</td><td>28 GB</td></tr>
+<tr><td>Adam v</td><td>28 GB</td></tr>
+<tr><td><strong>Total optimiser state</strong></td><td><strong>112 GB</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">That table is the entire reason 8-bit optimisers, optimiser-state sharding (ZeRO/FSDP) and mixed precision exist. When people say a 7B model "needs" far more memory than its weights suggest, this is what they mean — and SGD with momentum, storing one extra buffer instead of two, is meaningfully cheaper.</div></div>
+
+<div class="card cp"><div class="card-title">Bias correction, and the number that justifies it</div>
+<div class="card-body">Both averages start at zero, so early on they are badly biased toward zero — they are averages that have not yet seen enough terms. Adam divides them by (1 − βᵗ) to correct for exactly this, and the size of the correction is worth seeing:</div>
+<div class="formula math-formula">$$\hat m = \frac{m}{1 - \beta_1^{t}}, \qquad \hat v = \frac{v}{1 - \beta_2^{t}}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Step t</th><th>1 − β₂ᵗ (β₂ = 0.999)</th><th>√v̂ correction factor</th><th>Uncorrected step would be</th></tr>
+<tr><td>1</td><td>0.001</td><td><strong>31.6×</strong></td><td><strong>31.6× too large</strong></td></tr>
+<tr><td>10</td><td>0.010</td><td>10.0×</td><td>10× too large</td></tr>
+<tr><td>100</td><td>0.095</td><td>3.2×</td><td>3.2× too large</td></tr>
+<tr><td>1,000</td><td>0.632</td><td>1.26×</td><td>26% too large</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">At step 1, v is a thousandth of its proper size, so √v is about 31.6× too small — and since it sits in the <em>denominator</em>, the first step would be <strong>31.6× larger than intended</strong>. Without correction, Adam's opening move is a wild jump from a randomly initialised network. The correction is not a refinement; it is what stops the first hundred steps from being destructive.</div>
+<div class="box warn"><div class="bl">and this is also why warmup exists</div>
+<p>Bias correction fixes the <em>expected</em> value of v̂ but not its <strong>variance</strong>. Early on, v̂ is estimated from a handful of gradients, so it is not merely small — it is <em>unreliable</em>, and dividing by the square root of an unreliable number produces erratic step sizes exactly when the model is most fragile.</p>
+<p style="margin-top:8px">That is the mechanistic argument for linear warmup: ramp α from ~0 over the first 1–5% of steps so that by the time full-size steps are taken, v̂ has accumulated enough samples to be trustworthy. It is why transformer training essentially always warms up while SGD-trained convnets usually do not — SGD has no adaptive denominator to get wrong. RAdam attacks the same problem by rectifying the variance directly rather than by scheduling around it.</p></div></div>
+
+<div class="card ca"><div class="card-title">Choosing, and the settings that are not defaults</div>
+<div class="card-body">The honest summary is that optimiser choice is architecture-dependent and the differences are small next to the learning rate.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>AdamW for transformers</strong>, and not plain Adam — routing L2 through the loss lets the adaptive denominator divide the penalty, so the best-signalled parameters get the least decay. Exclude biases and normalisation gains from decay, as every reference implementation does</li>
+<li><strong>SGD with momentum plus cosine annealing for convnets.</strong> Well-tuned, it usually matches or beats Adam on final vision accuracy while using less memory. Adam gets to a decent loss faster; SGD often finishes better, which matters when you care about the last half-percent rather than the first epoch</li>
+<li><strong>β₂ = 0.95, not 0.999, for large language models.</strong> This is the non-obvious one, from the GPT-3 recipe and now standard. The default 0.999 averages over ~1,000 steps, which is too slow to react when the gradient distribution shifts during a long run; 0.95 averages over ~20 and adapts faster. Knowing that the published default is <em>not</em> what large runs use is a real signal</li>
+<li><strong>Gradient clipping at global norm 1.0</strong> before the optimiser step. Standard in every large run, because one anomalous batch can otherwise corrupt the state of a model that has been training for days</li>
+<li><strong>Differential learning rates when fine-tuning</strong> — a small rate for pretrained layers, a larger one for a fresh head. A single global rate either fails to train the head or destroys the pretrained representation</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>On the generalisation gap:</strong> the frequently repeated claim is that Adam finds worse minima than SGD. Treat it carefully. The gap is real and reproducible on image classification, largely absent on transformers, and much of it closes when the two are tuned equally hard and given comparable weight decay — a significant part of the original gap was Adam's broken L2, which AdamW fixed. Say it is architecture-dependent rather than a law.</div></div>
+
+<div class="card cb"><div class="card-title">Comparison</div>
+<table class="tbl">
+<tr><th>Optimiser</th><th>Per-parameter state</th><th>Use for</th><th>Watch out</th></tr>
+<tr><td><strong>SGD</strong></td><td>none</td><td>a baseline; convex problems</td><td>extremely sensitive to α; zigzags on ill-conditioned surfaces</td></tr>
+<tr><td><strong>SGD + momentum</strong></td><td>1 buffer</td><td>convnets with a cosine schedule — often the best final accuracy</td><td>α and β interact: effective step is α/(1−β)</td></tr>
+<tr><td><strong>RMSProp</strong></td><td>1 buffer</td><td>RNNs, non-stationary objectives</td><td>no momentum term, so it can stall</td></tr>
+<tr><td><strong>Adam</strong></td><td>2 buffers</td><td>a strong default almost everywhere</td><td>its <code>weight_decay</code> is not proper L2 — use AdamW</td></tr>
+<tr><td><strong>AdamW</strong></td><td>2 buffers</td><td><strong>transformers — the standard</strong></td><td>decay must be tuned separately from an L2 λ</td></tr>
+<tr><td><strong>Adafactor / 8-bit Adam</strong></td><td>&lt; 2 buffers</td><td>very large models where 112 GB of state does not fit</td><td>small quality cost for a large memory saving</td></tr>
+</table></div>
+
+<div class="card"><div class="card-title">Learning Rate Scheduling</div>
+<table class="tbl"><tr><th>Schedule</th><th>Description</th><th>When to Use</th></tr>
+<tr><td>Constant</td><td>Fixed LR</td><td>Quick experiments; often suboptimal</td></tr>
+<tr><td>Step decay</td><td>Reduce by factor every N epochs</td><td>Simple; works reasonably well</td></tr>
+<tr><td>Cosine annealing</td><td>Cosine decay with optional warm restarts</td><td>CV tasks with SGD</td></tr>
+<tr><td>Linear warmup + decay</td><td>Warm up then linear decay</td><td>Transformers; BERT; GPT</td></tr>
+<tr><td>OneCycleLR</td><td>Triangular LR with aggressive max</td><td>Fast convergence in fewer epochs</td></tr>
+<tr><td>Reduce on plateau</td><td>Halve LR when val loss stops improving</td><td>When you don't know the right schedule</td></tr></table></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Not tuning the learning rate because the optimiser is adaptive.</strong> Adam makes α <em>transferable</em>, not irrelevant. It remains the most impactful hyperparameter by a wide margin</li>
+<li><strong>Using Adam's <code>weight_decay</code> and calling it L2.</strong> Use AdamW; the two are not equivalent and the difference grows with scale</li>
+<li><strong>No warmup on a transformer.</strong> Full-size steps while v̂ is estimated from a handful of gradients, on a randomly initialised model. Loss spikes or NaN in the first few hundred steps</li>
+<li><strong>Raising momentum without lowering α.</strong> The effective step is α/(1−β), so 0.9 → 0.99 multiplies it by ten</li>
+<li><strong>Leaving β₂ at 0.999 for a long run.</strong> Adapts too slowly as the gradient distribution shifts. Large-model recipes use 0.95</li>
+<li><strong>No gradient clipping.</strong> One bad batch can destroy days of training. Clip by global norm so direction survives</li>
+<li><strong>Comparing optimisers at one learning rate each.</strong> Every optimiser has its own optimal α, often orders of magnitude apart. A fair comparison tunes α for each; otherwise you are measuring which default happened to suit your problem</li>
+<li><strong>Forgetting that the scheduler needs stepping</strong> — and at the right granularity. A per-step schedule stepped once per epoch decays hundreds of times too slowly, and nothing errors</li>
+<li><strong>Reusing an LR after changing the batch size.</strong> Larger batches give less noisy gradients and support larger steps; the linear-scaling rule is the usual starting point</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">What large runs actually use</div>
+<ul class="bul">
+<li><strong>The standard LLM recipe is remarkably fixed:</strong> AdamW, β₁ = 0.9, β₂ = 0.95, linear warmup over a small percentage of steps, then cosine decay to roughly 10% of peak, gradient clipping at 1.0, weight decay ~0.1 excluding biases and norms. It has held across model families, which makes deviating from it a decision to justify rather than a default</li>
+<li><strong>Optimiser state is a distributed-systems problem.</strong> ZeRO and FSDP shard m and v across devices precisely because they are twice the model. Choosing Adafactor or 8-bit Adam is a memory decision, not an optimisation one</li>
+<li><strong>Vision splits by architecture, not by fashion.</strong> Convnets still train well with SGD, momentum and cosine annealing; vision transformers want AdamW. That the same task has different best optimisers for different architectures is the clearest evidence there is no universal winner</li>
+<li><strong>Learning-rate range tests are standard practice.</strong> Sweep α upward over a few hundred steps and plot the loss: the usable maximum is just before it turns up. Minutes of compute, and far more reliable than guessing or inheriting someone else's number</li>
+<li><strong>Fine-tuning uses parameter groups.</strong> Backbone at a low rate, new head an order of magnitude higher, sometimes with layerwise decay across depth. The Trainer APIs expose this because a single global rate is usually wrong for both parts</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Explain momentum with the window.</strong> "It is an exponential moving average over roughly 1/(1−β) gradients — ten at β = 0.9. Consistent directions accumulate and get amplified up to 10×, alternating ones cancel, so it accelerates and damps at the same time." Then the consequence most people miss: the effective step is α/(1−β), so raising β means lowering α.</p>
+<p style="margin-top:8px"><strong>Explain Adam by its units.</strong> "m̂/√v̂ is a gradient divided by the RMS of a gradient, so it is dimensionless and of order 1 — the step is about α no matter how large the gradients are. That is why α transfers across architectures and why sparse embeddings still get updates." A far better answer than "it adapts the learning rate per parameter".</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does Adam need bias correction, and why warmup?" — At t = 1, v is a thousandth of its proper size, so √v is 31.6× too small and the first step would be 31.6× too large. Correction fixes the mean; warmup fixes the <strong>variance</strong>, because v̂ from a handful of gradients is unreliable and you are dividing by its square root. That distinction — mean versus variance — is the answer that stands out.</p>
+<p style="margin-top:8px"><strong>Two things worth volunteering:</strong> that large runs use β₂ = 0.95 rather than the 0.999 default, because 0.999 averages over ~1,000 steps and adapts too slowly; and that Adam's state is two buffers per parameter, so a 7B model in fp32 carries 112 GB of weights, gradients and optimiser state — which is why sharding and 8-bit optimisers exist. <strong>Be careful with</strong> "Adam generalises worse than SGD": true and reproducible on convnets, largely absent on transformers, and partly an artefact of Adam's broken L2 that AdamW fixed.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">SGD, momentum, RMSProp and Adam implemented on the same loop, so the differences are three lines rather than three paragraphs.</div>

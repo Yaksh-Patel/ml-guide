@@ -1,97 +1,19 @@
 <section class="section" id="sec-backprop">
 <div class="sec-title">Backpropagation &amp; Training Loop</div>
-<div class="sec-desc">Efficient computation of all gradients using the chain rule, plus the complete gradient descent training loop — from raw data to updated weights. Once you can trace this by hand, backprop becomes mechanical rather than magical.</div>
+<div class="sec-desc">Backpropagation is not a formula to memorise — it is the observation that all the derivatives a network needs share almost all of their work, so you can compute every one of them in a single backward sweep instead of one pass per parameter. That reuse is the difference between a billion-parameter model being trainable and being arithmetically impossible.</div>
 
-<div class="card"><div class="card-title">The Complete Training Loop</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">for epoch in range(num_epochs):
-    for X_batch, y_batch in dataloader:        # Step 1: mini-batch
-        # --- FORWARD PASS ---
-        z1 = X_batch @ W1 + b1                 # Step 2a: linear transform
-        h1 = relu(z1)                           # Step 2b: non-linearity
-        z2 = h1 @ W2 + b2                       # Step 2c: output layer
-        y_hat = sigmoid(z2)                     # Step 2d: probability
+<div class="card cb"><div class="card-title">Why backprop exists: a factor of a billion</div>
+<div class="card-body">Suppose you wanted the gradient without it. The obvious approach is finite differences: nudge one parameter, run the network, see how the loss changed, repeat.</div>
+<div class="formula math-formula">$$\frac{\partial L}{\partial w_i} \approx \frac{L(w_i + \epsilon) - L(w_i - \epsilon)}{2\epsilon}$$</div>
+<div class="card-body" style="margin-top:8px">That is two forward passes <strong>per parameter</strong>. For a model with 10⁹ parameters, one gradient step costs <strong>2 × 10⁹ forward passes</strong>. Backpropagation computes the same 10⁹ derivatives in <strong>one</strong> backward pass, costing roughly twice a forward pass.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Method</th><th>Cost of one full gradient</th><th>For 10⁹ parameters</th></tr>
+<tr><td>Finite differences</td><td>2P forward passes</td><td><strong>2,000,000,000</strong> forward passes</td></tr>
+<tr><td>Backpropagation</td><td>≈ 2 forward passes, total</td><td><strong>2</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>That ratio — around 10⁹ — is why deep learning is possible at all.</strong> Nothing else in the field buys a factor like it, and it comes not from an approximation but from noticing that the derivative with respect to an early weight <em>contains</em> the derivative with respect to every later one. Compute the late ones first, cache them, and reuse. Backprop is dynamic programming applied to the chain rule.</div>
+<div class="card-body" style="margin-top:8px">Finite differences do keep one job: <strong>gradient checking.</strong> When you implement a custom layer or loss, compare its analytic gradient against a finite-difference estimate on a couple of parameters. It is far too slow to train with and exactly right for confirming you got the maths correct.</div></div>
 
-        # --- LOSS ---
-        loss = binary_cross_entropy(y_hat, y_batch)   # Step 3: scalar loss
-
-        # --- BACKWARD PASS ---
-        optimizer.zero_grad()                   # Step 4a: clear old gradients!
-        loss.backward()                         # Step 4b: compute all ∂L/∂W
-
-        # --- CLIP (optional but critical for RNNs/Transformers) ---
-        clip_grad_norm_(model.parameters(), max_norm=1.0)  # Step 5
-
-        # --- UPDATE ---
-        optimizer.step()                        # Step 6: W ← W − α∇L
-
-    # --- VALIDATION ---
-    model.eval()
-    with torch.no_grad():                       # Step 7: no grad tracking
-        val_loss = evaluate(model, val_loader)
-    model.train()</code></pre></div></div>
-
-<!-- GD Animated Loss Surface -->
-<div class="anim-wrap"><div class="anim-title">Gradient descent: loss surface + parameter update steps</div>
-<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <marker id="gda" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
-  <marker id="ax2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker>
-</defs>
-<line x1="40" y1="170" x2="460" y2="170" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
-<line x1="40" y1="170" x2="40" y2="20" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
-<text x="455" y="185" fill="#4e5a7a" font-size="10" font-family="DM Sans">θ (parameter)</text>
-<text x="5" y="90" fill="#4e5a7a" font-size="10" font-family="DM Sans" transform="rotate(-90 18 90)">Loss L</text>
-<path d="M55,155 C100,70 160,35 250,28 C340,21 380,55 450,155" fill="none" stroke="#5ba4fb" stroke-width="2.5"/>
-<text x="260" y="22" fill="#5ba4fb" font-size="10" font-family="DM Sans" text-anchor="middle">L(θ) — loss landscape</text>
-<circle cx="250" cy="28" r="4" fill="#22d3a0"/>
-<line x1="250" y1="28" x2="250" y2="170" stroke="#22d3a0" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
-<text x="250" y="183" fill="#22d3a0" font-size="9" font-family="DM Sans" text-anchor="middle">θ*</text>
-<circle cx="95" cy="98" r="6" fill="#f5a623"/>
-<text x="95" y="90" fill="#f5a623" font-size="9" font-family="DM Sans" text-anchor="middle">θ₀</text>
-<line x1="60" y1="125" x2="130" y2="71" stroke="#f06767" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
-<text x="140" y="68" fill="#f06767" font-size="9" font-family="DM Sans">∇L steep→big step</text>
-<line x1="92" y1="98" x2="147" y2="72" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
-  <animate attributeName="opacity" values="0;1;1;0" dur="3s" repeatCount="indefinite"/>
-</line>
-<circle cx="155" cy="69" r="6" fill="#f5a623">
-  <animate attributeName="opacity" values="0;0;1;1" dur="3s" repeatCount="indefinite"/>
-</circle>
-<line x1="152" y1="69" x2="197" y2="52" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
-  <animate attributeName="opacity" values="0;0;1;0" dur="3s" repeatCount="indefinite"/>
-</line>
-<circle cx="205" cy="50" r="6" fill="#f5a623">
-  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
-</circle>
-<line x1="202" y1="50" x2="233" y2="35" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
-  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
-</line>
-<text x="370" y="110" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">SGD noise helps</text>
-<text x="370" y="122" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">escape local minima</text>
-<path d="M310,80 C330,75 350,73 370,73 C390,73 410,75 430,82" fill="none" stroke="#b97cf8" stroke-width="1.5" stroke-dasharray="5,3" opacity=".5"/>
-<text x="370" y="68" fill="#b97cf8" font-size="9" font-family="DM Sans" text-anchor="middle">saddle point</text>
-</svg></div>
-
-<div class="g2">
-<div class="card cb"><div class="card-title">Mini-batch vs Full-batch vs SGD</div>
-<table class="tbl"><tr><th>Type</th><th>Batch Size</th><th>Gradient</th><th>Speed</th></tr>
-<tr><td>Full batch GD</td><td>All N samples</td><td>Exact</td><td>Slow; stable</td></tr>
-<tr><td>Stochastic GD</td><td>1 sample</td><td>Very noisy</td><td>Fast; noisy path</td></tr>
-<tr><td>Mini-batch SGD</td><td>32–512</td><td>Approximate</td><td>Best of both ✅</td></tr></table></div>
-<div class="card cg"><div class="card-title">Critical Steps Often Missed</div>
-<ul class="bul"><li><strong>zero_grad():</strong> PyTorch accumulates gradients — missing this adds previous batch's gradients to the current one. Silent, hard-to-detect bug.</li><li><strong>model.eval() for validation:</strong> disables Dropout and uses BatchNorm running statistics. Missing this corrupts validation metrics.</li><li><strong>torch.no_grad():</strong> stops building the computation graph at inference — 2–3× memory + speed improvement.</li><li><strong>Gradient clipping:</strong> essential for RNNs and Transformers — caps gradient norm to prevent a bad batch from blowing up weights.</li></ul></div>
-</div>
-
-<div class="card"><div class="card-title">Chain Rule on a Computational Graph</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{For } L = \text{softmax}(W^2 \cdot \text{ReLU}(W^1 x + b^1) + b^2): \\
-\frac{\partial L}{\partial W^2} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z^2} \quad \text{(output layer gradient)} \\
-\frac{\partial L}{\partial W^1} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z^2} \cdot \frac{\partial z^2}{\partial h^1} \cdot \frac{\partial h^1}{\partial z^1} \cdot \frac{\partial z^1}{\partial W^1} \\
-\frac{\partial h^1}{\partial z^1} = \mathbb{1}(z^1>0) \quad \text{(ReLU local gradient)} \\
-\frac{\partial z^1}{\partial W^1} = x \quad \text{(linear local gradient)}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Key insight: during the forward pass, cache the intermediate values. During the backward pass, multiply them in reverse order. This makes backprop O(2 × forward pass), not O(parameters).</div></div>
-
-<!-- Backprop Flow Animation -->
 <div class="anim-wrap"><div class="anim-title">Backprop: gradients flow backward layer by layer via chain rule</div>
 <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -139,6 +61,16 @@
 <text x="250" y="210" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">δ² = ∂L/∂z² (output error signal);  δ¹ = ∂L/∂z¹ (hidden error signal)</text>
 </svg></div>
 
+<div class="card cg"><div class="card-title">The chain rule, read as a data structure</div>
+<div class="card-body">Every network is a directed graph of elementary operations. The forward pass evaluates the graph and — crucially — <strong>caches the intermediate values</strong>. The backward pass walks the same graph in reverse, and at each node multiplies the gradient arriving from above by that node's local derivative.</div>
+<div class="formula math-formula">$$\underbrace{\frac{\partial L}{\partial w^{(1)}}}_{\text{what you want}} = \underbrace{\frac{\partial L}{\partial \hat y}}_{\text{from the loss}} \cdot \underbrace{\frac{\partial \hat y}{\partial h^{(2)}} \cdot \frac{\partial h^{(2)}}{\partial h^{(1)}}}_{\text{shared by every earlier layer}} \cdot \underbrace{\frac{\partial h^{(1)}}{\partial w^{(1)}}}_{\text{local}}$$</div>
+<div class="card-body" style="margin-top:8px">Look at the middle bracket: <strong>every parameter below layer 1 needs that exact product.</strong> Computing it once and passing it down is the whole trick. In implementations that shared quantity is the error signal δ, and the backward pass is just δ being handed from layer to layer, each layer multiplying in its own local Jacobian.</div>
+<div class="card-body" style="margin-top:8px">Two practical consequences of "the forward pass caches values":</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>Memory scales with activations, not parameters.</strong> Training needs every intermediate value kept alive until its gradient is consumed, which is why a model that <em>infers</em> comfortably can fail to <em>train</em> on the same GPU. Gradient checkpointing trades compute for memory by recomputing activations instead of storing them</li>
+<li><strong>Anything that breaks the graph breaks learning silently.</strong> An in-place operation on a cached tensor, a <code>.detach()</code>, a conversion to NumPy and back — the forward pass still produces a number, the loss still decreases or does not, and the gradient is simply wrong or absent. This is the most common category of deep learning bug, and it never raises an error</li>
+</ul></div>
+
 <div class="card"><div class="card-title">Concrete 2-Layer Gradient Computation (Step-by-Step)</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Architecture: } x\,(2D) \rightarrow h\,(3D,\text{ReLU}) \rightarrow \hat{y}\,(1D,\text{sigmoid}) \\
@@ -159,22 +91,123 @@ W^2 \leftarrow W^2 - \alpha \cdot \frac{\partial L}{\partial W^2} \\
 W^1 \leftarrow W^1 - \alpha \cdot \frac{\partial L}{\partial W^1}
 \end{aligned}$$</div></div>
 
-<div class="g2">
-<div class="card cr"><div class="card-title">Vanishing Gradients</div>
-<ul class="bul"><li>Gradients → 0 as they multiply through many saturating activations (sigmoid, tanh)</li><li>Early layers learn nothing — training stalls</li><li><strong>Fixes:</strong> ReLU activations, BatchNorm, residual connections (ResNets), careful init</li></ul></div>
-<div class="card ca"><div class="card-title">Exploding Gradients</div>
-<ul class="bul"><li>Gradients grow exponentially → weights become NaN</li><li>Common in RNNs with long sequences</li><li><strong>Fixes:</strong> gradient clipping (clip_grad_norm), lower learning rate, BatchNorm, weight decay</li></ul></div>
-</div>
+<div class="anim-wrap"><div class="anim-title">Gradient descent: loss surface + parameter update steps</div>
+<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="gda" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
+  <marker id="ax2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker>
+</defs>
+<line x1="40" y1="170" x2="460" y2="170" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
+<line x1="40" y1="170" x2="40" y2="20" stroke="#4e5a7a" stroke-width="1.2" marker-end="url(#ax2)"/>
+<text x="455" y="185" fill="#4e5a7a" font-size="10" font-family="DM Sans">θ (parameter)</text>
+<text x="5" y="90" fill="#4e5a7a" font-size="10" font-family="DM Sans" transform="rotate(-90 18 90)">Loss L</text>
+<path d="M55,155 C100,70 160,35 250,28 C340,21 380,55 450,155" fill="none" stroke="#5ba4fb" stroke-width="2.5"/>
+<text x="260" y="22" fill="#5ba4fb" font-size="10" font-family="DM Sans" text-anchor="middle">L(θ) — loss landscape</text>
+<circle cx="250" cy="28" r="4" fill="#22d3a0"/>
+<line x1="250" y1="28" x2="250" y2="170" stroke="#22d3a0" stroke-width="1" stroke-dasharray="4,3" opacity=".6"/>
+<text x="250" y="183" fill="#22d3a0" font-size="9" font-family="DM Sans" text-anchor="middle">θ*</text>
+<circle cx="95" cy="98" r="6" fill="#f5a623"/>
+<text x="95" y="90" fill="#f5a623" font-size="9" font-family="DM Sans" text-anchor="middle">θ₀</text>
+<line x1="60" y1="125" x2="130" y2="71" stroke="#f06767" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
+<text x="140" y="68" fill="#f06767" font-size="9" font-family="DM Sans">∇L steep→big step</text>
+<line x1="92" y1="98" x2="147" y2="72" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;1;1;0" dur="3s" repeatCount="indefinite"/>
+</line>
+<circle cx="155" cy="69" r="6" fill="#f5a623">
+  <animate attributeName="opacity" values="0;0;1;1" dur="3s" repeatCount="indefinite"/>
+</circle>
+<line x1="152" y1="69" x2="197" y2="52" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;0;1;0" dur="3s" repeatCount="indefinite"/>
+</line>
+<circle cx="205" cy="50" r="6" fill="#f5a623">
+  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
+</circle>
+<line x1="202" y1="50" x2="233" y2="35" stroke="#f06767" stroke-width="2" marker-end="url(#gda)">
+  <animate attributeName="opacity" values="0;0;0;1" dur="3s" repeatCount="indefinite"/>
+</line>
+<text x="370" y="110" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">SGD noise helps</text>
+<text x="370" y="122" fill="#b97cf8" font-size="10" font-family="DM Sans" text-anchor="middle">escape local minima</text>
+<path d="M310,80 C330,75 350,73 370,73 C390,73 410,75 430,82" fill="none" stroke="#b97cf8" stroke-width="1.5" stroke-dasharray="5,3" opacity=".5"/>
+<text x="370" y="68" fill="#b97cf8" font-size="9" font-family="DM Sans" text-anchor="middle">saddle point</text>
+</svg></div>
 
-<div class="card"><div class="card-title">BatchNorm — The Stability Breakthrough</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{BatchNorm}(x) = \gamma \cdot \frac{x - \mu_B}{\sqrt{\sigma^2_B + \varepsilon}} + \beta \\
-\mu_B = \text{batch mean},\quad \sigma^2_B = \text{batch variance} \\
-\gamma,\,\beta = \text{learned scale and shift parameters}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Normalizes activations per mini-batch — keeps gradients in a healthy range</li><li>Acts as regularizer (noisy normalization during training)</li><li>Allows higher learning rates — training is much faster and stable</li><li>Applied before or after activation (debate; pre-activation ResNets say before)</li></ul></div>
+<div class="card cr"><div class="card-title">Vanishing and exploding gradients are one phenomenon</div>
+<div class="card-body">The gradient reaching layer 1 is a product of per-layer factors — each roughly the layer's weight matrix times its activation derivative. A product of L numbers is a knife edge: if the typical factor is even slightly off 1, the result is exponential in depth.</div>
+<div class="formula math-formula">$$\frac{\partial L}{\partial h^{(1)}} = \frac{\partial L}{\partial h^{(L)}} \prod_{k=2}^{L} \underbrace{\big(W^{(k)}\big)^{T} \odot \phi'\big(z^{(k)}\big)}_{\text{one factor per layer}}$$</div>
+<div class="card-body" style="margin-top:8px">Put a single number on each factor and take 50 layers:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Per-layer factor</th><th>Gradient after 50 layers</th><th>What happens</th></tr>
+<tr><td>0.8</td><td><strong>1.4 × 10⁻⁵</strong></td><td>early layers never move — <em>vanishing</em></td></tr>
+<tr><td>0.9</td><td>5.2 × 10⁻³</td><td>early layers learn ~200× slower than late ones</td></tr>
+<tr><td><strong>1.0</strong></td><td><strong>1.0</strong></td><td>the only stable value</td></tr>
+<tr><td>1.1</td><td>117</td><td>large, unstable updates</td></tr>
+<tr><td>1.2</td><td><strong>9,100</strong></td><td>NaN within a few steps — <em>exploding</em></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A ±20% deviation per layer spans <strong>nearly nine orders of magnitude</strong> over 50 layers. So vanishing and exploding are not two separate problems with two separate fixes — they are the same instability, and every remedy in deep learning is an attempt to hold that per-layer factor near 1:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Initialisation</strong> sets the factor to ≈1 at step zero — that is precisely what He and Xavier scaling compute</li>
+<li><strong>Normalisation layers</strong> re-impose unit scale at every layer, every step, so drift cannot accumulate</li>
+<li><strong>Residual connections</strong> add an identity path, so the factor is (1 + something) rather than something — the gradient has a route that multiplies by exactly 1. This, more than depth itself, is what made 100-layer networks trainable</li>
+<li><strong>ReLU-family activations</strong> contribute a derivative of 1 rather than ≤ 0.25</li>
+<li><strong>Gradient clipping</strong> handles the exploding side directly: if ‖g‖ exceeds a threshold, rescale the whole gradient to that norm. At ‖g‖ = 100 with a threshold of 1, every component is multiplied by 0.01 — the <em>direction</em> is preserved and only the length is capped, which is why clipping by global norm is preferred over clipping element-wise</li>
+</ul>
+<div class="box warn"><div class="bl">what you would actually observe</div>
+<p><strong>Vanishing:</strong> log the gradient norm per layer. A healthy network shows norms within an order of magnitude of each other; a vanishing one shows the first layers orders of magnitude below the last. Symptom in training: the loss falls a little and then flattens, and freezing the early layers changes nothing because they were not learning anyway.</p>
+<p style="margin-top:8px"><strong>Exploding:</strong> loss spikes to a huge value or NaN, usually within the first few hundred steps, and often after one bad batch. Print the global gradient norm every step during early training — a norm that jumps by orders of magnitude tells you immediately that you need clipping or a lower learning rate, and distinguishes this from a data bug.</p></div></div>
 
-<div class="g2">
+<div class="card ca"><div class="card-title">Normalisation, and a correction to the usual story</div>
+<div class="card-body">Batch normalisation standardises each activation across the batch, then applies a learned scale and shift so the network can undo it if that helps:</div>
+<div class="formula math-formula">$$\hat z = \frac{z - \mu_{\text{batch}}}{\sqrt{\sigma^2_{\text{batch}} + \epsilon}}, \qquad \text{out} = \gamma \hat z + \beta$$</div>
+<div class="card-body" style="margin-top:8px">It made deep networks dramatically easier to train — higher learning rates, faster convergence, less sensitivity to initialisation. <strong>The explanation in the original paper, "reducing internal covariate shift", is now believed to be wrong.</strong> Santurkar et al. showed you can inject covariate shift back in after normalising and keep the benefit; what BatchNorm actually does is smooth the loss landscape, making gradients more predictive so larger steps stay safe. Worth knowing, because the covariate-shift story is still repeated as fact and being able to correct it is a genuine signal.</div>
+<div class="card-body" style="margin-top:8px">The practical details matter more than the theory:</div>
+<ul class="bul" style="margin-top:6px">
+<li><strong>It behaves differently in training and inference.</strong> Training uses batch statistics; inference uses running averages accumulated during training. Forgetting <code>model.eval()</code> means inference uses whatever batch happens to be present — so predictions depend on what else is in the request. A genuinely nasty production bug, and a common one</li>
+<li><strong>It breaks at small batch size.</strong> Batch statistics from four samples are noise. Below roughly 16, use GroupNorm or LayerNorm instead</li>
+<li><strong>LayerNorm normalises across features within one sample</strong>, so it is batch-size independent and has no train/inference discrepancy. That is why every transformer uses it — with variable-length sequences and batch size 1 at inference, BatchNorm is simply unusable</li>
+<li><strong>It interacts badly with dropout.</strong> Dropout changes activation variance between training and inference, which is exactly the statistic BatchNorm estimated. Modern architectures generally pick one</li>
+</ul></div>
+
+<div class="card"><div class="card-title">The Complete Training Loop</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">for epoch in range(num_epochs):
+    for X_batch, y_batch in dataloader:        # Step 1: mini-batch
+        # --- FORWARD PASS ---
+        z1 = X_batch @ W1 + b1                 # Step 2a: linear transform
+        h1 = relu(z1)                           # Step 2b: non-linearity
+        z2 = h1 @ W2 + b2                       # Step 2c: output layer
+        y_hat = sigmoid(z2)                     # Step 2d: probability
+
+        # --- LOSS ---
+        loss = binary_cross_entropy(y_hat, y_batch)   # Step 3: scalar loss
+
+        # --- BACKWARD PASS ---
+        optimizer.zero_grad()                   # Step 4a: clear old gradients!
+        loss.backward()                         # Step 4b: compute all ∂L/∂W
+
+        # --- CLIP (optional but critical for RNNs/Transformers) ---
+        clip_grad_norm_(model.parameters(), max_norm=1.0)  # Step 5
+
+        # --- UPDATE ---
+        optimizer.step()                        # Step 6: W ← W − α∇L
+
+    # --- VALIDATION ---
+    model.eval()
+    with torch.no_grad():                       # Step 7: no grad tracking
+        val_loss = evaluate(model, val_loader)
+    model.train()</code></pre></div></div>
+
+<div class="card cb"><div class="card-title">Mini-batch vs Full-batch vs SGD</div>
+<table class="tbl"><tr><th>Type</th><th>Batch Size</th><th>Gradient</th><th>Speed</th></tr>
+<tr><td>Full batch GD</td><td>All N samples</td><td>Exact</td><td>Slow; stable</td></tr>
+<tr><td>Stochastic GD</td><td>1 sample</td><td>Very noisy</td><td>Fast; noisy path</td></tr>
+<tr><td>Mini-batch SGD</td><td>32–512</td><td>Approximate</td><td>Best of both ✅</td></tr></table></div>
+
+<div class="card"><div class="card-title">Learning Rate — The Most Impactful Hyperparameter</div>
+<table class="tbl"><tr><th>LR Value</th><th>Effect</th><th>Symptom</th></tr>
+<tr><td>Too high (e.g. 0.1 for Adam)</td><td>Overshoots minimum; diverges</td><td>Loss oscillates or NaN</td></tr>
+<tr><td>Too low (e.g. 1e-6)</td><td>Glacially slow convergence</td><td>Loss barely moves</td></tr>
+<tr><td>Just right (1e-3 for Adam)</td><td>Smooth descent to a good minimum</td><td>Loss steadily decreasing</td></tr>
+<tr><td>Warmup then decay</td><td>Stable start + convergence boost</td><td>Best final perf for Transformers</td></tr></table></div>
+
 <div class="card cb"><div class="card-title">What Autograd Does For You</div>
 <div class="card-body">In PyTorch, <code>loss.backward()</code> executes the entire chain automatically by traversing the computation graph in reverse. Each operation records its local gradient during the forward pass, then multiplies them in chain-rule order during backward.</div>
 <div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">x = torch.tensor([...], requires_grad=True)
@@ -184,43 +217,23 @@ z2 = h @ W2 + b2
 loss = F.binary_cross_entropy(z2.sigmoid(), y)
 loss.backward()            # traverses graph, accumulates grads
 print(W1.grad)             # ∂L/∂W1 is now populated</code></pre></div></div>
-<div class="card cg"><div class="card-title">Computational Graph</div>
-<ul class="bul"><li>Every tensor operation creates a node in the graph</li><li>Each node stores: its output value + its local gradient function</li><li>backward() walks this DAG in reverse topological order</li><li><code>detach()</code>: cuts gradient flow (e.g., for target network in RL)</li><li><code>retain_graph=True</code>: allows multiple backward passes (used in GANs)</li><li><code>torch.no_grad()</code>: don't build graph at all (inference mode)</li></ul></div>
-</div>
 
-<div class="card"><div class="card-title">Learning Rate — The Most Impactful Hyperparameter</div>
-<table class="tbl"><tr><th>LR Value</th><th>Effect</th><th>Symptom</th></tr>
-<tr><td>Too high (e.g. 0.1 for Adam)</td><td>Overshoots minimum; diverges</td><td>Loss oscillates or NaN</td></tr>
-<tr><td>Too low (e.g. 1e-6)</td><td>Glacially slow convergence</td><td>Loss barely moves</td></tr>
-<tr><td>Just right (1e-3 for Adam)</td><td>Smooth descent to a good minimum</td><td>Loss steadily decreasing</td></tr>
-<tr><td>Warmup then decay</td><td>Stable start + convergence boost</td><td>Best final perf for Transformers</td></tr></table></div>
-
-<div class="box story"><div class="bl">📖 Telephone Game</div><p>Backprop is feedback traveling backward through 100 student pairs whispering to each other. By the time it reaches student #1 (first layer), the message is either completely garbled (vanishing) or shouted so loud it's noise (exploding). BatchNorm is a relay station every 10 pairs ensuring the message arrives intact and at the right volume.</p></div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>"Backprop is O(parameters)"</strong> — wrong. Backprop is O(2 × forward pass) due to the chain rule reusing intermediate activations. The cost of a backward pass is roughly 2× a forward pass regardless of depth, because each layer's gradient reuses the already-computed activations stored during the forward pass</li>
-  <li><strong>Vanishing gradients only happen in RNNs</strong> — they happen in any deep network with saturating activations (sigmoid, tanh) in hidden layers. The fix is the same: ReLU/GELU activations + BatchNorm + residual connections. RNNs are just the most severe case</li>
-  <li><strong>Exploding gradients only affect training stability visually</strong> — NaN loss or wildly oscillating training curves are the obvious sign, but subtle exploding gradients can silently prevent convergence. Always monitor gradient norms; clip at a threshold (e.g., max_norm=1.0 in PyTorch)</li>
-  <li><strong>Not zeroing gradients between batches in PyTorch</strong> — PyTorch accumulates gradients by default. Always call optimizer.zero_grad() before loss.backward(). Forgetting this causes gradients to accumulate across batches, effectively using a much larger batch size than intended</li>
-  <li><strong>Confusing backprop with gradient descent</strong> — backprop computes the gradients (the what). Gradient descent uses those gradients to update weights (the how). They are separate: backprop is an efficient algorithm for chain rule application; gradient descent is the optimisation strategy</li>
+<li><strong>Forgetting <code>optimizer.zero_grad()</code>.</strong> PyTorch <em>accumulates</em> gradients by default, so without it step k uses the sum of all gradients so far. Training appears to work and converges to nonsense. The single most common beginner bug, and it is silent</li>
+<li><strong>Forgetting <code>model.eval()</code>.</strong> Leaves dropout active and BatchNorm using batch statistics at inference, so predictions become noisy and batch-dependent. Its mirror image — forgetting <code>model.train()</code> after validating — silently disables your regularisation for the rest of training</li>
+<li><strong>Breaking the graph.</strong> An in-place edit, a stray <code>.detach()</code>, a round trip through NumPy. No error, wrong or absent gradients</li>
+<li><strong>Calling <code>.item()</code> or storing the loss tensor for logging.</strong> Keeping the tensor keeps the entire graph alive, so memory grows every step until it dies. Log <code>loss.item()</code>, not <code>loss</code></li>
+<li><strong>No gradient clipping on recurrent or transformer training.</strong> Cheap insurance against a single bad batch taking down a long run. Clip by global norm so the direction survives</li>
+<li><strong>Tuning anything before the learning rate.</strong> It dominates every other hyperparameter. An architecture search at the wrong learning rate measures the learning rate</li>
+<li><strong>Not checking that the model can overfit ten samples.</strong> If it cannot drive the loss to near zero on a tiny batch, the problem is wiring — misaligned labels, a frozen layer, a detached graph — and no tuning will help</li>
+<li><strong>Reading the training loss as progress.</strong> It falls almost by construction. The validation curve carries the information</li>
+<li><strong>Assuming a bigger batch is strictly better.</strong> It gives a less noisy gradient estimate and fewer updates per epoch, and the gradient noise in small batches is part of why SGD generalises. Scaling batch size usually requires scaling the learning rate with it, and past some size the returns stop</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>PyTorch autograd (Meta):</strong> backprop is implemented via dynamic computational graphs — every operation records a backward function; calling loss.backward() traverses this graph in reverse. This "define-by-run" approach enables variable-length inputs (NLP) and conditional computation</li>
-  <li><strong>Google (TPU training):</strong> gradient checkpointing used at scale — instead of storing all activations for backprop, recompute them during the backward pass, trading 33% compute overhead for 10× memory savings on billion-parameter models</li>
-  <li><strong>Transformer training (all major labs):</strong> gradient clipping (clip_grad_norm=1.0) is universal in transformer training recipes — prevents occasional large gradient spikes from destabilising attention layer training</li>
-  <li><strong>Mixed-precision training (NVIDIA):</strong> forward pass and activations stored in FP16 (half memory, faster); gradients computed in FP16 then scaled to FP32 for the weight update — gradient scaling prevents FP16 underflow in the backward pass</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Backprop is O(2 × forward pass) — not O(parameters) — because of shared computation via the chain rule. The mathematical elegance: ∂L/∂z = ŷ − y for BCE+sigmoid — the sigmoid derivative cancels perfectly with the BCE derivative, leaving a clean residual gradient. Residual connections (ResNet) create a gradient highway — the skip connection passes gradients directly to early layers without multiplicative attenuation, solving the vanishing gradient problem for depth. This is why ResNet-152 trained when a plain 152-layer net couldn't."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I forgot to zero the gradients." — In PyTorch, optimizer.zero_grad() before every backward pass is fundamental. Mentioning this in an interview without being asked signals attention to implementation details.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does gradient checkpointing work?" — Answer: normal backprop stores all layer activations during the forward pass to use in the backward pass (memory = O(depth)). Gradient checkpointing only stores activations at "checkpoint" layers; intermediate activations are recomputed during the backward pass when needed. Trades ~33% extra compute for O(√depth) memory — essential for training very deep models or very long sequences on limited GPU memory.</p>
-</div>
-  <div class="card-title">▶ Run It: Manual Backprop (edit &amp; re-run)</div>
-  <div class="code-runner" id="runner-backprop">
+<div class="card cc"><div class="card-title">▶ Run it: manual backprop</div>
+<div class="card-body">The two-layer gradient computation above, executable. Edit the weights or the input and watch which gradients change.</div>
+<div class="code-runner" id="runner-backprop">
     <div class="code-runner-header">
       <span>🐍 Python · numpy</span>
       <div class="runner-btns">
@@ -275,8 +288,8 @@ print(f"dW2 = {dW2.flatten().round(4)}")
     </textarea>
     <pre class="code-output">Click ▶ Run to execute…</pre>
   </div>
+</div>
 
-<!-- ── Animated Backpropagation Computation Graph ── -->
 <div class="anim-wrap" style="padding:16px 20px">
 <div class="anim-title">Interactive — Forward Pass → Loss → Backward Pass (step through)</div>
 <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap;align-items:center">
@@ -378,4 +391,20 @@ print(f"dW2 = {dW2.flatten().round(4)}")
   bpReset();
 })();
 </script>
+
+<div class="card ca"><div class="card-title">What this looks like at scale</div>
+<ul class="bul">
+<li><strong>Residual connections are the reason modern depth works.</strong> ResNet's contribution was not depth but a gradient path that multiplies by 1. Every transformer block is a residual block for the same reason, and it is the clearest example of an architectural change made specifically to fix the product-of-factors problem above</li>
+<li><strong>Gradient checkpointing is standard for large models.</strong> Since backprop's memory cost is the stored activations, dropping most of them and recomputing during the backward pass trades roughly 30% extra compute for a large memory saving. It is what allows a model to train on hardware that cannot hold its activation stack</li>
+<li><strong>Mixed precision needs loss scaling, and the reason is this topic.</strong> fp16 has a narrow dynamic range, so small gradients underflow to zero. Multiplying the loss by a large constant before the backward pass shifts every gradient into representable range, and the optimiser divides it back out. Automatic loss scaling adjusts that constant when it detects overflow</li>
+<li><strong>Gradient-norm monitoring is routine instrumentation.</strong> Large training runs log per-layer gradient norms continuously, because a norm spike is the earliest warning of divergence — earlier than the loss, which is averaged and lags. Runs are checkpointed so a divergence can be rewound and resumed past the offending batch</li>
+<li><strong>Distributed training is an exercise in gradient plumbing.</strong> Data-parallel training computes gradients per device and all-reduces them; the communication of that gradient, not the arithmetic, is usually the bottleneck, which drives gradient compression, bucketing, and overlapping the reduction with the backward pass</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Explain backprop as reuse, not as calculus.</strong> "Finite differences cost two forward passes per parameter — for a billion parameters that is two billion passes per step. Backprop gets all of them in one backward pass, because the derivative with respect to an early weight contains the derivative with respect to every later one. Compute late, cache, reuse — it is dynamic programming on the chain rule." That answer explains why it matters, which the formula alone does not.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What causes vanishing gradients?" — Give the product. The gradient into layer 1 is a product of one factor per layer, so a factor of 0.8 over 50 layers is 1.4 × 10⁻⁵ while 1.2 gives 9,100 — nine orders of magnitude from a ±20% deviation. Then make the point that lands: <strong>vanishing and exploding are the same instability</strong>, and initialisation, normalisation, residuals and ReLU are all attempts to hold that factor at 1. Residuals work because they give the gradient a path that multiplies by exactly 1.</p>
+<p style="margin-top:8px"><strong>Know the practical failure modes cold</strong>, because they are what the job consists of: <code>zero_grad()</code> because PyTorch accumulates; <code>model.eval()</code> because BatchNorm and dropout switch behaviour; log <code>loss.item()</code> or you leak the graph; clip by global norm. And that memory during training scales with activations, not parameters, which is why a model can infer but not train on the same card.</p>
+<p style="margin-top:8px"><strong>The differentiator:</strong> if BatchNorm comes up, note that "internal covariate shift" is the paper's explanation and is not well supported — the current understanding is that it smooths the loss landscape, since you can reintroduce covariate shift and keep the benefit. Very few candidates know the original justification did not survive scrutiny.</p>
+</div>
 </section>

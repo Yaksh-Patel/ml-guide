@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C9 done (28 topics), C10–C20 remaining (27 topics)** |
+| **Prose quality** | **C1–C10 done (31 topics), C11–C20 remaining (24 topics)** |
 
-### Prose progress: 28 / 55
+### Prose progress: 31 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -36,7 +36,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C7  21 feature-engineering · 22 imbalanced · 23 regularization
 - [x] C8  24 hyperparameter-tuning · 25 ensemble-methods
 - [x] C9  26 mlp · 27 activations · 28 loss-functions
-- [ ] C10 29 backpropagation · 30 optimizers · 31 weight-init
+- [x] C10 29 backpropagation · 30 optimizers · 31 weight-init
 - [ ] C11 32 cnns · 33 rnns-lstms
 - [ ] C12 34 attention · 35 transformers · 36 transfer-distillation
 - [ ] C13 37 tokenization · 38 bert · 39 llms-rlhf
