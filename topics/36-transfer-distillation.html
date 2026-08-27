@@ -1,6 +1,6 @@
 <section class="section" id="sec-transfer">
 <div class="sec-title">Transfer Learning &amp; Knowledge Distillation</div>
-<div class="sec-desc">Two complementary strategies for leveraging existing knowledge — transfer learning adapts pre-trained representations to new tasks, distillation compresses large model knowledge into deployable ones, and PEFT methods (LoRA, QLoRA, adapters) enable fine-tuning billion-parameter models on a single GPU.</div>
+<div class="sec-desc">Three ways of not training from scratch, answering different questions. <strong>Transfer learning</strong> asks how to reuse representations someone else paid for. <strong>PEFT</strong> asks how to adapt a model you cannot fit in memory. <strong>Distillation</strong> asks how to ship something smaller than what you trained. All three rest on one observation: the expensive part of a model is its general knowledge, and the task-specific part is small — small enough that LoRA captures it in a few hundredths of a percent of the weights.</div>
 
 <!-- PART 1 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Transfer Learning</div>
@@ -97,6 +97,10 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 </div>
 
 <div class="g2">
+<div class="card ca"><div class="card-title">The two LoRA details that are usually skipped</div>
+<div class="card-body"><strong>Why a low-rank update is plausible at all.</strong> LoRA is not just a memory trick — it is a claim about fine-tuning: that adapting a pretrained model moves the weights within a <em>low-dimensional</em> subspace. That is believable precisely because the base model already holds the general capability, so the task-specific correction is small. The practical consequence is a real limit: <strong>LoRA adapts behaviour well and teaches genuinely new capability badly</strong>, because a rank-8 update cannot express a large change. If a task needs more than style, format and framing, raise the rank or fine-tune fully.</div>
+<div class="card-body" style="margin-top:8px"><strong>B is initialised to zero and A randomly.</strong> Not arbitrary: it makes ΔW = AB start at exactly zero, so the adapted model begins <em>identical</em> to the base and training departs from it smoothly. Initialise both randomly and you have corrupted the pretrained weights before step one — discarding the thing you were reusing. Symmetrically A must <em>not</em> be zero, or the gradient through B is zero and nothing learns at all.</div>
+<div class="card-body" style="margin-top:8px"><strong>The property that beats adapters:</strong> ΔW = AB has the same shape as W, so after training you can add it in. The deployed model is then an ordinary model with <strong>zero extra layers and zero added latency</strong> — unlike adapter layers, which insert real computation into every block. It also means one base model can stay resident while task-specific ΔW matrices are swapped per request, which is how multi-tenant fine-tuned serving works.</div></div>
 <div class="card cp"><div class="card-title">LoRA Hyperparameter Guide</div>
 <table class="tbl"><tr><th>Hyperparameter</th><th>Typical Range</th><th>Effect</th></tr>
 <tr><td><strong>Rank r</strong></td><td>4, 8, 16, 32, 64</td><td>Higher r = more capacity = more params. Start with r=16.</td></tr>
@@ -182,6 +186,17 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <div class="card cb"><div class="card-title">Why Soft Labels Are Better</div>
 <div class="card-body">Hard label: cat = [1, 0, 0, 0]. Teacher soft label (τ=4): [0.01, 0.72, 0.20, 0.07] — the teacher reveals that "fox" is similar to "cat". The student learns the class similarity structure for free, without ever needing labeled fox-vs-cat examples.</div>
 <div class="box story"><div class="bl">📖 The Brilliant Tutor</div><p>The teacher says "this is likely a fox, somewhat like a cat, very unlikely a car." The student learns not just the answer, but the teacher's uncertainty and reasoning — far richer than binary right/wrong labels.</p></div></div>
+<div class="card cp"><div class="card-title">What temperature actually does, in numbers</div>
+<div class="card-body">Softening the teacher's distribution is the whole mechanism, so it is worth seeing. Take teacher logits [3.0, 1.0, 0.5] and divide by T before the softmax:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>T</th><th>Class 1</th><th>Class 2</th><th>Class 3</th><th>What the student can learn</th></tr>
+<tr><td>1</td><td><strong>0.821</strong></td><td>0.111</td><td>0.067</td><td>almost a hard label — runner-up structure nearly invisible</td></tr>
+<tr><td>3</td><td>0.513</td><td><strong>0.264</strong></td><td><strong>0.223</strong></td><td>class 2 clearly preferred over class 3 — <em>this</em> is the dark knowledge</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">At T = 1 the teacher says "class 1" and little else. At T = 3 it says "class 1, and failing that 2 before 3" — an ordering over the <em>wrong</em> answers that no hard label contains and only the teacher can supply. That extra signal is why a student trained on soft targets can outperform the same student trained on the ground-truth labels alone.</div>
+<div class="box warn"><div class="bl">multiply the soft loss by T²</div>
+<p>Dividing logits by T scales the soft-target loss gradients by roughly <strong>1/T²</strong> — a ninth at T = 3. Without correction the distillation term quietly becomes nine times weaker than the hard-label term, and you conclude distillation does not work.</p>
+<p style="margin-top:8px">Multiplying the soft loss by T² restores the balance and makes the mixing weight mean what you think it means. It is in the original paper, it is easy to miss, and it is a common reason a from-scratch implementation underperforms. Also: use the same T for teacher and student <em>during training</em>, and T = 1 at inference.</p></div></div>
 <div class="card cg"><div class="card-title">Distillation Variants</div>
 <table class="tbl"><tr><th>Type</th><th>What's Transferred</th><th>Example</th></tr>
 <tr><td>Response distillation</td><td>Soft output probabilities</td><td>Hinton 2015 (original)</td></tr>
@@ -208,7 +223,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <tr><td>Llama-2 7B</td><td>Code generation</td><td>Full fine-tune on GitHub code (Code Llama)</td></tr>
 </table></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>Setting LoRA rank r too high</strong> — r=16 or r=32 is almost always sufficient; r=256 wastes memory with marginal gain. The whole point of LoRA is a low-rank update: W + ΔW where ΔW = AB, A ∈ ℝ^(d×r), B ∈ ℝ^(r×k). If r approaches min(d,k), you're approaching full fine-tuning</li>
   <li><strong>Fine-tuning to inject factual knowledge</strong> — fine-tuning teaches the model how to behave (style, format, task patterns), not what to know. Facts injected via fine-tuning are unreliable and go stale. Use RAG for knowledge; fine-tune for behaviour</li>
@@ -226,10 +241,12 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
   <li><strong>Anthropic / OpenAI (Constitutional AI / RLHF):</strong> fine-tuning pipeline: supervised fine-tuning (SFT) → reward model training → RLHF/DPO alignment. Each stage is a targeted fine-tuning step with different objectives and data types</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
 <p><strong>What to say:</strong> "Transfer learning is the highest-leverage technique in applied deep learning. For NLP I start with a pretrained BERT/RoBERTa or an instruction-tuned LLM, add a classification head, and fine-tune with LoRA — I can adapt a 7B LLM to a custom task on a single GPU by training only 0.1% of parameters. The intuition: lower layers learn general features (syntax, semantics), upper layers learn task-specific patterns — so for domain adaptation, only upper layers need significant updating. QLoRA extends this to 13B+ models by quantising the frozen base to 4-bit NF4 while keeping LoRA adapters in BF16 — ~70% VRAM savings at ~2% quality cost."</p>
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to teach it new facts." — Fine-tuning encodes behavioural patterns, not reliable factual knowledge. Facts change and fine-tuned knowledge becomes stale. Use RAG for dynamic knowledge; fine-tune only for style, format, and task-specific reasoning patterns.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between LoRA and full fine-tuning?" — Answer: full fine-tuning updates all parameters (billions of gradients, requires huge GPU memory). LoRA freezes the pretrained weights and adds low-rank update matrices ΔW = AB where rank r ≪ min(d,k). Only A and B are trained — typically 0.1–1% of original parameters. The pretrained weights are unchanged so general capabilities are preserved; the adapters capture task-specific adjustments. LoRA can be merged at inference (W + AB) so there's zero latency overhead.</p>
+<p style="margin-top:8px"><strong>Two details that show you have implemented this rather than read about it.</strong> LoRA initialises B to zero and A randomly, so ΔW = AB starts at exactly zero and the adapted model begins identical to the base — initialise both randomly and you have corrupted the pretrained weights before the first step. And in distillation, dividing logits by T scales the soft-loss gradients by 1/T², so the soft term must be multiplied by T² or it silently becomes ninefold weaker at T = 3.</p>
+<p style="margin-top:8px"><strong>Know LoRA's limit, not only its benefit.</strong> A low-rank update assumes the task-specific change is low-dimensional, which holds for style, format and task framing and does not hold for genuinely new capability. So when LoRA underperforms, the honest diagnosis is often that the rank is too low for what you are asking rather than that the learning rate is wrong.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

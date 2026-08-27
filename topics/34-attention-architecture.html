@@ -1,6 +1,6 @@
 <section class="section" id="sec-attention">
 <div class="sec-title">Attention &amp; Transformer Architecture</div>
-<div class="sec-desc">The complete architectural lineage from vanilla RNNs to GPT — understanding exactly why each component was invented, what problem it solved, and how they compose into the architecture that powers modern AI.</div>
+<div class="sec-desc">Attention was not invented to build transformers — it was a patch for a specific failure: a sequence-to-sequence model had to squeeze an entire input sentence through one fixed-size vector, and long sentences broke. The patch turned out to be the whole model. This topic follows that lineage in order, because every component of a transformer exists to solve a problem the previous architecture had, and the design makes far more sense read forwards than reverse-engineered.</div>
 
 <!-- ══════════════════════════════════════════════════════════════
      PART 1 — THE PROBLEM: SEQUENCE MODELLING BEFORE ATTENTION
@@ -110,9 +110,16 @@ d_k &= \text{key/query dimension (scale factor prevents softmax saturation)}
 </div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Why √dₖ Scaling?</div>
-<div class="card-body">Dot products grow as O(√dₖ) with dimension — without scaling, large dₖ produces very large logits → softmax saturates → near-zero gradients for all non-maximum positions. Dividing by √dₖ keeps the softmax in a gradient-friendly range.</div>
-<div class="box mem"><div class="bl">💡 Rule of thumb</div><p>If dₖ = 64 (typical), divide by 8. If dₖ = 512 (large model), divide by ~22. The scale factor is always √dₖ regardless of model size.</p></div></div>
+<div class="card cb"><div class="card-title">Why √dₖ scaling — with the saturation shown</div>
+<div class="card-body">Q and K have dₖ components. If those components are roughly independent with unit variance, their dot product is a sum of dₖ such products, so its <strong>variance is dₖ and its standard deviation is √dₖ</strong>. That is the whole reason for the divisor — it normalises the logits back to unit scale — and the consequence of skipping it is worth computing rather than asserting.</div>
+<div class="card-body" style="margin-top:8px">At dₖ = 64 the logits arrive with a standard deviation of <strong>8</strong>. Take two positions whose logits differ by that much and put them through the softmax:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>Logit gap</th><th>Softmax weight on the winner</th><th>Gradient p(1−p)</th></tr>
+<tr><td><strong>Unscaled</strong></td><td>8</td><td><strong>0.9997</strong></td><td><strong>0.00034</strong></td></tr>
+<tr><td><strong>Divided by √64 = 8</strong></td><td>1</td><td>0.731</td><td><strong>0.197</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The unscaled softmax puts 99.97% of its weight on one position — it has become a hard argmax — and the gradient it passes back is <strong>587× smaller</strong>. So the layer stops learning <em>which</em> positions to attend to, because it is already certain, and that certainty came from the dimension of the vectors rather than from the data. Scaling keeps the softmax in the range where it can still be taught.</div>
+<div class="box mem"><div class="bl">💡 Rule of thumb</div><p>dₖ = 64 → divide by 8. dₖ = 512 → divide by ~22.6. The divisor is always √dₖ, and note that it depends on the <em>head</em> dimension, not the model width — so it does not change as you add heads.</p></div></div>
 <div class="card cg"><div class="card-title">Self-Attention vs Cross-Attention</div>
 <ul class="bul">
   <li><strong>Self-Attention:</strong> Q, K, V all from the <em>same</em> sequence. Each token attends to all other tokens in the same sequence. Used in both Encoder and Decoder self-attention blocks.</li>
@@ -272,15 +279,16 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 </table></div>
 </div>
 
-<div class="box story"><div class="bl">📖 The Library Analogy</div><p>An RNN reads a book page by page, maintaining a single notepad summary. By chapter 20 it has mostly forgotten chapter 1. An LSTM has a better notepad with sticky notes — but still reads page by page. A Transformer gets the entire book at once, draws lines between every relevant passage simultaneously (attention), and builds its understanding in parallel across all pages. The FFN is the interpreter that extracts facts from the underlined passages. That's why Transformers understand "it" in chapter 20 refers to the cat mentioned in chapter 1 — both are visible at once.</p></div>
+<div class="box info"><div class="bl">the same three architectures, as reading strategies</div><p>An RNN reads page by page keeping one running summary, so by chapter 20 chapter 1 has been overwritten. An LSTM keeps a better summary it can choose what to write into — still one page at a time. A transformer has every page open simultaneously and draws a weighted line from each passage to every other, in parallel. <strong>That is why "it" in chapter 20 can resolve to a cat named in chapter 1: the distance between them is one attention hop rather than nineteen chapters of summarising.</strong> The feed-forward layers are then what turns those underlined passages into stored knowledge.</p></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Attention lets every position directly attend to every other — replacing sequential recurrence with parallel computation. Three design choices make it work: residual connections for gradient flow through depth; Layer Norm (not BatchNorm) for sequence-length-independent training stability; multi-head attention so the model simultaneously tracks syntax, semantics, and coreference with independent subspaces. The FFN layers between attention blocks act as key-value memory — factual knowledge is stored in FFN weights, which is why wider models know more facts. Modern decoder-only GPT-style models drop the cross-attention encoder and train autoregressively — simpler and generalist enough to handle any task via prompting."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "The √d_k scaling is just a trick." — It has a principled reason: without scaling, dot products grow with dimensionality (variance scales with d_k), pushing softmax into saturation regions where gradients vanish. Dividing by √d_k keeps the dot product variance at ~1 regardless of d_k.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is GQA (Grouped Query Attention) and why is it used?" — Answer: standard MHA has a separate K and V head per Q head. GQA groups multiple Q heads to share one K/V head. Result: KV-cache is much smaller (critical for long-context inference), with minimal accuracy loss. LLaMA 2/3, Mistral, and most production LLMs use GQA — the KV-cache is the primary memory bottleneck at inference, so reducing its size is a priority.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Tell it as a sequence of fixes, not a list of parts.</strong> "Seq2seq forced the whole input through one fixed vector, so long sentences failed. Attention removed that bottleneck by letting the decoder look at every encoder state and weight them per step. Once you have attention, the recurrence is no longer carrying the information — so you delete it, and you get parallel training plus an O(1) path between any two positions." That narrative answers "why transformers" and "why not RNNs" in one go.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why divide by √dₖ?" — Do not call it a trick. A dot product over dₖ unit-variance components has variance dₖ, so logits arrive with standard deviation √dₖ. At dₖ = 64 that is 8, and a logit gap of 8 puts <strong>0.9997</strong> of the softmax weight on one position with a gradient of 0.00034 — about <strong>587× smaller</strong> than the 0.197 you get after scaling. The softmax has become an argmax and stopped being teachable.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What does multi-head buy?" — Each head attends in its own learned subspace, so one can track syntactic agreement while another tracks coreference, in parallel rather than as a compromise in a single attention distribution. Note the constraint that follows: heads split the model width, so dₖ = d_model/h, and past a point more heads means each is too narrow to represent anything — dₖ ≈ 64 is the usual floor.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What is GQA and why?" — Standard attention gives every query head its own K and V head. GQA lets a group of query heads share one K/V pair, which cuts the KV cache proportionally at little quality cost. It exists because the KV cache, not the weights, is the memory bottleneck at inference. <strong>Also worth volunteering:</strong> LayerNorm rather than BatchNorm because sequence lengths vary and batch statistics are unusable at inference; and that FlashAttention is a memory-traffic optimisation, not a FLOP reduction — the maths is identical.</p>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
   <li><strong>O(n²) is always a problem</strong> — at typical inference context lengths (512–8K tokens), O(n²) is fast. The bottleneck is usually the FFN layers (O(n·d_model·d_ff)) not the attention matrix. FlashAttention's value is primarily memory (avoids materialising the n×n matrix) not raw FLOPs</li>
   <li><strong>Confusing encoder and decoder attention masking</strong> — encoder self-attention is bidirectional (each token attends to all others); decoder self-attention is causal (each token only attends to past tokens via a triangular mask). Mixing these up is a common implementation bug</li>

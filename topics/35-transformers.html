@@ -1,8 +1,23 @@
 <section class="section" id="sec-transformers">
 <div class="sec-title">Transformers</div>
-<div class="sec-desc">The architecture that ate the world — "Attention is All You Need" (2017) replaced RNNs across NLP, then spread to vision (ViT), protein folding (AlphaFold), audio, video, and more.</div>
-<div class="card"><div class="card-title">Encoder-Decoder Architecture</div>
-<!-- Transformer Animation -->
+<div class="sec-desc">Attention explains why the architecture works. This topic is about what it costs to build and serve one — because every design choice that distinguishes a 2017 transformer from a 2024 one is a response to an arithmetic problem: attention is quadratic in sequence length, the KV cache can exceed the model itself, and the naive implementation is bound by memory bandwidth rather than compute.</div>
+
+<div class="card cb"><div class="card-title">The block, and where its parameters go</div>
+<div class="card-body">A transformer layer is two sublayers, each wrapped in a residual connection and a normalisation. That is the whole architecture — the depth comes from stacking it.</div>
+<div class="formula math-formula">$$\begin{aligned}
+x &\leftarrow x + \text{MHA}\big(\text{LN}(x)\big) \\
+x &\leftarrow x + \text{FFN}\big(\text{LN}(x)\big)
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Note the normalisation sits <em>inside</em> the residual branch — <strong>pre-norm</strong>, which is what every modern model uses. The original paper put it after the addition (post-norm), and that turned out to need careful warmup to train at depth, because the residual path no longer had a clean identity route. Pre-norm leaves the skip connection untouched, so the gradient path multiplies by exactly 1. It is a one-line change that made deep stacks trainable without heroics.</div>
+<div class="card-body" style="margin-top:8px"><strong>Counting the parameters is worth doing once</strong>, because it tells you where a model's capacity actually lives. With model width d, attention holds four d × d projections (Q, K, V, and the output), and the feed-forward network expands to 4d and back:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Component</th><th>Parameters</th><th>Share</th></tr>
+<tr><td>Attention — Q, K, V, O projections</td><td>4d²</td><td><strong>1/3</strong></td></tr>
+<tr><td>Feed-forward — d → 4d → d</td><td>8d²</td><td><strong>2/3</strong></td></tr>
+<tr><td><strong>Per layer</strong></td><td><strong>12d²</strong></td><td></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Two thirds of a transformer is the feed-forward network, not attention.</strong> That surprises people, and it explains why mixture-of-experts targets the FFN specifically — it is where the parameters are. At d = 4,096 that is 201M parameters per layer, so 32 layers gives 6.4B, which lands about where a "7B" model does once embeddings are included. Being able to do that estimate in your head is genuinely useful for judging whether a claimed configuration is plausible.</div></div>
+
 <div class="anim-wrap" style="margin-top:10px"><div class="anim-title">Transformer Encoder-Decoder — encoder processes input, decoder generates output</div>
 <svg viewBox="0 0 500 230" xmlns="http://www.w3.org/2000/svg">
 <!-- Encoder stack -->
@@ -44,21 +59,70 @@
 <text x="392" y="154" text-anchor="middle" fill="#8e97b8" font-size="9" font-family="DM Sans">Add &amp; LayerNorm</text>
 <text x="392" y="180" text-anchor="middle" fill="#b97cf8" font-size="11" font-family="JetBrains Mono">× 6 layers</text>
 <text x="392" y="218" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Output Embeddings (shifted)</text>
-</svg></div></div>
-<div class="card"><div class="card-title">Positional Encoding</div>
-<div class="card-body">Self-attention is permutation-invariant — shuffling tokens gives the same output. Positional encodings inject position information into the embeddings.</div>
-<div class="formula math-formula">$$\begin{aligned}
-PE(\text{pos}, 2i)   &= \sin\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
-PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
-\text{Input to each layer} &= \text{token embedding} + \text{positional embedding}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Original Transformer used sinusoidal encodings. Modern LLMs use Rotary Position Embedding (RoPE) or ALiBi — these generalize better to sequences longer than training length.</div></div>
+</svg></div>
+
+<div class="card cg"><div class="card-title">The quadratic, and what it costs in memory</div>
+<div class="card-body">Attention compares every position with every other, so both compute and the attention matrix itself scale with T². The compute cost is discussed often; the <em>memory</em> cost is what actually broke things.</div>
+<div class="formula math-formula">$$\text{scores} = \frac{QK^{T}}{\sqrt{d_k}} \in \mathbb{R}^{T \times T} \qquad\Longrightarrow\qquad \text{one matrix per head, per layer}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>At T = 4,096, fp16</th><th>Memory</th></tr>
+<tr><td>one attention matrix (4,096²)</td><td>33.6 MB</td></tr>
+<tr><td>× 32 heads, one layer, one sequence</td><td><strong>1.07 GB</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A single layer's attention scores for one sequence exceed a gigabyte. Multiply by batch size and it becomes the binding constraint — and note that this matrix is written to memory and then immediately read back by the softmax, so the operation is <strong>bound by memory bandwidth, not by arithmetic.</strong></div>
+<div class="card-body" style="margin-top:8px"><strong>That observation is what FlashAttention exploits.</strong> It never materialises the T × T matrix at all: it processes the scores in tiles that fit in on-chip SRAM, computing the softmax incrementally with a running maximum and normaliser. The FLOP count is unchanged — it is not a cheaper algorithm — but the memory traffic drops by an order of magnitude and memory is what the operation was waiting on. Attention memory goes from O(T²) to O(T), which is why long contexts became affordable without changing the maths at all.</div>
+<div class="card-body" style="margin-top:8px">The scaling is brutal and worth internalising: <strong>going from 2,048 to 8,192 tokens is 4× the context and 16× the attention work.</strong> Everything marketed as "long context" is a strategy for avoiding paying that in full — sparse or windowed patterns, linear approximations, or FlashAttention-style exact methods that fix the memory term while leaving the compute term quadratic.</div></div>
+
+<div class="card cp"><div class="card-title">The KV cache: why serving is a different problem from training</div>
+<div class="card-body">Generation is autoregressive, so producing token t requires attending over tokens 1…t−1. Recomputing their keys and values every step would be O(T²) work per sequence, so you cache them. That cache is the central object in inference engineering, and its size surprises people.</div>
+<div class="formula math-formula">$$\text{KV bytes} = 2 \times L \times H_{kv} \times d_{head} \times T \times \text{bytes}$$</div>
+<div class="card-body" style="margin-top:8px">For a 7B-class model — 32 layers, 32 heads, head dimension 128 — in fp16:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Setting</th><th>KV cache at T = 4,096</th></tr>
+<tr><td>One sequence, full multi-head attention</td><td><strong>2.1 GB</strong></td></tr>
+<tr><td>Batch of 32 sequences</td><td><strong>68.7 GB</strong> — larger than the 14 GB of weights</td></tr>
+<tr><td>Grouped-query attention, 8 KV heads</td><td><strong>537 MB</strong> — a 4× reduction</td></tr>
+<tr><td>Multi-query attention, 1 KV head</td><td><strong>67 MB</strong> — a 32× reduction</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>At batch 32 the cache is nearly five times the model.</strong> That single fact reshaped inference: throughput is limited by how many sequences fit in memory alongside their caches, not by arithmetic. It is why <strong>grouped-query attention</strong> is now standard — let several query heads share one key/value head, keeping most of the quality while cutting the cache proportionally. It is also why paged attention exists: the cache is managed like virtual memory, in fixed blocks, to avoid the fragmentation that comes from pre-allocating for the longest possible sequence.</div>
+<div class="box warn"><div class="bl">the asymmetry that explains inference cost</div>
+<p><strong>Prefill</strong> — processing the prompt — handles all T tokens at once, so it is compute-bound and parallel, and it is what you pay for a long prompt. <strong>Decode</strong> — generating each subsequent token — processes exactly one token against the whole cache, so it is memory-bandwidth-bound and inherently serial.</p>
+<p style="margin-top:8px">These have completely different bottlenecks, which is why time-to-first-token and tokens-per-second are separate metrics that respond to different optimisations, and why batching helps decode enormously (it amortises the weight reads across sequences) while doing much less for prefill. If someone reports "latency" for a language model without saying which phase, the number means very little.</p></div></div>
+
+<div class="card ca"><div class="card-title">Position: from sinusoids to rotation</div>
+<div class="card-body">Attention is a sum over positions, and sums do not care about order — permute the input and the output permutes identically. <strong>A transformer with no positional information cannot distinguish "dog bites man" from "man bites dog".</strong> Position has to be injected deliberately.</div>
+<div class="formula math-formula">$$PE_{(pos,\,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d}}\right), \qquad PE_{(pos,\,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d}}\right)$$</div>
+<div class="card-body" style="margin-top:8px">The original sinusoidal scheme adds a fixed pattern of many frequencies to the embeddings. Its appeal was that relative offsets are expressible as linear functions of the encoding, so the model can in principle learn "attend three positions back". Its weakness is that it is <em>added to the input</em>, so the information has to survive every layer.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Scheme</th><th>Mechanism</th><th>Trade-off</th></tr>
+<tr><td><strong>Sinusoidal</strong></td><td>fixed pattern added to embeddings</td><td>no parameters, no training limit — but weak extrapolation in practice</td></tr>
+<tr><td><strong>Learned absolute</strong></td><td>a trainable vector per position</td><td>simple, and <strong>hard-capped</strong> at the trained length. BERT's 512 limit is this</td></tr>
+<tr><td><strong>RoPE</strong></td><td><em>rotates</em> Q and K by an angle proportional to position</td><td>the modern default — relative by construction, and the rotation can be interpolated to extend context</td></tr>
+<tr><td><strong>ALiBi</strong></td><td>adds a distance-proportional penalty to attention scores</td><td>extrapolates naturally to longer sequences than trained on</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Rotary embeddings won for a structural reason.</strong> They act on the queries and keys inside every attention operation rather than on the input once, so position cannot be diluted with depth. And because position is encoded as a rotation angle, you can scale the angles down to stretch a model trained at 4K to a longer context — which is exactly what the "context extension" techniques do. That is not available to a learned absolute table, where position 8,192 simply has no vector.</div></div>
+
 <div class="card"><div class="card-title">Transformer Variants</div>
 <table class="tbl"><tr><th>Type</th><th>Architecture</th><th>Used For</th><th>Examples</th></tr>
 <tr><td>Encoder-only</td><td>Bidirectional self-attention</td><td>Classification, NER, embedding</td><td>BERT, RoBERTa, DistilBERT</td></tr>
 <tr><td>Decoder-only</td><td>Causal (masked) self-attention</td><td>Text generation, LLMs</td><td>GPT, Claude, Llama, Mistral</td></tr>
 <tr><td>Encoder-decoder</td><td>Cross-attention between encoder and decoder</td><td>Translation, summarization, T2T</td><td>T5, BART, MarianMT</td></tr>
 <tr><td>Vision Transformer</td><td>Patch embeddings + self-attention</td><td>Image classification, detection</td><td>ViT, DeiT, Swin</td></tr></table></div>
+
+<div class="card cb"><div class="card-title">What changed since 2017</div>
+<div class="card-body">The 2017 block and a current one differ in half a dozen places, and every change has a reason worth knowing rather than a name to memorise.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>2017</th><th>Now</th><th>Why</th></tr>
+<tr><td>Post-norm</td><td><strong>Pre-norm</strong></td><td>keeps the residual path a clean identity, so deep stacks train without delicate warmup</td></tr>
+<tr><td>LayerNorm</td><td><strong>RMSNorm</strong></td><td>drops the mean-centring; nearly identical quality, measurably cheaper</td></tr>
+<tr><td>Learned absolute position</td><td><strong>RoPE</strong></td><td>relative by construction, and extensible beyond the trained length</td></tr>
+<tr><td>ReLU/GELU feed-forward</td><td><strong>SwiGLU</strong></td><td>gated activation; hidden width shrinks to 8d/3 to hold parameters constant</td></tr>
+<tr><td>Multi-head attention</td><td><strong>Grouped-query attention</strong></td><td>cuts the KV cache several-fold at little quality cost — a serving decision</td></tr>
+<tr><td>Dense feed-forward</td><td><strong>Mixture of experts</strong></td><td>route each token to a few of many FFNs, so parameters grow without proportional compute. Targets the FFN because that is 2/3 of the model</td></tr>
+<tr><td>Naive attention</td><td><strong>FlashAttention</strong></td><td>same maths, tiled to avoid materialising the T × T matrix. Memory, not FLOPs</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Read the "why" column as a group and a pattern emerges: <strong>almost none of these improve the model's expressiveness.</strong> They make it trainable at depth, cheaper to serve, or able to handle longer sequences. The 2017 architecture was close to right; nearly everything since has been engineering around its costs.</div></div>
+
 <div class="card"><div class="card-title">Why Transformers Beat RNNs</div>
 <table class="tbl"><tr><th>Property</th><th>RNN/LSTM</th><th>Transformer</th></tr>
 <tr><td>Long-range dependencies</td><td>Struggle (vanishing gradient)</td><td>Direct attention — O(1) path length</td></tr>
@@ -67,27 +131,33 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 <tr><td>Memory</td><td>O(sequence length)</td><td>O(n²) attention matrix</td></tr>
 <tr><td>Streaming / online inference</td><td>Natural (stateful)</td><td>Requires full context or KV cache</td></tr></table></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Confusing encoder-only, decoder-only, and encoder-decoder</strong> — encoder-only (BERT): bidirectional, good for classification/NER/embeddings, can't generate. Decoder-only (GPT): causal, generative, the dominant paradigm for LLMs. Encoder-decoder (T5, BART): best for seq2seq tasks (translation, summarization) where input and output are both structured sequences</li>
-  <li><strong>Using BatchNorm in transformers</strong> — BatchNorm computes statistics over the batch dimension; for variable-length sequences this is unstable. Transformers use Layer Norm (statistics over the feature dimension within each token) — batch-size independent and stable with variable-length inputs</li>
-  <li><strong>"Pre-LN vs Post-LN doesn't matter"</strong> — it does. Original Transformer: Post-LN (norm after residual add) — training unstable without warmup. Modern transformers (GPT, LLaMA): Pre-LN (norm before sublayer) — more stable training, no warmup required, enables training without careful LR tuning</li>
-  <li><strong>Treating the KV cache as automatic</strong> — KV cache must be explicitly managed at inference time. Many serving bugs come from incorrect cache invalidation (stale cache from previous request) or running out of KV cache memory at long contexts. Monitor KV cache utilization in production</li>
-  <li><strong>Ignoring positional encoding differences</strong> — learned absolute PE (BERT/GPT-2): fixed context length, doesn't generalise beyond training length. RoPE (LLaMA, GPT-NeoX): rotary, relative, extrapolates better. ALiBi: linear bias on attention logits, zero parameters, excellent length generalisation. Choice matters for long-context tasks</li>
+<li><strong>Forgetting the causal mask in a decoder.</strong> Every position attends to the future, so the model learns to read the answer off the input. Training loss collapses to near zero and generation is incoherent — one of the most memorable bugs in the field precisely because the loss curve looks spectacular</li>
+<li><strong>Forgetting the padding mask.</strong> Attention over pad tokens injects noise, and it is silent. Both masks are required and they are different things</li>
+<li><strong>Assuming a bidirectional encoder can generate.</strong> BERT-style models see the whole sequence, so they cannot produce tokens left to right. Encoder-only for understanding, decoder-only for generation — this is architectural, not a matter of tuning</li>
+<li><strong>Exceeding the positional limit.</strong> A learned absolute table has no vector for a position beyond training, so behaviour past the limit is undefined rather than merely degraded. Check what scheme the model uses before assuming a context window is soft</li>
+<li><strong>Reasoning about cost from parameter count alone.</strong> Inference is dominated by the KV cache and memory bandwidth, not by weight count — a batch of 32 at 4K context carries more cache than model</li>
+<li><strong>Quoting one latency number.</strong> Prefill is compute-bound and parallel; decode is bandwidth-bound and serial. They optimise differently and must be reported separately</li>
+<li><strong>Expecting attention weights to be an explanation.</strong> They show where the model looked, which is not why it decided. Attention maps are appealing and weak evidence — the literature on this is explicit</li>
+<li><strong>Fine-tuning without matching the pretraining format.</strong> Tokeniser, special tokens, prompt template. A mismatch degrades quality in ways that look like a data problem</li>
+<li><strong>Treating a long context window as usable throughout.</strong> Models attend unevenly across a long context and reliably degrade in the middle. The advertised window is a capacity, not a guarantee of uniform attention</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card ca"><div class="card-title">How they are actually built and served</div>
 <ul class="bul">
-  <li><strong>Google (BERT → production NLP):</strong> BERT fine-tuned for query understanding in Google Search — the Transformer's ability to model bidirectional context transformed relevance ranking quality in 2019; still a component in the search stack</li>
-  <li><strong>OpenAI (GPT-4):</strong> decoder-only transformer at scale; sparse mixture-of-experts (MoE) architecture — only a subset of FFN experts activated per token, enabling 8× parameter count at ~2× FLOPs; production serving via continuous batching</li>
-  <li><strong>Meta (LLaMA 3):</strong> decoder-only with RoPE positional encoding, GQA, SwiGLU activation, Pre-LN — these four architectural choices are now the standard recipe for open-source LLMs; trains on 15T tokens</li>
-  <li><strong>Microsoft (GitHub Copilot):</strong> fine-tuned GPT decoder for code completion; prefix-suffix-middle (PSM) training objective — model trained to fill in the middle of code given both prefix and suffix context</li>
+<li><strong>Decoder-only won by convergence, not by proof.</strong> One stack, one objective, and scaling that generalises — encoder-decoder survives where input and output are genuinely different modalities (translation, speech), and encoder-only survives for retrieval and classification where you want a representation rather than a continuation</li>
+<li><strong>Serving is a memory-management discipline.</strong> Continuous batching keeps the GPU fed by admitting new sequences as others finish; paged attention manages the KV cache in fixed blocks to avoid fragmentation; quantisation shrinks both weights and cache. None of this changes the model — it changes how many users one machine serves, which is the number that matters commercially</li>
+<li><strong>Mixture of experts is how parameter counts grew without proportional cost.</strong> Route each token to a small number of expert FFNs and total parameters rise while per-token compute stays roughly flat. The difficulty is engineering rather than modelling: load balancing across experts, and the fact that all experts must be resident in memory even though each token uses few</li>
+<li><strong>Long-context claims deserve reading closely.</strong> Extending a trained model's context by interpolating RoPE angles works, and quality across the window is uneven. The honest question about any long-context model is not whether it accepts the tokens but whether retrieval accuracy holds in the middle</li>
+<li><strong>The transferable lesson:</strong> the architecture stopped being the interesting variable around 2020. What changed since is data, scale, and the serving stack — which is why an engineer who understands the KV cache and batching is often more useful on a production LLM team than one who can recite the block diagram</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "The transformer's key insight: replace sequential recurrence with parallel attention over all positions — O(n²) computation but fully parallelisable on GPUs. The architectural choices: residual connections for gradient flow through depth; Layer Norm (not BatchNorm) for sequence-length-independent stability; Pre-LN (before sublayer) in modern models for stable training without warmup. The paradigm shift: pretrain on massive unsupervised data via next-token prediction → fine-tune on task-specific data. This self-supervised pretraining is why transformers dominate — they leverage internet-scale data with no labels."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll use BERT for text generation." — BERT is encoder-only with bidirectional attention; it cannot autoregressively generate text. BERT: classification, NER, embeddings. GPT-style decoders: generation. T5/BART: seq2seq tasks with a structured output sequence.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why do modern LLMs use Pre-LN instead of the original Post-LN?" — Answer: Post-LN (original Transformer) applies LayerNorm after the residual addition: output = LayerNorm(x + F(x)). This means the residual path accumulates unnormalised values — gradients through early layers can explode or vanish, requiring careful warmup. Pre-LN: output = x + F(LayerNorm(x)) — the normalised input to each sublayer keeps gradients stable regardless of depth, enabling training without warmup and at higher learning rates.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Know where the parameters are.</strong> "Per layer it is 4d² for attention and 8d² for the feed-forward network, so <strong>two thirds of a transformer is the FFN</strong> — which is why mixture-of-experts targets it. At d = 4,096 that is 201M per layer, so 32 layers is about 6.4B." Most candidates assume attention dominates, and the estimate itself is a useful skill.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why is long context hard?" — Answer with memory rather than FLOPs, because that is where the real constraint is. The T × T score matrix at 4K with 32 heads is 1.07 GB for one sequence in one layer, and the operation is bandwidth-bound. FlashAttention keeps the same FLOPs and tiles the computation so the matrix is never materialised — O(T) memory instead of O(T²). And 2K → 8K is 4× the context for 16× the attention work.</p>
+<p style="margin-top:8px"><strong>The answer that signals production experience: the KV cache.</strong> For a 7B model at 4K context it is 2.1 GB per sequence — at batch 32, 68.7 GB, nearly five times the 14 GB of weights. That is why grouped-query attention is standard (8 KV heads instead of 32 cuts it 4×) and why paged attention exists. Follow with the prefill/decode asymmetry: compute-bound and parallel versus bandwidth-bound and serial, so batching helps one far more than the other.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why RoPE over sinusoidal or learned?" — It rotates Q and K inside every attention operation rather than adding to the input once, so position cannot dilute with depth, and it is relative by construction. Crucially the angles can be interpolated to extend context beyond the trained length, which a learned absolute table cannot do because position 8,192 has no vector. <strong>Do not say</strong> attention weights explain the model's decision, and do not quote a single latency number.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>
