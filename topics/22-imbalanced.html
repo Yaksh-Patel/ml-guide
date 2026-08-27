@@ -1,44 +1,44 @@
 <section class="section" id="sec-imbalanced">
 <div class="sec-title">Handling Imbalanced Datasets</div>
-<div class="sec-desc">In fraud detection (0.1% positive), cancer detection (5%), and credit default (3%), naive models predict "no" for everything and get 99% accuracy. The metric and data preparation must account for the imbalance.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Resampling Strategies</div>
-<ul class="bul"><li><strong>Random oversampling:</strong> duplicate minority class samples. Simple but overfits on exact duplicates.</li><li><strong>SMOTE:</strong> Synthetic Minority Oversampling TEchnique — interpolate between minority class neighbors to create new synthetic points. Better than random oversampling.</li><li><strong>ADASYN:</strong> Adaptive Synthetic — generates more samples where misclassification is likely.</li><li><strong>Random undersampling:</strong> remove majority class samples. Loses information — only use when data is huge.</li><li><strong>Tomek links:</strong> remove boundary majority samples (cleaning, not balancing).</li></ul></div>
-<div class="card cg"><div class="card-title">Algorithm-Level Adjustments</div>
-<ul class="bul"><li><strong>Class weights:</strong> weight=class_weight='balanced' in sklearn — scales the loss contribution. No data loss. My #1 first try.</li><li><strong>Threshold tuning:</strong> instead of default 0.5 cutoff, find threshold that maximizes F1 or business metric on validation set.</li><li><strong>Cost-sensitive learning:</strong> assign asymmetric misclassification costs — missed positive costs more than false alarm.</li><li><strong>Focal Loss:</strong> down-weights easy negative examples dynamically. Used in RetinaNet (object detection) and imbalanced NLP tasks.</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Correct Evaluation on Imbalanced Data</div>
-<table class="tbl"><tr><th>Metric</th><th>Good For Imbalanced?</th><th>Why</th></tr>
-<tr><td>Accuracy</td><td>❌ Never</td><td>Dominated by majority class</td></tr>
-<tr><td>AUC-ROC</td><td>⚠️ Partially</td><td>Optimistic when TN pool is huge</td></tr>
-<tr><td>PR-AUC</td><td>✅ Yes</td><td>Doesn't use TN; minority-focused</td></tr>
-<tr><td>F1 / F-beta</td><td>✅ Yes</td><td>Ignores TN; balance P and R</td></tr>
-<tr><td>Matthews Correlation Coeff.</td><td>✅ Yes</td><td>Balanced even for extreme imbalance</td></tr>
-<tr><td>KS statistic</td><td>✅ Yes</td><td>Separation between class score distributions</td></tr></table></div>
-<div class="box story"><div class="bl">📖 Fraud Analogy</div><p>If 0.1% of transactions are fraud and you predict "not fraud" for everything: 99.9% accuracy. 0% recall. 100% of fraudsters escape. Accuracy is a lie. Your PR-AUC baseline is 0.001. Your model must beat that to add any value.</p></div>
+<div class="sec-desc">At 0.1% fraud, predicting "no" for everything scores 99.9% accuracy. The instinct is that the data is broken and needs rebalancing. Usually it is not: <strong>the metric is wrong and the threshold is wrong</strong>, and both are free to fix. Resampling changes the base rate your model believes in, so it belongs last — after you have decided what you are measuring and where you are cutting.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Applying SMOTE to the whole dataset before splitting</strong> — synthetic samples from the test set contaminate training. Always split first, then apply SMOTE only to the training fold. The test set must contain only real examples</li>
-  <li><strong>"Random oversampling fixes imbalance"</strong> — it duplicates exact examples, causing the model to overfit to those specific training points. SMOTE creates synthetic interpolations between existing minority examples — always prefer SMOTE over random oversampling</li>
-  <li><strong>Not tuning the decision threshold after training</strong> — the default 0.5 threshold is almost never optimal for imbalanced problems. After training, find the threshold that maximises your business metric (e.g., F1, or recall@fixed precision) on the validation set</li>
-  <li><strong>Undersampling as the first resort</strong> — discarding majority examples loses real information. class_weight='balanced' achieves equivalent loss re-weighting without data loss — try that first</li>
-  <li><strong>Ignoring the imbalance in CV folds</strong> — always use StratifiedKFold; a random fold with 0 positive examples will produce nonsensical metrics and unstable gradient estimates during training</li>
-</ul></div>
+<div class="card cb"><div class="card-title">What is actually broken</div>
+<div class="card-body">A model trained with log loss on imbalanced data is not confused. It has correctly learned that the positive class is rare, and it is reporting honest probabilities like 0.03. The breakage is downstream of that:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Accuracy is the wrong question.</strong> It weights a missed fraud and a false alarm equally, which no business does</li>
+<li><strong>0.5 is the wrong threshold.</strong> It is the right cut only when a false positive and a false negative cost the same. At 0.1% prevalence they never do</li>
+<li><strong>Sometimes there genuinely is not enough minority signal</strong> — 40 positive examples is 40 examples, and no resampling technique manufactures information that was not collected</li>
+</ul>
+<div class="card-body" style="margin-top:8px">Notice that resampling addresses none of these directly. It makes the model output larger numbers, which happens to move predictions across an unexamined 0.5 threshold. <strong>That is fixing the threshold by distorting the model.</strong> Fix the threshold instead and you keep calibrated probabilities, which you need the moment a probability gets multiplied by an amount of money.</div>
+<div class="box warn"><div class="bl">the order that works</div>
+<p><strong>1.</strong> Choose a metric that ignores true negatives — PR-AUC, F-beta, MCC. <strong>2.</strong> Train normally and check calibration. <strong>3.</strong> Choose the threshold from costs. <strong>4.</strong> If recall is still short, apply class weights. <strong>5.</strong> Only then consider resampling, and expect to recalibrate afterwards. Most projects are finished by step 3, and the ones that start at step 5 tend to ship a model with good recall and meaningless probabilities.</p></div></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Stripe / PayPal (fraud detection):</strong> class_weight or scale_pos_weight as the first adjustment; SMOTE-ENN (SMOTE + edited nearest neighbours cleaning) for borderline cases; PR-AUC as primary metric; threshold tuned to match regulatory recall requirements</li>
-  <li><strong>Google (spam detection):</strong> Focal Loss in neural models — dynamically down-weights easy negatives so training focuses on hard positive examples; standard in imbalanced NLP classification</li>
-  <li><strong>Healthcare AI (rare disease detection):</strong> extreme imbalance (1:10000); cost-sensitive learning with asymmetric loss weights; human review triggered above a low-recall threshold to avoid missing rare cases</li>
-  <li><strong>Insurance (claim fraud):</strong> XGBoost with scale_pos_weight + threshold optimised for F-beta (β=2, weighting recall 2× over precision) — missing fraud is more costly than false accusations</li>
-</ul></div>
+<div class="card cg"><div class="card-title">Why ROC-AUC flatters you, in one confusion matrix</div>
+<div class="card-body">The metric problem is worth making concrete. Take a million negatives and a thousand positives. Your model flags 10,900 cases and catches 900 of the positives:</div>
+<div class="formula math-formula">$$\text{FPR} = \frac{FP}{FP + TN} = \frac{10{,}000}{1{,}000{,}000} = \mathbf{0.01} \qquad\qquad \text{Precision} = \frac{TP}{TP + FP} = \frac{900}{10{,}900} = \mathbf{0.083}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Same model, two readings</th><th>Value</th><th>How it sounds</th></tr>
+<tr><td>False positive rate</td><td>0.01</td><td>"one percent false alarms" — excellent</td></tr>
+<tr><td>Precision</td><td>0.083</td><td><strong>91.7% of the queue is noise</strong></td></tr>
+<tr><td>False alarms per true catch</td><td><strong>11.1</strong></td><td>the analyst reviews eleven innocents per fraud</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The difference is the denominator.</strong> FPR divides by the enormous pool of true negatives, so a large absolute number of false positives becomes a tiny rate. Precision divides by what you actually flagged, which is what the team downstream experiences. ROC-AUC is built from FPR, so it inherits the flattery; PR curves never touch TN at all.</div>
+<div class="card-body" style="margin-top:8px">One consequence people get wrong: <strong>the PR-AUC baseline is the prevalence, not 0.5.</strong> At 0.1% positives, a random model scores 0.001. So a PR-AUC of 0.05 sounds dreadful and is fifty times better than chance. Always quote PR-AUC against the prevalence baseline, or the number is uninterpretable.</div></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "My imbalanced data strategy in order: (1) PR-AUC as primary metric — not accuracy, not AUC-ROC alone. (2) class_weight='balanced' first — no data manipulation, same information. (3) If insufficient, SMOTE on training set only — never on validation/test. (4) Tune decision threshold on validation set to maximise the business metric (e.g., recall at acceptable precision). (5) Focal Loss for neural nets — focuses training on hard examples. Always StratifiedKFold to maintain class ratio in every CV fold."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I applied SMOTE before train/test split." — This is data leakage. Synthetic minority examples generated from test data contaminate training. SMOTE must happen inside the CV loop, after splitting.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does SMOTE work?" — Answer: for each minority example, find its k nearest minority-class neighbours. Pick one at random, then generate a new synthetic example by interpolating along the line between the original point and its neighbour: x_new = x + λ·(x_neighbour − x) where λ ~ Uniform(0,1). Creates new examples in the minority manifold rather than duplicating existing ones.</p>
-</div>
+<div class="card cp"><div class="card-title">The threshold is derivable, not searchable</div>
+<div class="card-body">Given calibrated probabilities and the two error costs, the optimal cut is arithmetic. Predicting positive costs (1 − p)·C<sub>FP</sub> in expectation; predicting negative costs p·C<sub>FN</sub>. Flag when the first is smaller:</div>
+<div class="formula math-formula">$$(1-p)\,C_{FP} < p\,C_{FN} \quad\Longleftrightarrow\quad p > \frac{C_{FP}}{C_{FP} + C_{FN}}$$</div>
+<div class="card-body" style="margin-top:8px">Fraud review costs about <strong>$5</strong> of analyst time; a missed fraud costs about <strong>$500</strong>. So:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>C<sub>FP</sub></th><th>C<sub>FN</sub></th><th>Optimal threshold</th><th>Note</th></tr>
+<tr><td>$5</td><td>$500</td><td><strong>0.0099</strong></td><td>flag anything above ~1%, not 50%</td></tr>
+<tr><td>$1</td><td>$100</td><td>0.0099</td><td>only the <em>ratio</em> matters</td></tr>
+<tr><td>$5</td><td>$5</td><td>0.5000</td><td>equal costs is the only case where 0.5 is right</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The default threshold is off by a factor of fifty here</strong>, and that single line of arithmetic recovers most of the recall people go to SMOTE for — without touching the data, the model, or the calibration. It is also the answer to "what threshold should I use", which is otherwise an unanswerable question: it depends on costs, so get the costs.</div>
+<div class="card-body" style="margin-top:8px">When costs are unknown or political, the usable substitutes are <strong>recall at a fixed precision</strong> ("catch as much as possible while keeping the review queue at least 20% real") or <strong>precision at fixed recall</strong> ("we must catch 90% by regulation — how much noise does that cost"). Both are business conversations with a number attached, which is a far better artefact than a tuned F1.</div>
+<div class="box warn"><div class="bl">this requires calibration, so check it</div>
+<p>The derivation assumes p means what it says. Tree ensembles are not calibrated out of the box, and anything you do in the next two cards — class weights, resampling — deliberately breaks calibration by shifting the implied base rate. If you reweight and then apply a cost-derived threshold, the threshold is being applied to numbers that are no longer probabilities. Either leave the data alone and threshold, or reweight and recalibrate on the true prevalence before thresholding.</p></div></div>
 
 <div class="anim-wrap"><div class="anim-title">Four ways to handle imbalance, in pipeline order</div>
 <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
@@ -67,6 +67,80 @@
 <text x="448.0" y="168.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">changes nothing but the decision</text>
 <text x="250.0" y="190.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">Try the last one first: it costs nothing, invents no data, and is usually competitive.</text>
 </svg></div>
+
+<div class="card ca"><div class="card-title">Class weights: the same effect without touching the data</div>
+<div class="card-body">Multiply each class's contribution to the loss by a weight. sklearn's <code>'balanced'</code> sets w<sub>c</sub> = n / (k · n<sub>c</sub>), which equalises the total weight carried by each class.</div>
+<div class="card-body" style="margin-top:8px">With 100,000 rows and 100 positives:</div>
+<div class="formula math-formula">$$w_{+} = \frac{100{,}000}{2 \times 100} = \mathbf{500} \qquad w_{-} = \frac{100{,}000}{2 \times 99{,}900} = \mathbf{0.5005} \qquad \frac{w_+}{w_-} \approx \mathbf{1000\times}$$</div>
+<div class="card-body" style="margin-top:8px">Each positive row now counts a thousand times a negative one. That is <em>almost exactly</em> what oversampling the minority 1000× would do to the loss — with three advantages: no duplicated rows for a flexible model to memorise, no synthetic points, and no extra training time. In XGBoost the equivalent is <code>scale_pos_weight = n_neg / n_pos</code>.</div>
+<div class="card-body" style="margin-top:8px"><strong>What it costs you is calibration</strong>, by construction and by a known factor — you have told the model the base rate is 50% when it is 0.1%. The output is still monotone in true risk, so ranking, AUC and threshold-sweeping all still work. Anything multiplied by money needs recalibration on real prevalence first.</div></div>
+
+<div class="card cg"><div class="card-title">Resampling: what SMOTE assumes, and when it breaks</div>
+<div class="card-body">SMOTE takes a minority point, picks one of its k minority nearest neighbours, and creates a new point on the segment between them:</div>
+<div class="formula math-formula">$$x_{\text{new}} = x_i + \lambda\,(x_{\text{neighbour}} - x_i), \qquad \lambda \sim \text{Uniform}(0,1)$$</div>
+<div class="card-body" style="margin-top:8px">The whole method rests on one assumption: <strong>the straight line between two minority points is also minority territory.</strong> That is reasonable for a compact blob of continuous features in low dimensions. It fails in the cases people most often apply it to:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>One-hot and categorical columns.</strong> Interpolating between two one-hot vectors produces 0.5 of a category — a row that could not exist, presented to the model as a real positive. <code>SMOTE-NC</code> exists for mixed data; plain SMOTE on one-hot input is generating nonsense</li>
+<li><strong>High dimensions.</strong> SMOTE is a k-NN method, so it inherits the curse of dimensionality wholesale. Once "nearest neighbour" stops being meaningful, the synthetic points are interpolations between unrelated rows. This is why SMOTE so often fails to beat plain class weights on wide data</li>
+<li><strong>Noisy or overlapping classes.</strong> A mislabelled minority point in the middle of the majority region becomes a <em>generator</em> of further minority points there, actively enlarging the error. SMOTE-ENN and Tomek-link cleaning exist to remove those afterwards</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>Random oversampling</strong> duplicates exact rows, which a high-capacity model memorises — the duplicates are not new information, they are the same point counted repeatedly. <strong>Random undersampling</strong> discards real, collected data, and is defensible only when the majority class is so large that you are compute-bound rather than data-bound.</div>
+<div class="box warn"><div class="bl">the leak, and the pipeline that prevents it</div>
+<p><strong>SMOTE before the split contaminates the test set</strong> — and in a way that is easy to under-rate. It is not merely that synthetic rows land in both halves; it is that a synthetic training point can be a convex combination of two <em>test</em> rows, so the model has literally been shown a blend of the data it is evaluated on. The score can be near-perfect and means nothing.</p>
+<p style="margin-top:8px">Resampling must happen inside each fold, on the training portion only. Use <strong><code>imblearn.pipeline.Pipeline</code></strong>, not sklearn's — imblearn's applies samplers on <code>fit</code> and skips them on <code>predict</code>, which is exactly the required behaviour and is not something sklearn's Pipeline knows how to do. And never resample the validation or test set: those must keep the real prevalence or every metric you compute is answering a different question.</p></div></div>
+
+<div class="card cb"><div class="card-title">Focal loss: reweight by difficulty instead of by class</div>
+<div class="card-body">Class weights treat every positive alike. Focal loss instead down-weights <em>easy</em> examples of either class, so training attention flows to the boundary:</div>
+<div class="formula math-formula">$$\text{FL}(p_t) = -(1 - p_t)^{\gamma}\,\log(p_t)$$</div>
+<div class="card-body" style="margin-top:8px">where p<sub>t</sub> is the predicted probability of the <em>correct</em> class. The modulating factor collapses as the model gets an example right:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>p<sub>t</sub></th><th>(1 − p<sub>t</sub>)² at γ = 2</th><th>Effect on that example's loss</th></tr>
+<tr><td>0.9 — easy, already correct</td><td><strong>0.010</strong></td><td>contributes 1% of its unmodulated loss</td></tr>
+<tr><td>0.5 — on the boundary</td><td><strong>0.250</strong></td><td>contributes 25%</td></tr>
+<tr><td>0.1 — badly wrong</td><td><strong>0.810</strong></td><td>contributes 81% — dominates the gradient</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A boundary example carries <strong>25× the weight</strong> of a comfortably-classified one. This matters at extreme imbalance because the loss would otherwise be the sum of a million tiny, individually-negligible easy-negative terms that collectively swamp the thousand informative ones. It comes from RetinaNet, where the imbalance is roughly 1000:1 background to object, and it is the standard choice for imbalanced deep learning. For gradient-boosted trees, class weights plus thresholding does the same job with less machinery.</div></div>
+
+<div class="card ca"><div class="card-title">Metrics, and what each is blind to</div>
+<table class="tbl">
+<tr><th>Metric</th><th>Verdict</th><th>Reason</th></tr>
+<tr><td><strong>Accuracy</strong></td><td>never</td><td>the all-negative classifier scores 99.9%. It is a measure of prevalence, not of the model</td></tr>
+<tr><td><strong>ROC-AUC</strong></td><td>with care</td><td>FPR's denominator is the huge TN pool, so it stays optimistic. Fine for comparing models, misleading as an absolute claim of usefulness</td></tr>
+<tr><td><strong>PR-AUC</strong></td><td><strong>yes</strong></td><td>never touches TN. Quote it against the prevalence baseline, which is where random sits</td></tr>
+<tr><td><strong>F1 / F-beta</strong></td><td><strong>yes</strong></td><td>ignores TN. F-beta lets you state the trade explicitly — β = 2 weights recall twice precision</td></tr>
+<tr><td><strong>MCC</strong></td><td><strong>yes</strong></td><td>the only common metric using all four cells that still sits near 0 for every trivial classifier. The best single summary number</td></tr>
+<tr><td><strong>Recall @ fixed precision</strong></td><td><strong>yes</strong></td><td>not a leaderboard metric — an operational one. Usually the number the business actually wants</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">And use <code>StratifiedKFold</code> without exception. At 0.1% prevalence a plain random 5-fold split can hand you a fold containing zero positives, which makes its recall undefined and its contribution to the mean meaningless. At extreme imbalance, prefer repeated stratified CV — a single fold's positive count may be small enough that the metric's variance across folds dwarfs the differences you are trying to measure.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>SMOTE before the train/test split.</strong> Synthetic training rows can be blends of test rows. Resample inside the fold with <code>imblearn</code>'s Pipeline</li>
+<li><strong>Resampling the validation or test set.</strong> Those must carry the real prevalence, or precision and PR-AUC are computed against a base rate that does not exist</li>
+<li><strong>Reaching for resampling first.</strong> Metric, then threshold, then weights, then resampling. Most problems are solved before step four, and the earlier steps preserve calibration</li>
+<li><strong>Leaving the threshold at 0.5.</strong> The single most common miss. It is only correct when the two errors cost the same</li>
+<li><strong>Quoting probabilities after reweighting.</strong> Weights and resampling shift the implied base rate on purpose. Ranking survives; probabilities do not, until you recalibrate on true prevalence</li>
+<li><strong>Reporting PR-AUC without the baseline.</strong> 0.05 is meaningless alone, and excellent at 0.001 prevalence</li>
+<li><strong>Unstratified CV.</strong> Folds with no positives produce undefined metrics that silently poison the average</li>
+<li><strong>Optimising F1 by default.</strong> F1 encodes the specific opinion that precision and recall matter equally. If a missed fraud costs 100× a review, F1 is the wrong objective — use F-beta or a cost-derived threshold</li>
+<li><strong>Treating imbalance as the problem when the real problem is 40 positive examples.</strong> No sampler creates information. At that point the useful moves are collecting more positives, weak supervision, or reframing as anomaly detection, which needs no positive labels at all</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is handled in production</div>
+<ul class="bul">
+<li><strong>Payments fraud.</strong> <code>scale_pos_weight</code> or class weights as the first move, PR-AUC as the tracked metric, and the threshold set from an explicit cost model that the risk team owns. Thresholds are re-tuned far more often than models are retrained, because the cost ratio moves with chargeback rates and staffing</li>
+<li><strong>Two-stage triage.</strong> A high-recall, low-precision model narrows millions of cases to a reviewable queue; a second, more expensive stage or a human ranks it. This is the real production answer to extreme imbalance — you are not trying to make one classifier decide, you are trying to make the queue as small as possible while keeping the catch rate</li>
+<li><strong>Regulated recall floors.</strong> In parts of healthcare and AML the recall target is set by regulation, so the model is tuned to <em>precision at fixed recall</em> and the false-positive load becomes a staffing cost to plan for. The metric is chosen by the rulebook, not by the data scientist</li>
+<li><strong>Focal loss in deep models.</strong> Standard wherever the imbalance is structural — dense object detection, span extraction, spam. The gradient contribution of easy negatives has to be suppressed or it drowns everything else</li>
+<li><strong>Anomaly detection when positives are too rare to model.</strong> Below a few dozen positives, one-class methods and reconstruction error need no positive labels, and distance-to-training-data doubles as the drift monitor. Reframing beats resampling in this regime</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Do not lead with SMOTE.</strong> Say that imbalance is usually a metric and threshold problem: "the model is reporting honest low probabilities; accuracy and a 0.5 cut are what is broken." That reframing is the answer they are hoping for, and candidates who open with resampling reveal they have never had to keep probabilities usable.</p>
+<p style="margin-top:8px"><strong>Have the threshold derivation ready.</strong> Flag when p &gt; C<sub>FP</sub>/(C<sub>FP</sub> + C<sub>FN</sub>). With <span>$5</span> review and <span>$500</span> loss that is 0.0099 — the default is wrong by a factor of fifty. Deriving it beats saying "I tune the threshold on validation", because it shows the threshold is a business input rather than a hyperparameter.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why not just use accuracy / AUC?" — Give the confusion matrix. A million negatives, 10,000 false positives: FPR is 0.01 and sounds great, precision is 0.083, and the analyst sees eleven false alarms per catch. The difference is that FPR's denominator is the TN pool. Add that PR-AUC's baseline is the prevalence, so it must be quoted against it.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How does SMOTE work, and when would you not use it?" — Interpolate between a minority point and a minority neighbour. Then the limits, which is the real answer: it assumes the segment between two minority points is minority, so it breaks on one-hot features (0.5 of a category), degrades in high dimensions because it is k-NN underneath, and amplifies mislabelled points into generators. And it must sit inside the CV fold, or synthetic rows become blends of the test set.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Four responses to imbalance, ranked. The last one — leaving the data alone and moving the threshold — is usually the best and is almost always skipped.</div>

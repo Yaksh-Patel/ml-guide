@@ -1,71 +1,20 @@
 <section class="section" id="sec-featureeng">
 <div class="sec-title">Feature Engineering &amp; Data Processing</div>
-<div class="sec-desc">The art and science of turning raw data into signals that algorithms can use — arguably the highest-ROI activity in applied ML. Better features beat better algorithms every time.</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Missing Value Strategies</div>
-<table class="tbl"><tr><th>Method</th><th>When to Use</th></tr>
-<tr><td>Drop rows</td><td>Only if &lt;5% missing and random (MCAR)</td></tr>
-<tr><td>Mean/median imputation</td><td>MCAR; doesn't preserve variance</td></tr>
-<tr><td>Mode imputation</td><td>Categorical features</td></tr>
-<tr><td>KNN imputation</td><td>MAR; uses similar rows; expensive</td></tr>
-<tr><td>Model imputation</td><td>Best accuracy; risk of leakage</td></tr>
-<tr><td>Missing indicator + impute</td><td>When missingness itself is signal</td></tr>
-<tr><td>XGBoost/LightGBM</td><td>Handle NaN natively — no imputation needed</td></tr></table>
-<div class="box warn"><div class="bl">⚠️ Types of Missingness</div><p><strong>MCAR</strong> (completely at random): safe to drop. <strong>MAR</strong> (at random given other vars): impute. <strong>MNAR</strong> (not at random — the value is missing because of what it is): add missingness indicator as feature!</p></div></div>
-<div class="card cg"><div class="card-title">Encoding Categorical Features</div>
-<table class="tbl"><tr><th>Method</th><th>Best For</th><th>Watch Out</th></tr>
-<tr><td>One-hot encoding</td><td>Low cardinality (&lt;10 cats)</td><td>Curse of dim for high cardinality</td></tr>
-<tr><td>Label encoding</td><td>Ordinal categories; tree models</td><td>Implies order for nominal data</td></tr>
-<tr><td>Target encoding</td><td>High cardinality</td><td>Severe leakage without CV-in-fold</td></tr>
-<tr><td>Count/freq encoding</td><td>High cardinality; trees</td><td>Same count for different cats</td></tr>
-<tr><td>Binary encoding</td><td>Medium cardinality</td><td>Log₂(k) columns</td></tr>
-<tr><td>Embeddings (NN)</td><td>Very high cardinality (user ID)</td><td>Needs training; complex</td></tr>
-<tr><td>Hashing</td><td>Very high cardinality; streaming</td><td>Hash collisions</td></tr></table></div>
-</div>
-<div class="card ca"><div class="card-title">Feature Scaling</div>
-<div class="g2" style="margin-top:8px">
-<div><strong style="color:var(--text);font-size:13px">Standardization (Z-score)</strong>
-<div class="formula math-formula">$$x' = (x - \mu) / \sigma  \rightarrow  N(0,1)$$</div>
-<div class="card-body">Use for: linear models, SVM, PCA, neural networks. Does NOT bound to [0,1] — outliers still present.</div></div>
-<div><strong style="color:var(--text);font-size:13px">Min-Max Normalization</strong>
-<div class="formula math-formula">$$x' = (x - xmin) / (xmax - xmin)  \rightarrow \quad \text{[0,1]}$$</div>
-<div class="card-body">Use for: neural networks when you need bounded input. Sensitive to outliers — one extreme value squashes everything else.</div></div>
-</div>
-<div class="card-body" style="margin-top:8px"><strong>Never scale:</strong> tree-based models (XGBoost, RF, decision trees) — splits are rank-based, scale doesn't matter. <strong>Always scale:</strong> KNN, SVM, linear/logistic, neural networks, PCA.</div></div>
-<div class="card"><div class="card-title">Feature Selection Methods</div>
-<table class="tbl"><tr><th>Method</th><th>Type</th><th>When to Use</th></tr>
-<tr><td>Variance threshold</td><td>Filter</td><td>Remove near-constant features</td></tr>
-<tr><td>Correlation filter</td><td>Filter</td><td>Remove highly correlated pairs (keep one)</td></tr>
-<tr><td>Chi-square test</td><td>Filter</td><td>Categorical feature vs target independence</td></tr>
-<tr><td>Mutual information</td><td>Filter</td><td>Non-linear dependency feature vs target</td></tr>
-<tr><td>L1 (Lasso)</td><td>Embedded</td><td>Feature selection via regularization</td></tr>
-<tr><td>Tree importance</td><td>Embedded</td><td>Tree models; fast; MDI-biased</td></tr>
-<tr><td>SHAP importance</td><td>Embedded</td><td>Unbiased, theoretically principled</td></tr>
-<tr><td>Recursive Feature Elimination (RFE)</td><td>Wrapper</td><td>Expensive but accurate selection</td></tr>
-<tr><td>Boruta algorithm</td><td>Wrapper</td><td>RF-based; excellent but slow</td></tr></table></div>
+<div class="sec-desc">The stage where domain knowledge actually enters the model — and where essentially every leak is introduced, because the useful features are aggregates and every aggregate is a chance to let the label or the future into the input. A model that leaks scores beautifully offline and loses money in production, so the discipline here is worth more than the cleverness.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Target encoding leakage</strong> — the #1 feature engineering mistake. If you encode a category with the mean of the target on the full dataset, target info leaks into features. Always use CV-in-fold target encoding (compute mean from training fold only for each validation fold) or add Laplace/Gaussian noise</li>
-  <li><strong>Creating features from the test set</strong> — any feature that uses test set statistics (mean, max, percentile) is leakage. Compute all aggregations from training data, then join to test. Even seemingly innocent group-level aggregations need care</li>
-  <li><strong>Not scaling numeric features before interaction terms</strong> — interaction x₁·x₂ is dominated by the larger-scale feature if they're not normalized first. Scale before creating polynomial/interaction features</li>
-  <li><strong>One-hot encoding high-cardinality features</strong> — a city with 10,000 unique values creates 10,000 binary columns. Use target encoding (with leakage protection), frequency encoding, or embeddings instead</li>
-  <li><strong>Log-transforming without checking zeros</strong> — log(0) = -∞. Always use log(1 + x) or check for zeros before applying log transforms to count data or skewed monetary features</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Uber (demand forecasting):</strong> hour-of-day × day-of-week interaction features, lag features (demand 1 week ago same hour), Fourier series features for weekly/yearly seasonality — hand-crafted temporal features remain critical even in deep learning pipelines</li>
-  <li><strong>Airbnb (search ranking):</strong> listing quality score = weighted combination of review count, response rate, booking conversion rate — a single engineered feature that outperforms all raw inputs in ranking models</li>
-  <li><strong>Stripe (fraud detection):</strong> velocity features — transactions_last_1h, transactions_last_24h, distinct_merchants_last_7d — rolling aggregations computed in real-time at inference from a feature store (Redis)</li>
-  <li><strong>LinkedIn (feed ranking):</strong> cross-features between user and content (e.g., user_industry × post_topic) as explicit sparse features fed to linear layers — interaction features bridge the gap between linear models and learned embeddings</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Feature engineering is where I spend most of my ML project time — a well-engineered simple model often beats a poorly-featured complex one. My process: (1) understand domain semantics first — what ratios, lags, or interactions should matter physically? (2) create candidate features, (3) evaluate with SHAP + permutation importance — unbiased, shows direction and magnitude. For high-cardinality categoricals: target encoding with CV-in-fold leakage protection, not one-hot. For time series: lag features, rolling aggregations, and Fourier seasonality terms."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I target-encoded the city column using the full dataset mean." — This is classic leakage. Target encoding must be computed within CV folds (fit on training fold, apply to validation fold).</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you handle feature selection when you have 500 features?" — Answer: (1) remove near-zero variance features; (2) remove features with correlation &gt;0.95 (keep one from each correlated cluster); (3) use SHAP importance on a trained model to rank remaining features; (4) iteratively remove bottom-SHAP features and check CV metric — stop when metric drops. This is more principled than RFE and faster than Boruta for &gt;100 features.</p>
-</div>
+<div class="card cb"><div class="card-title">Target encoding: the highest-leverage feature and the easiest leak</div>
+<div class="card-body">Replace a category with the mean of the target for that category. It collapses a 10,000-level column into one dense, informative number and it routinely beats every alternative on tabular data. It is also the fastest way to leak the label into a feature, and the failure is not subtle once you see it.</div>
+<div class="card-body" style="margin-top:8px"><strong>Consider a category that appears exactly once.</strong> Its "mean target" is computed from one row — that row. So the encoded feature for that row <em>is its own label</em>, exactly. With 5,000 cities across 10,000 rows, a large share are singletons, and you have handed the model a partial copy of y. Cross-validation looks superb, production is a coin flip, and nothing in the code looks wrong.</div>
+<div class="card-body" style="margin-top:8px">Two fixes, and you need both. <strong>Smoothing</strong> blends the category mean toward the global mean, weighted by how much evidence the category actually has:</div>
+<div class="formula math-formula">$$\text{encoded} = \frac{n_c \cdot \bar{y}_c + m \cdot \bar{y}_{\text{global}}}{n_c + m}$$</div>
+<div class="card-body" style="margin-top:8px">where n<sub>c</sub> is the category's row count, ȳ<sub>c</sub> its target mean, and <em>m</em> a smoothing weight — read it as "how many rows of prior I am pretending to have". With a 5% global default rate and m = 20:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Category</th><th>Raw encoding</th><th>Smoothed (m = 20)</th><th>Effect</th></tr>
+<tr><td>1 row, that row defaulted</td><td><strong>1.000</strong> — the label itself</td><td><strong>0.095</strong></td><td>pulled almost all the way back to the 5% prior</td></tr>
+<tr><td>100 rows, 10 defaulted</td><td>0.100</td><td><strong>0.092</strong></td><td>barely moved — the evidence is real</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A single default nudges a thin category from 5% to 9.5% rather than to 100%. <strong>Regularisation is strongest exactly where evidence is thinnest</strong> — the same shape as λ dominating a small leaf's denominator in XGBoost.</div>
+<div class="card-body" style="margin-top:8px">Smoothing alone is not enough, though, because a row still contributes to the statistic that becomes its own feature. <strong>Out-of-fold encoding</strong> closes that: split into folds, and encode each fold using only the <em>other</em> folds' rows. A row never sees itself. This is what <code>TargetEncoder</code> in recent sklearn and CatBoost's ordered statistics both do, and it is the only version that belongs anywhere near production.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">The highest-leverage tabular feature, and its trap</div>
 <svg viewBox="0 0 500 158" xmlns="http://www.w3.org/2000/svg">
@@ -95,6 +44,101 @@
 <text x="372.0" y="122.0" fill="#22d3a0" font-size="8.3" text-anchor="middle" font-family="DM Sans">CV score is lower and honest</text>
 <text x="250.0" y="148.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="JetBrains Mono">smoothed:  (mean · n + prior · k) / (n + k)   — so a category seen twice does not get a confident number</text>
 </svg></div>
+
+<div class="card cr"><div class="card-title">Leakage: three kinds, one question that catches them</div>
+<div class="card-body">Leakage is the defining failure of this topic and it is worth naming the varieties, because they are found in different ways.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Kind</th><th>What happens</th><th>Example</th></tr>
+<tr><td><strong>Target leakage</strong></td><td>a feature encodes the outcome — it exists <em>because</em> the label happened</td><td><code>n_collection_calls</code> when predicting default; <code>discharge_code</code> when predicting readmission. Available in your warehouse, not available at decision time</td></tr>
+<tr><td><strong>Train–test contamination</strong></td><td>a statistic computed across the split</td><td>scaler, imputer, target encoder or <em>feature selector</em> fitted before splitting. The mechanism that makes <code>Pipeline</code> non-optional</td></tr>
+<tr><td><strong>Temporal leakage</strong></td><td>an aggregate whose window includes the future</td><td><code>customer_lifetime_value</code> as a feature for a purchase in month 3. Also any shuffled CV on time-ordered rows</td></tr>
+</table>
+<div class="box warn"><div class="bl">the two-part test for every feature</div>
+<p>For each column ask: <strong>(1) at the moment of prediction, would this value exist?</strong> and <strong>(2) would it have <em>this</em> value?</strong> The first catches obviously unavailable fields. The second is the one that finds real bugs — <code>account_status</code> exists at scoring time, but the value in your training table is today's status, not the status as of the decision. Same column name, different number, and the difference is the leak.</p>
+<p style="margin-top:8px"><strong>Symptoms to act on:</strong> a depth-2 tree reaching 0.99 AUC; one feature holding most of the importance; validation far above anything the business thought possible; and the definitive one — CV at 0.95 and production at 0.62. A shallow tree is the cheapest leak detector available and it names the guilty column for you.</p></div></div>
+
+<div class="card cg"><div class="card-title">Features that repeatedly earn their place</div>
+<ul class="bul">
+<li><strong>Ratios over raw pairs.</strong> Debt-to-income, click-through rate, price per square metre. A linear model cannot construct a quotient and a tree needs many splits to approximate one, so handing over the ratio directly is often the largest single gain available. <em>Divide by the thing that makes rows comparable</em> is most of feature engineering</li>
+<li><strong>Lags and differences</strong> for anything temporal — value last week, change since last month. This is also the fix for the tree-extrapolation problem: a tree cannot predict a level it has never seen, but a <em>difference</em> stays inside its training range even as the level grows</li>
+<li><strong>Velocity and rolling counts.</strong> Transactions in the last hour, distinct merchants in seven days, failed logins in ten minutes. In fraud these are usually the top features outright, because the signal is a change in rate rather than any single value. They are also the ones most often computed with a leaking window — the window must end strictly before the event</li>
+<li><strong>Cyclical encoding</strong> for periodic quantities. Hour 23 and hour 0 are one hour apart and numerically 23 apart, so a raw hour column tells the model midnight is maximally distant from 11pm. Map to a circle instead:</li>
+</ul>
+<div class="formula math-formula">$$x_{\sin} = \sin\!\left(\frac{2\pi h}{24}\right), \qquad x_{\cos} = \cos\!\left(\frac{2\pi h}{24}\right)$$</div>
+<div class="card-body" style="margin-top:8px">Check that it works. Hour 0 sits at (0.000, 1.000), hour 1 at (0.259, 0.966), hour 23 at (−0.259, 0.966). The distance from midnight to 1am is <strong>0.261</strong>; from midnight to 11pm it is also <strong>0.261</strong> — correctly symmetric, where the raw column made one of them 23 times further. Noon lands at distance 2.000, the maximum. Same for day-of-week, month, and wind direction.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>The missingness indicator.</strong> Nearly free and frequently more predictive than the column it describes. If income is blank for 8% of applicants and those applicants default at 12% against a 4% base rate, then <code>income_is_missing</code> beats <code>income</code>. Impute <em>and</em> keep the flag — imputing alone throws the signal away</li>
+<li><strong>Explicit interactions</strong> where the domain implies them — hour-of-day × day-of-week, user_segment × product_category. Trees can find these given depth and data; stating them saves both. Scale the components first, or the wider-ranged one dominates the product</li>
+</ul></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Encoding categoricals</div>
+<table class="tbl">
+<tr><th>Method</th><th>Good for</th><th>Cost</th></tr>
+<tr><td><strong>One-hot</strong></td><td>under ~10 levels</td><td>one column per level. 10,000 cities means 10,000 columns of curse and almost no signal per column</td></tr>
+<tr><td><strong>Ordinal / label</strong></td><td>genuinely ordered levels; tree models</td><td>invents an order for nominal data, which linear models will believe</td></tr>
+<tr><td><strong>Target encoding</strong></td><td>high cardinality — the strong default</td><td>leaks without out-of-fold computation. See above</td></tr>
+<tr><td><strong>Frequency / count</strong></td><td>high cardinality, trees</td><td>no leak risk at all, and two unrelated categories with equal counts become identical</td></tr>
+<tr><td><strong>Hashing</strong></td><td>streaming, unbounded vocabularies</td><td>fixed width by construction; collisions merge unrelated levels</td></tr>
+<tr><td><strong>Embeddings</strong></td><td>very high cardinality inside a network</td><td>needs a network and enough data per level</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Watch for levels that appear at inference and never appeared in training — a new city, a new device model. Decide the fallback deliberately (global mean for target encoding, a reserved bucket for one-hot) or the first unseen value will throw in production.</div></div>
+
+<div class="card ca"><div class="card-title">Scaling: who needs it and why</div>
+<table class="tbl">
+<tr><th>Model</th><th>Scale matters?</th><th>Because</th></tr>
+<tr><td>k-NN, SVM, k-means, PCA</td><td><strong>critically</strong></td><td>the objective is a distance or a variance, so units decide which features exist</td></tr>
+<tr><td>Regularised linear / logistic</td><td><strong>yes</strong></td><td>the penalty charges per unit of coefficient, and coefficient size is inverse to feature scale</td></tr>
+<tr><td>Neural networks</td><td><strong>yes</strong></td><td>conditioning — see below — plus saturating activations</td></tr>
+<tr><td>Trees, RF, XGBoost</td><td><strong>no</strong></td><td>splits use order only, so any monotonic transform gives an identical model</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The gradient-descent reason, which is less often stated.</strong> Wildly different feature scales make the loss surface a long narrow valley, and the number of gradient steps to converge grows linearly with the condition number of the Hessian. Since that condition number tracks the ratio of feature variances, a 1000:1 spread in standard deviations turns a few hundred steps into a few hundred thousand. Standardising is not cosmetic; it is what makes the optimiser's job tractable.</div>
+<div class="card-body" style="margin-top:8px"><strong>Standardise</strong> (subtract mean, divide by sd) by default. <strong>Min-max</strong> when you need bounded input, accepting that one outlier compresses everything else. <strong>Robust</strong> scaling (median and IQR) when outliers are real and you want to keep them without letting them set the scale.</div></div>
+</div>
+
+<div class="card cp"><div class="card-title">Feature selection — and the leak hiding in it</div>
+<table class="tbl">
+<tr><th>Method</th><th>Type</th><th>Use for</th></tr>
+<tr><td>Variance threshold</td><td>filter</td><td>dropping near-constant columns. Free, do it first</td></tr>
+<tr><td>Correlation pruning</td><td>filter</td><td>keeping one of each pair above ~0.95. Helps linear models and stabilises importances</td></tr>
+<tr><td>Mutual information</td><td>filter</td><td>non-linear dependence with the target, unlike a correlation filter</td></tr>
+<tr><td>L1 / lasso</td><td>embedded</td><td>selection as a by-product of fitting — cheap and principled</td></tr>
+<tr><td>SHAP importance</td><td>embedded</td><td>ranking for tree models without the cardinality bias of MDI</td></tr>
+<tr><td>RFE / Boruta</td><td>wrapper</td><td>accurate and expensive; refits the model repeatedly</td></tr>
+</table>
+<div class="box warn"><div class="bl">selection is model fitting, so it belongs inside the fold</div>
+<p>Pick the best 20 of 500 features on the full dataset, then cross-validate the model on those 20, and your CV score is contaminated — the selection already read every row, including the ones each fold is about to be validated on.</p>
+<p style="margin-top:8px"><strong>The demonstration is stark.</strong> Take 100 rows and 500 columns of pure noise with a random binary target. Keep the 10 columns most correlated with y, then cross-validate. You will get an accuracy comfortably above 0.5 from data containing no signal whatsoever, because the selection step found the columns that happened to correlate with the labels in <em>this</em> sample. Put the selector inside the <code>Pipeline</code> and the score returns to chance, which is the correct answer.</p></div>
+<div class="card-body" style="margin-top:8px">A practical order for 500 features: drop near-constant columns, prune correlations above 0.95, rank the rest by SHAP on one fitted model, then remove from the bottom while watching CV — and stop when it drops. Cheaper than RFE, faster than Boruta, and honest as long as every step sits inside the fold.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Target encoding on the full dataset.</strong> The canonical leak. Singleton categories become copies of the label. Out-of-fold plus smoothing, always</li>
+<li><strong>Any transform fitted before the split.</strong> Scalers, imputers, encoders, selectors, PCA. All of them must refit inside each fold, which is what <code>Pipeline</code> is for and why hand-rolled preprocessing is where leaks live</li>
+<li><strong>Aggregates over windows that include the event.</strong> "Average spend" computed over all history, used to predict a transaction inside that history. The window must close before the timestamp you are predicting — and it must close at the same offset it will have in production</li>
+<li><strong>One-hot encoding a 10,000-level column.</strong> Ten thousand near-empty columns. Target, frequency, hashing, or embeddings</li>
+<li><strong>Log-transforming without checking for zeros.</strong> log(0) is −∞ and will propagate NaN through your whole matrix. Use log1p, and remember to invert it correctly if you transformed the target</li>
+<li><strong>Imputing without a flag.</strong> Mean imputation converts "we do not know" into "this person is average", which is both false and less useful than the fact of the gap</li>
+<li><strong>Interactions on unscaled features.</strong> x₁·x₂ is dominated by whichever has the wider range, so the product mostly encodes one input</li>
+<li><strong>Building features the production system cannot compute.</strong> A 30-day rolling distinct count is trivial in a notebook and needs a feature store with the right freshness guarantee at serving time. Training on a feature you cannot serve is a very expensive way to discover an architectural constraint</li>
+<li><strong>Train/serve skew.</strong> The same feature computed by two different code paths — SQL for training, application code for serving — will disagree eventually. Compute both from one definition, or monitor the distributions of both</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this is done at scale</div>
+<ul class="bul">
+<li><strong>Velocity features are the fraud stack.</strong> Counts and distinct-counts over rolling windows — transactions in the last hour, distinct merchants in seven days, failed attempts in ten minutes — served from a low-latency store at inference. The engineering problem is guaranteeing that the window available online matches the window used in training, because a few minutes of difference is enough to inflate offline results</li>
+<li><strong>Feature stores exist to solve exactly one problem: point-in-time correctness.</strong> Given an event at time t, return the feature values <em>as they were</em> at t rather than as they are now. Doing this by hand in SQL is possible and is where temporal leaks come from, which is why the tooling category exists at all</li>
+<li><strong>Composite quality scores.</strong> Marketplaces build single engineered features — a listing quality score combining review count, response rate and conversion — that outperform their raw inputs in ranking, because they encode a business judgement about how the inputs trade off that the model would need far more data to learn</li>
+<li><strong>Cross features in ranking.</strong> Explicit user × content crosses (user_industry × post_topic) fed as sparse inputs remain standard alongside learned embeddings. They give a linear or wide component the interaction terms it cannot form, which is the entire idea behind wide-and-deep architectures</li>
+<li><strong>Temporal features survive deep learning.</strong> Even in neural forecasting stacks, hand-built lags, rolling statistics and Fourier seasonality terms stay in the input. The network could in principle learn them; given finite data it does better when handed them</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with leakage, not with cleverness.</strong> Anyone can list encodings. Say that your first pass on any feature is the two-part test — would this value exist at prediction time, and would it have this value — and that you fit every transform inside the CV fold via a <code>Pipeline</code>. That answer is what distinguishes someone who has shipped a model from someone who has trained one.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How do you encode a high-cardinality categorical?" — Target encoding, then immediately name the trap: a singleton category's encoding <em>is</em> its own label. Fix with smoothing toward the global mean, weighted by category count, and with out-of-fold computation so a row never contributes to its own feature. Quoting the smoothing formula and a number (5% prior, m = 20, one default → 0.095 not 1.0) settles the question.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "You have 500 features, what do you do?" — Variance filter, correlation prune above 0.95, SHAP rank, then trim from the bottom while watching CV. Then volunteer the part most candidates miss: <strong>selection is model fitting, so doing it outside the fold contaminates the score</strong> — 500 noise columns and 100 rows will beat chance if you select first and validate second.</p>
+<p style="margin-top:8px"><strong>Good things to volunteer:</strong> that a missingness indicator is often stronger than the imputed column; that cyclical features need sin/cos or midnight is 23 hours from 11pm; and that trees cannot extrapolate, so for trending targets you engineer differences rather than levels.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Target encoding is the highest-leverage tabular feature and the easiest way to leak. The out-of-fold version is the only one that belongs in production.</div>

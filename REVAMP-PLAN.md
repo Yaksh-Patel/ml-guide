@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C6 done (20 topics), C7–C20 remaining (35 topics)** |
+| **Prose quality** | **C1–C7 done (23 topics), C8–C20 remaining (32 topics)** |
 
-### Prose progress: 20 / 55
+### Prose progress: 23 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -33,7 +33,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C4  11 linear-logistic · 12 knn · 13 naive-bayes
 - [x] C5  14 svm · 15 decision-trees · 16 random-forest
 - [x] C6  17 gradient-boosting · 18 xgboost · 19 clustering · 20 dimred
-- [ ] C7  21 feature-engineering · 22 imbalanced · 23 regularization
+- [x] C7  21 feature-engineering · 22 imbalanced · 23 regularization
 - [ ] C8  24 hyperparameter-tuning · 25 ensemble-methods
 - [ ] C9  26 mlp · 27 activations · 28 loss-functions
 - [ ] C10 29 backpropagation · 30 optimizers · 31 weight-init
@@ -224,5 +224,12 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
 - **Diagram labels in a serif fallback.** 294 SVG `text` elements named DM
   Sans / Syne / Inter, which this build no longer loads. One CSS rule in the
   compat layer remaps them.
+- **Dollar amounts in prose rendering as maths.** KaTeX matches `$…$` inside a
+  *single text node*, so two `$` in one sentence ("costs $5 … costs $500") render
+  as inline maths. Fixed in `22-imbalanced` and `28-loss-functions` by wrapping each
+  amount in a `<span>`/`<strong>` so each `$` sits in its own text node. Intentional
+  inline maths in 01/41/46/48/49 is unaffected. Scan for it with an HTMLParser pass
+  over text nodes, not a line-based grep — a line-based check misses it and also
+  false-positives on multi-line `$$` blocks.
 - **Five pre-existing markup bugs** (unclosed cards in 14/48, stray `</div>` in
   28/29, an orphaned `\end{aligned}$$` printing literal LaTeX in 28). All fixed.

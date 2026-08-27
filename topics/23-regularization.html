@@ -1,56 +1,34 @@
 <section class="section" id="sec-reg">
 <div class="sec-title">Regularization</div>
-<div class="sec-desc">The surgeon that trims model complexity — adds a penalty to the loss function to prevent overfitting and improve generalization.</div>
-<div class="formula math-formula">$$\text{Total Loss} = \underbrace{\text{Data Loss}}_{\text{fit}} + \lambda \times \underbrace{\text{Regularization Penalty}}_{\text{complexity}}$$</div>
-<div class="g2">
-<div class="card cb"><div class="card-title">L1 Regularization — Lasso</div>
-<div class="formula math-formula">$$\text{Penalty} = \lambda \sum_i |w_i|$$</div>
-<ul class="bul" style="margin-top:8px"><li>Pushes coefficients to <strong>exactly zero</strong> — automatic feature selection</li><li>Produces sparse models — most features get wᵢ = 0</li><li>Non-differentiable at 0 — requires subgradient methods</li><li>MAP interpretation: Laplace prior on weights</li></ul>
-<span class="tag tb">Feature selection</span><span class="tag tb">Sparse models</span></div>
-<div class="card cg"><div class="card-title">L2 Regularization — Ridge</div>
-<div class="formula math-formula">$$\text{Penalty} = \lambda \sum_i w_i^2$$</div>
-<ul class="bul" style="margin-top:8px"><li>Shrinks all coefficients proportionally toward zero — never exactly 0</li><li>Smooth penalty — differentiable everywhere</li><li>Better when all features are somewhat relevant</li><li>Handles multicollinearity well (distributes weight)</li><li>MAP interpretation: Gaussian prior on weights</li></ul>
-<span class="tag tg">Shrinkage</span><span class="tag tg">Stable</span></div>
-</div>
-<div class="card"><div class="card-title">Dropout — Regularization for Neural Networks</div>
-<div class="card-body">Randomly zero out each neuron with probability p during training (typically p=0.5 for hidden, p=0.2 for input). Forces the network to learn redundant representations — no single neuron can dominate.</div>
-<div class="formula math-formula">$$\begin{aligned}
-z_i &= \text{activation} \times \frac{\text{Bernoulli}(1-p)}{1-p} \quad \text{(inverted dropout)} \\
-&\quad \text{At inference: use all neurons (no scaling needed)}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Ensemble effect: trains ~2^n sub-networks implicitly</li><li>Apply after activation; before input to next layer</li><li>p=0.5 for fully connected; p=0.1–0.2 for convolutional; not needed with BatchNorm</li></ul></div>
-<div class="card"><div class="card-title">Other Regularization Techniques</div>
-<table class="tbl"><tr><th>Technique</th><th>How</th><th>Used In</th></tr>
-<tr><td>Early stopping</td><td>Stop when val loss stops improving</td><td>NNs, gradient boosting</td></tr>
-<tr><td>Batch Normalization</td><td>Normalize activations per mini-batch</td><td>Deep NNs; implicitly regularizes</td></tr>
-<tr><td>Weight decay (AdamW)</td><td>L2 penalty on weights in optimizer</td><td>Transformers</td></tr>
-<tr><td>Data augmentation</td><td>Artificially expand training data</td><td>CNNs, NLP (EDA, back-translation)</td></tr>
-<tr><td>Label smoothing</td><td>Soft targets (0.9 instead of 1.0)</td><td>Classification NNs</td></tr>
-<tr><td>max_depth / min_samples_leaf</td><td>Structural constraints on tree</td><td>Decision trees, XGBoost</td></tr></table></div>
-<div class="box story"><div class="bl">📖 The Strict Editor</div><p>Regularization is an editor charging you for every word: L1 cuts entire sentences (zeros features). L2 makes every sentence shorter. Dropout randomly silences 50% of your team during rehearsal — they learn to compensate for absent colleagues, making each individual more capable.</p></div>
+<div class="sec-desc">Every regulariser makes the same bet: accept more training error in exchange for less test error. What separates them is the assumption each one encodes about which models are implausible before you have seen any data — and that assumption, not the formula, is what you are choosing when you pick L1 over L2 or dropout over weight decay.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Confusing L1 and L2 effects on sparsity</strong> — L1 (Lasso) creates sparse solutions because its gradient is constant (±1), so small weights get driven exactly to zero. L2 (Ridge) has a gradient proportional to the weight, so it shrinks weights but rarely zeros them out</li>
-  <li><strong>Applying the same λ to all features without scaling</strong> — regularization penalizes large weights, but "large" depends on feature scale. Always StandardScale features before applying L1/L2; otherwise high-scale features are penalized more than low-scale features of equal importance</li>
-  <li><strong>"Dropout replaces all other regularization"</strong> — dropout is effective for fully connected layers but insufficient alone. Modern best practice: dropout + weight decay (AdamW) + batch normalization + data augmentation — layers of complementary regularization</li>
-  <li><strong>Choosing λ by intuition</strong> — regularization strength is a critical hyperparameter. Always tune via cross-validation over a log-scale grid (e.g., [0.0001, 0.001, 0.01, 0.1, 1, 10]); intuition about the right λ is consistently wrong</li>
-  <li><strong>Using L1 when features are correlated</strong> — among a group of correlated features, L1 arbitrarily picks one and zeros the rest. If all correlated features are meaningful, use L2 or Elastic Net (L1+L2) instead</li>
-</ul></div>
+<div class="formula math-formula">$$\text{objective} = \underbrace{\text{data loss}}_{\text{fit the sample}} \;+\; \lambda \cdot \underbrace{\text{penalty}}_{\text{prefer simpler models}}$$</div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Google (neural machine translation):</strong> dropout (rate=0.1–0.3) on all transformer layers + weight decay; label smoothing as an additional regularizer that prevents overconfident softmax outputs — now standard in all transformer training</li>
-  <li><strong>Netflix / Spotify (collaborative filtering):</strong> L2 regularization on user and item embedding matrices prevents extreme embedding magnitudes for users/items with few interactions (cold start regularization)</li>
-  <li><strong>Genomics / bioinformatics:</strong> Elastic Net regression for gene expression prediction — L1 for feature selection (most of 20,000 genes are irrelevant), L2 for stability among correlated gene groups</li>
-  <li><strong>Credit scoring:</strong> L2 (Ridge) regularization on logistic regression scorecard prevents individual feature coefficients from becoming extreme; regulatory requirement that no single feature can dominate the prediction</li>
-</ul></div>
+<div class="card cb"><div class="card-title">The penalty is a prior</div>
+<div class="card-body">L1 and L2 look like arbitrary choices until you write down where they come from. Maximum likelihood picks the weights that best explain the data. Maximum <em>a posteriori</em> multiplies in a prior belief about the weights first:</div>
+<div class="formula math-formula">$$\hat w = \arg\max_w\ \underbrace{p(\text{data} \mid w)}_{\text{likelihood}} \cdot \underbrace{p(w)}_{\text{prior}} \quad\Longrightarrow\quad \arg\min_w\ \big[\underbrace{-\log p(\text{data} \mid w)}_{\text{data loss}} \;\underbrace{-\log p(w)}_{\text{penalty}}\big]$$</div>
+<div class="card-body" style="margin-top:8px">Take the negative log of a prior and you get the penalty term, which fixes the forms exactly:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Gaussian prior</strong> on the weights → −log p(w) ∝ Σwᵢ² → <strong>this is L2 / ridge.</strong> The belief is that weights are small and no coordinate is special</li>
+<li><strong>Laplace prior</strong> (a sharp peak at zero with heavy tails) → −log p(w) ∝ Σ|wᵢ| → <strong>this is L1 / lasso.</strong> The belief is that most weights are exactly zero and a few are large</li>
+</ul>
+<div class="card-body" style="margin-top:8px">So the choice between them is a modelling statement, not a preference: <strong>do you believe every feature contributes a little, or that most contribute nothing?</strong> λ is the strength of that belief. It also explains why the best λ grows as your dataset shrinks — with less data, the prior should carry more of the answer.</div></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Regularization encodes the prior belief that simpler models generalise better. L1 (Lasso) for feature selection — penalizes with constant gradient, drives small weights to exactly zero, producing sparse solutions. L2 (Ridge) when most features matter — shrinks proportionally, stable with correlated features. For deep learning: dropout + weight decay (AdamW) + data augmentation + early stopping — each addresses a different failure mode. λ is always tuned via CV over a log-scale grid; never guessed."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I set dropout=0.5 based on the original paper." — 0.5 was optimal for large fully-connected layers in 2012 AlexNet. Modern transformer layers typically use 0.1. Always tune dropout rate; it's dataset and architecture dependent.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "Why does L1 produce sparse solutions but L2 doesn't?" — Answer: the L1 penalty has a constant subgradient of ±1 regardless of weight magnitude. Even a tiny weight gets pushed by the full ±λ gradient — it reaches zero and stays there (no gradient to push it off zero). L2's gradient is proportional to the weight: as weight → 0, the gradient → 0, so the update force vanishes before reaching zero. L1 has a "sharp corner" at zero in the penalty geometry; L2 has a smooth bowl.</p>
-</div>
+<div class="card cg"><div class="card-title">Why L1 zeroes and L2 does not — the exact answer</div>
+<div class="card-body">The usual explanation is geometric: the L1 constraint region is a diamond with corners on the axes, and an expanding loss contour touches a corner before a face. That is right and it is a picture. Here is the same fact as arithmetic you can check.</div>
+<div class="card-body" style="margin-top:8px">With orthonormal features both penalties have closed-form solutions in terms of the unpenalised estimate — and the two formulas are the whole story:</div>
+<div class="formula math-formula">$$w^{\text{lasso}} = \operatorname{sign}(w^{\text{ols}})\cdot\max\big(|w^{\text{ols}}| - \lambda,\ 0\big) \qquad\qquad w^{\text{ridge}} = \frac{w^{\text{ols}}}{1 + \lambda}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>L1 subtracts a constant and clips at zero. L2 multiplies by a constant.</strong> Run λ = 0.5 through both:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Unpenalised w</th><th>Lasso (subtract 0.5, clip)</th><th>Ridge (× 0.667)</th></tr>
+<tr><td>2.0</td><td>1.500</td><td>1.333</td></tr>
+<tr><td>0.8</td><td>0.300</td><td>0.533</td></tr>
+<tr><td>0.4</td><td><strong>0.000</strong> — eliminated</td><td>0.267</td></tr>
+<tr><td>0.1</td><td><strong>0.000</strong> — eliminated</td><td>0.067</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Everything with |w| below λ is gone under L1, exactly and permanently. Under L2 a coefficient is multiplied by 0.667 no matter how small it already is — 0.1 becomes 0.067, then 0.045, approaching zero and never arriving. <strong>Subtraction has a floor; multiplication does not.</strong></div>
+<div class="card-body" style="margin-top:10px"><strong>L1 —</strong> <span class="tag tb">Feature selection</span><span class="tag tb">Sparse models</span>&nbsp;&nbsp;<strong>L2 —</strong> <span class="tag tg">Shrinkage</span><span class="tag tg">Stable</span></div>
+<div class="card-body" style="margin-top:8px">The gradient view says the same thing in one line. The derivative of |w| is sign(w) — magnitude 1 regardless of how small w is, so the push toward zero never weakens and eventually lands. The derivative of w² is 2w, which vanishes as w → 0, so the push dies out before it arrives. Once L1 has a weight at zero, the subgradient interval [−λ, λ] holds it there against any data gradient smaller than λ.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Coefficient paths: what L1 and L2 actually do</div>
 <svg viewBox="0 0 500 172" xmlns="http://www.w3.org/2000/svg">
@@ -77,6 +55,84 @@ z_i &= \text{activation} \times \frac{\text{Bernoulli}(1-p)}{1-p} \quad \text{(i
 <text x="385.0" y="142.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">L1: hits exactly zero, in order</text>
 <text x="250.0" y="162.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">On correlated features L2 splits the weight between them; L1 keeps one and zeroes the other — arbitrarily.</text>
 </svg></div>
+
+<div class="card cp"><div class="card-title">Choosing between them, and the correlated-feature problem</div>
+<table class="tbl">
+<tr><th></th><th>L1 / Lasso</th><th>L2 / Ridge</th></tr>
+<tr><td><strong>Effect</strong></td><td>exact zeros — selection</td><td>proportional shrinkage — never zero</td></tr>
+<tr><td><strong>Believe when</strong></td><td>most features are irrelevant</td><td>most features matter a little</td></tr>
+<tr><td><strong>Correlated features</strong></td><td><strong>picks one arbitrarily</strong>, zeroes the rest</td><td>splits the weight between them</td></tr>
+<tr><td><strong>Stability</strong></td><td>unstable — a bootstrap can pick a different member</td><td>stable</td></tr>
+<tr><td><strong>Differentiable</strong></td><td>no, kink at zero — needs coordinate descent or a proximal step</td><td>yes, everywhere</td></tr>
+<tr><td><strong>Solution when d &gt; n</strong></td><td>selects at most n features</td><td>always unique and well-defined</td></tr>
+</table>
+<div class="box warn"><div class="bl">the failure that gets lasso mistaken for a feature-importance tool</div>
+<p>Give lasso two strongly correlated features that are both genuinely predictive and it keeps one and zeroes the other — <em>because keeping one is enough to fit the data, and one coefficient costs less penalty than two.</em> Which one survives is decided by noise. Refit on a bootstrap sample and the other may win.</p>
+<p style="margin-top:8px">So a lasso path is not a statement about which features matter; it is one sparse solution among several that fit almost equally well. <strong>Elastic net exists precisely for this</strong> — the L1 term keeps the sparsity and the L2 term makes correlated features share, so a whole correlated group enters or leaves together. If you are using L1 to decide what to tell a stakeholder is important, check the stability across resamples first.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>Scale first, always.</strong> The penalty charges per unit of coefficient, and a coefficient's magnitude is inversely proportional to its feature's scale. Express income in thousands instead of dollars and its coefficient multiplies by 1,000 — so under L2 its penalty contribution multiplies by <strong>10⁶</strong>. Regularising unstandardised features means your choice of units decided which features got selected, which is not a modelling decision anyone intended to make.</div>
+<div class="card-body" style="margin-top:8px"><strong>And do not penalise the intercept.</strong> It only shifts the output level, so shrinking it biases predictions toward zero for no benefit — a model on data with mean 50 cannot fit if its intercept is being pulled to 0. sklearn excludes it automatically; hand-rolled implementations frequently do not.</div></div>
+
+<div class="card ca"><div class="card-title">Dropout: an ensemble you never enumerate</div>
+<div class="card-body">During training, zero each unit independently with probability p. Every minibatch therefore trains a different subnetwork, and since a layer of n droppable units has 2<sup>n</sup> possible masks, the network is an implicit ensemble over an astronomically large family sharing one set of weights. At n = 1,000 that is 2¹⁰⁰⁰ subnetworks — the point being that it is an ensemble you get for free, never by enumeration.</div>
+<div class="card-body" style="margin-top:8px">The mechanism that matters: <strong>no unit can rely on any particular other unit being present</strong>, so the network cannot build brittle chains where one feature detector depends on one upstream neighbour. It is forced into redundant, distributed representations.</div>
+<div class="formula math-formula">$$\text{train:}\quad a' = a \cdot \frac{\text{Bernoulli}(1-p)}{1-p} \qquad\qquad \text{inference:}\quad a' = a$$</div>
+<div class="card-body" style="margin-top:8px"><strong>That 1/(1−p) factor is the detail worth knowing.</strong> At p = 0.5 the surviving activations are scaled by 2, so the expected activation entering the next layer is the same during training as at inference — which is why inference needs no adjustment at all. This is "inverted dropout", and it is why <code>model.eval()</code> is sufficient rather than requiring a manual rescale. Forget it and every activation at inference is roughly double what the next layer was trained to expect.</div>
+<div class="card-body" style="margin-top:8px"><strong>Modern rates are much lower than the famous 0.5.</strong> That number comes from very wide fully-connected layers in 2012, and repeating it in a transformer is a mistake — transformers typically use 0.1, sometimes 0.0 at large scale where the data itself is the regulariser. Dropout also largely left convnets when batch normalisation arrived: BN's minibatch noise is itself regularising, and the two interact badly, since the activation statistics BN estimated during training do not match the undropped statistics at inference.</div></div>
+
+<div class="card cr"><div class="card-title">Weight decay is not L2 once you use Adam</div>
+<div class="card-body">These are treated as synonyms and they are only equivalent under plain SGD. The distinction is the entire content of the AdamW paper and the reason every transformer is trained with AdamW rather than Adam.</div>
+<div class="card-body" style="margin-top:8px"><strong>Under SGD they coincide.</strong> Adding λ‖w‖² to the loss contributes 2λw to the gradient, and subtracting η·2λw from the weight is the same thing as decaying the weight directly. Two descriptions, one update.</div>
+<div class="card-body" style="margin-top:8px"><strong>Under Adam they diverge.</strong> Adam divides each parameter's update by an estimate of its gradient magnitude. If the penalty enters through the loss, <em>its</em> gradient gets divided too:</div>
+<div class="formula math-formula">$$\text{Adam (L2 in the loss):}\ \ w \leftarrow w - \eta\,\frac{\hat m_t + 2\lambda w}{\sqrt{\hat v_t} + \epsilon} \qquad\qquad \text{AdamW:}\ \ w \leftarrow w - \eta\,\frac{\hat m_t}{\sqrt{\hat v_t} + \epsilon} - \eta\lambda w$$</div>
+<div class="card-body" style="margin-top:8px">In the first form, a parameter with historically large gradients has a large √v̂, so its decay is divided down — <strong>the parameters carrying the most signal get the least regularisation</strong>, which is the opposite of the intent. The effective penalty strength ends up coupled to each parameter's gradient history, which is not a prior anyone would choose.</div>
+<div class="card-body" style="margin-top:8px">AdamW applies the decay directly to the weight, outside the adaptive rescaling, so it means the same thing for every parameter. In practice: <strong>use AdamW, and remember that its <code>weight_decay</code> is not comparable to a loss-based L2 λ</strong> — the two need separate tuning, and copying a value across is a common way to get accidentally unregularised training. Also exclude biases and normalisation parameters from decay, as every reference transformer implementation does.</div></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Early stopping and label smoothing</div>
+<div class="card-body"><strong>Early stopping is regularisation</strong>, and for a linear model trained by gradient descent from zero it is approximately equivalent to L2 with a λ that shrinks as steps accumulate — each step lets the weights grow a little further from the origin, so stopping early is a bound on weight norm imposed by the clock. That is why it composes with, rather than replaces, an explicit penalty.</div>
+<div class="card-body" style="margin-top:8px"><strong>Label smoothing</strong> replaces a hard target of 1 with 1 − ε, distributing ε over the other classes. At ε = 0.1 with 10 classes the true class is 0.9 and each other class is 0.1/9 = <strong>0.0111</strong>.</div>
+<div class="card-body" style="margin-top:8px">Its purpose is specific: a hard target of exactly 1 is only reachable by driving the correct logit infinitely far above the others, so cross-entropy keeps pushing the logit gap wider forever and the model becomes progressively more overconfident. A soft target has a finite optimum, so the gap stops growing. <strong>It is a calibration fix as much as a regulariser</strong>, and it is standard in transformer and image-classification training for that reason.</div></div>
+
+<div class="card cg"><div class="card-title">The rest of the toolbox</div>
+<table class="tbl">
+<tr><th>Technique</th><th>What it constrains</th></tr>
+<tr><td><strong>Data augmentation</strong></td><td>encodes the invariances you know are true — a rotated cat is a cat. Usually the highest-value regulariser in vision because it adds real information rather than restricting the model</td></tr>
+<tr><td><strong>Batch / layer norm</strong></td><td>normalises activations; regularises as a side effect via minibatch noise. LayerNorm is the transformer default because it is batch-size independent</td></tr>
+<tr><td><strong>Structural limits</strong></td><td><code>max_depth</code>, <code>min_samples_leaf</code>, <code>num_leaves</code>, γ — regularisation by restricting the hypothesis space rather than by penalising a parameter</td></tr>
+<tr><td><strong>Ensembling</strong></td><td>averaging reduces variance, which is what regularisation is for. A random forest is a regularised decision tree by a different mechanism</td></tr>
+<tr><td><strong>More data</strong></td><td>the only option that reduces variance without adding bias. Always the first thing to price up before tuning λ</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">These are complementary because they constrain different things. A transformer stack typically runs dropout, AdamW decay, LayerNorm, label smoothing and early stopping simultaneously, and removing any one measurably changes the result.</div></div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Regularising unstandardised features.</strong> The penalty is denominated in coefficient units, so your choice of units picks the features. Scaler and model inside one <code>Pipeline</code></li>
+<li><strong>Guessing λ.</strong> The right value spans orders of magnitude and depends on n and on the feature scaling. Search log-spaced, and re-search when the dataset size changes materially</li>
+<li><strong>Tuning λ on the test set.</strong> λ is a hyperparameter like any other. Selecting it on the data you then report makes the report optimistic by an unknown margin</li>
+<li><strong>Using L2 in the loss with Adam and calling it weight decay.</strong> The penalty gets divided by the adaptive term, so well-signalled parameters end up least regularised. Use AdamW, and tune its <code>weight_decay</code> independently rather than reusing an L2 value</li>
+<li><strong>Reading a lasso path as feature importance.</strong> Among correlated features it keeps one arbitrarily. Check stability across bootstraps, or use elastic net so groups move together</li>
+<li><strong>dropout = 0.5 by default.</strong> Right for 2012's wide fully-connected layers, wrong for a transformer, which wants ~0.1. And avoid stacking dropout on batch norm — they fight over the activation statistics</li>
+<li><strong>Penalising the intercept or the norm parameters.</strong> The intercept only sets the output level; biases and LayerNorm gains should be excluded from decay, as reference implementations do</li>
+<li><strong>Adding regularisation to fix a bias problem.</strong> Regularisation trades variance for bias. If train and validation error are both high, the model is underfitting and more penalty makes it strictly worse — check the learning curve before reaching for λ</li>
+<li><strong>Forgetting dropout is active in training mode.</strong> Evaluating without <code>model.eval()</code> gives noisy, pessimistic numbers; training with it off silently removes the regulariser. Both are common and neither raises an error</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">How this shows up in real systems</div>
+<ul class="bul">
+<li><strong>Transformer training is a stack of regularisers.</strong> AdamW decay around 0.01–0.1 with biases and norms excluded, dropout 0.1, label smoothing 0.1, warmup plus decay on the learning rate. None is optional at moderate scale, and the recipe is stable enough across models that deviating from it is usually a bug rather than an innovation</li>
+<li><strong>Elastic net in genomics.</strong> Twenty thousand gene-expression features against a few hundred samples, with genes in strongly correlated pathways. Pure L1 would pick one gene per pathway at random and produce a different answer on every resample; the L2 component makes a pathway enter as a group, which is both more stable and more biologically meaningful</li>
+<li><strong>Embedding regularisation in recommenders.</strong> L2 on user and item vectors stops entities with two interactions from acquiring extreme embeddings — the cold-start case, where the data cannot support a confident representation and the prior has to carry it</li>
+<li><strong>Regulated linear models.</strong> Ridge on a logistic scorecard keeps any single coefficient from dominating, which is partly a stability requirement and partly a governance one: a score that swings on one feature is hard to defend and fragile under population shift</li>
+<li><strong>Augmentation as the dominant regulariser in vision.</strong> Crops, flips, colour jitter, mixup, cutmix. Worth separating from the others because it adds information — the knowledge that a label is invariant to a transform — rather than merely restricting the model. When it applies, it beats penalty tuning</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Expect:</strong> "Why does L1 give sparsity and L2 not?" — Give the arithmetic rather than the diamond picture. With orthonormal features, lasso is soft-thresholding — subtract λ and clip at zero — while ridge multiplies by 1/(1+λ). Subtraction has a floor, multiplication does not, so anything below λ is eliminated exactly and nothing under ridge ever arrives at zero. If you want the gradient version: d|w|/dw = ±1 regardless of magnitude, while d(w²)/dw = 2w vanishes as w → 0.</p>
+<p style="margin-top:8px"><strong>Frame the choice as a prior.</strong> "L2 is a Gaussian prior on the weights, L1 a Laplace prior — so the question is whether I believe every feature contributes a little or that most contribute nothing." That reframing turns a memorised comparison into a modelling argument, and it explains why λ should be larger on small datasets.</p>
+<p style="margin-top:8px"><strong>The differentiator: know that weight decay ≠ L2 under Adam.</strong> If the penalty goes through the loss, Adam divides it by the per-parameter second-moment estimate, so parameters with the largest gradients get the least decay — the opposite of the intent. AdamW applies it outside the adaptive term. Very few candidates raise this, and it is the reason every modern transformer uses AdamW.</p>
+<p style="margin-top:8px"><strong>Do not say</strong> "dropout 0.5 because the paper said so" (that was wide FC layers in 2012; transformers use ~0.1), and do not propose regularisation for a model that is underfitting — check whether train error is already high first.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">L1, L2 and elastic net on correlated features, which is the case that separates them: L2 shares the coefficient, L1 picks one arbitrarily.</div>
