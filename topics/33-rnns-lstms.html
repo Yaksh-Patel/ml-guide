@@ -1,13 +1,20 @@
 <section class="section" id="sec-rnn">
 <div class="sec-title">RNNs &amp; LSTMs</div>
-<div class="sec-desc">Neural networks with memory — process sequences step by step, maintaining a hidden state that summarizes history. Pre-Transformer architecture for sequential data.</div>
-<div class="card"><div class="card-title">Vanilla RNN</div>
-<div class="formula math-formula">$$\begin{aligned}
-h_t = \tanh(W_{hh}h_{t-1} + W_{xh}x_t + b) \\
-y_t = W_{hy}h_t + b_y
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">The same weights (Wₕₕ, Wₓₕ) are applied at every time step — "weight sharing across time" analogous to CNN's weight sharing across space. Problem: for long sequences, multiplying Wₕₕᵀ many times → vanishing or exploding gradients.</div></div>
-<!-- RNN/LSTM Animation -->
+<div class="sec-desc">A recurrent network applies the same weights at every timestep — weight sharing across time, exactly as a convolution shares across space. That reuse is what lets one model handle any sequence length, and it is also what breaks it, because reusing one matrix a hundred times means raising it to the hundredth power. Nearly everything in this topic follows from that single consequence.</div>
+
+<div class="card cb"><div class="card-title">One matrix, raised to the length of your sequence</div>
+<div class="card-body">The recurrence is one line, and the problem is visible in it:</div>
+<div class="formula math-formula">$$h_t = \tanh\big(W_{hh}h_{t-1} + W_{xh}x_t + b\big)$$</div>
+<div class="card-body" style="margin-top:8px">Because the <em>same</em> W<sub>hh</sub> applies at every step, the gradient from step t back to step 1 involves that one matrix multiplied by itself t times. Its behaviour is therefore governed by a single number — the largest singular value λ:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>λ of W<sub>hh</sub></th><th>Gradient factor over 100 steps</th><th>Result</th></tr>
+<tr><td>0.9</td><td><strong>2.7 × 10⁻⁵</strong></td><td>nothing more than ~20 steps back can be learned</td></tr>
+<tr><td>1.0</td><td>1.0</td><td>the only stable value — and it is a knife edge</td></tr>
+<tr><td>1.1</td><td><strong>13,781</strong></td><td>NaN, usually within a few batches</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">This is the product-of-factors instability that governs depth, but <strong>sharper</strong>. In a deep feed-forward network each layer has its own matrix and the errors partially cancel; here one matrix's spectral radius is raised to a power, so nothing averages out. A vanilla RNN is not "hard to train on long sequences" — it is <em>arithmetically unable</em> to carry gradient past a couple of dozen steps unless λ sits almost exactly at 1.</div>
+<div class="card-body" style="margin-top:8px">Two consequences you act on. <strong>Gradient clipping is not optional for recurrent models</strong> — the exploding side arrives abruptly and destroys a run, and clipping by global norm caps the length while preserving direction. And <strong>orthogonal initialisation</strong> of W<sub>hh</sub> is the natural choice, because an orthogonal matrix has every singular value exactly 1, which is precisely the knife edge you want to start on.</div></div>
+
 <div class="anim-wrap"><div class="anim-title">RNN Unrolled — and LSTM gates controlling information flow</div>
 <svg viewBox="0 0 500 190" xmlns="http://www.w3.org/2000/svg">
 <!-- RNN Unrolled (top half) -->
@@ -65,16 +72,20 @@ y_t = W_{hy}h_t + b_y
 <text x="345" y="143" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">o</text>
 <text x="345" y="172" text-anchor="middle" fill="#b97cf8" font-size="9" font-family="DM Sans">output</text>
 </svg></div>
-<div class="card"><div class="card-title">LSTM — Long Short-Term Memory</div>
-<div class="formula math-formula">$$\begin{aligned}
-f_t = \sigma(W_f[h_{t-1}, x_t] + b_f) \quad \text{(forget gate)} \\
-i_t = \sigma(W_i[h_{t-1}, x_t] + b_i) \quad \text{(input gate)} \\
-\tilde{g}_t = \tanh(W_g[h_{t-1}, x_t] + b_g) \quad \text{(candidate memory)} \\
-C_t = f_t \odot C_{t-1} + i_t \odot \tilde{g}_t \quad \text{(cell state update)} \\
-o_t = \sigma(W_o[h_{t-1}, x_t] + b_o) \quad \text{(output gate)} \\
-h_t = o_t \odot \tanh(C_t) \quad \text{(hidden state)}
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">The <strong>cell state</strong> Cₜ is a conveyor belt — it carries information across many time steps with only multiplicative (not additive) interactions, preventing gradient vanishing. Gates (sigmoid squashed → [0,1]) control: forget (what to erase), input (what to add), output (what to expose).</div></div>
+
+<div class="card cg"><div class="card-title">What the LSTM actually changes</div>
+<div class="card-body">The usual explanation is that the cell state is an additive conveyor belt. That is right, and it is worth being precise about why it helps — because the common claim that LSTMs <em>solved</em> vanishing gradients is not true.</div>
+<div class="formula math-formula">$$C_t = f_t \odot C_{t-1} + i_t \odot \tilde g_t \qquad\Longrightarrow\qquad \frac{\partial C_t}{\partial C_{t-1}} = f_t$$</div>
+<div class="card-body" style="margin-top:8px">The gradient along the cell state is a product of <strong>forget-gate values</strong> rather than of weight matrices. The product has not been eliminated — but the multiplier is now a learned, per-timestep, per-dimension number in (0,1) that the network can drive close to 1 where it needs to remember:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Typical f<sub>t</sub></th><th>Over 100 steps</th><th>Over 500 steps</th></tr>
+<tr><td>0.99</td><td><strong>0.37</strong> — largely intact</td><td>0.0066 — fading</td></tr>
+<tr><td>0.90</td><td><strong>2.7 × 10⁻⁵</strong></td><td>effectively zero</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Read the second row: at f = 0.9 an LSTM vanishes exactly as fast as a vanilla RNN at λ = 0.9.</strong> The architecture does not remove the exponential — it hands you control of its base. That is a large and real improvement, because a gate can learn to stay open on the dimensions that matter. It is also why LSTMs still degrade past a few hundred steps, and why attention — which connects any two positions in a single hop — was a categorical change rather than an incremental one.</div>
+<div class="card-body" style="margin-top:8px">It also explains why <strong>initialising the forget-gate bias to 1</strong> matters more than it looks. At bias 0 the gate starts at σ(0) = 0.5, so the cell discards half its memory every step before learning anything — a product of 0.5 that vanishes in a handful of steps. At bias 1 it starts at σ(1) ≈ 0.73, the default behaviour becomes <em>remember</em>, and the model only has to learn when to forget, which is the easier direction.</div>
+<div class="card-body" style="margin-top:8px">The three gates split the job cleanly: <strong>forget</strong> decides what to erase from the cell, <strong>input</strong> decides how much of the new candidate to write, and <strong>output</strong> decides how much of the cell to expose as this step's hidden state. All three are sigmoids because a gate must be a bounded fraction — one of the few places where a saturating activation is the correct engineering choice rather than a legacy one.</div></div>
+
 <div class="g2">
 <div class="card cb"><div class="card-title">GRU — Gated Recurrent Unit</div>
 <div class="formula math-formula">$$\begin{aligned}
@@ -89,29 +100,74 @@ h_t = (1-z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
 <div class="formula math-formula">$$\bar{h}_t = \text{concat}(\text{RNN}_{\text{forward}}(x_t),\; \text{RNN}_{\text{backward}}(x_t))$$</div>
 <div class="card-body" style="margin-top:6px">Used in BERT's architecture conceptually. Requires full sequence — can't stream. More powerful than unidirectional for NLU tasks.</div></div>
 </div>
-<div class="box story"><div class="bl">📖 Goldfish vs Elephant Analogy</div><p>Vanilla RNN is a goldfish — forgets what happened 10 steps ago because the information has to pass through 10 matrix multiplications. LSTM is an elephant with a notebook (cell state) — it decides what to write, what to erase, and what to read. The cell state highway carries memories intact across hundreds of steps.</p></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cp"><div class="card-title">Parameter counts, derived rather than quoted</div>
+<div class="card-body">The gate structure fixes the size exactly. With hidden size h and input size d, each gate needs a matrix over the concatenation [h<sub>t−1</sub>, x<sub>t</sub>], which has width h + d:</div>
+<div class="formula math-formula">$$\text{RNN}: h(h+d) + h \qquad\quad \text{GRU}: 3\big[h(h+d) + h\big] \qquad\quad \text{LSTM}: 4\big[h(h+d) + h\big]$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Cell, h = d = 256</th><th>Matrices</th><th>Parameters</th><th>Relative to LSTM</th></tr>
+<tr><td>Vanilla RNN</td><td>1</td><td>131,328</td><td>25%</td></tr>
+<tr><td>GRU</td><td>3</td><td><strong>393,984</strong></td><td><strong>75%</strong></td></tr>
+<tr><td>LSTM</td><td>4</td><td><strong>525,312</strong></td><td>100%</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">GRU is <strong>exactly</strong> three quarters of an LSTM — not approximately, but by construction, since it has three matrices where the LSTM has four. It merges forget and input into one update gate (what you keep is one minus what you write) and drops the separate cell state, carrying everything in the hidden state.</div>
+<div class="card-body" style="margin-top:8px"><strong>Which to use:</strong> after a decade of comparisons they perform comparably on most tasks. GRU is the better default when compute or memory is constrained; LSTM has a small edge on very long sequences, where separating "what to remember" from "what to expose" pays off. This is not a decision worth agonising over — it matters far less than sequence length, clipping and learning rate.</div></div>
+
+<div class="card ca"><div class="card-title">Why transformers won, and why RNNs did not disappear</div>
+<div class="card-body">The reason is not accuracy in the abstract. It is that h<sub>t</sub> depends on h<sub>t−1</sub>, so <strong>training cannot be parallelised over time.</strong> A length-1,000 sequence means 1,000 strictly sequential steps, each too small to fill a GPU.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th></th><th>RNN / LSTM</th><th>Transformer</th></tr>
+<tr><td><strong>Training — sequential depth</strong></td><td><strong>O(T)</strong> — 1,000 steps at T = 1,000</td><td><strong>O(1)</strong> — all positions at once</td></tr>
+<tr><td><strong>Training — total work</strong></td><td>O(T·h²) — <em>cheaper</em> in raw FLOPs</td><td>O(T²·h) — 10⁶ pairs at T = 1,000</td></tr>
+<tr><td><strong>Path between two positions</strong></td><td>O(T) — must pass through every state between</td><td><strong>O(1)</strong> — one attention hop</td></tr>
+<tr><td><strong>Inference — per token</strong></td><td><strong>O(1)</strong> time, <strong>O(1)</strong> state</td><td>O(T) time, O(T) KV cache</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Notice that the RNN does <em>less</em> total arithmetic and still loses. <strong>On modern hardware, parallelism beats FLOP count</strong> — a transformer's 10⁶ pairwise operations are all independent and saturate thousands of cores, while the RNN's 1,000 steps are serial by definition and leave the machine idle. That, plus the O(1) path between any two positions, is the whole story of the transition.</div>
+<div class="card-body" style="margin-top:8px"><strong>But read the last row.</strong> At inference an RNN carries a fixed-size state and costs the same per token forever, while a transformer's cost and memory grow with the context it has already produced. That is why recurrence survives exactly where that property is decisive:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Streaming recognition.</strong> Real-time speech has to emit output before the utterance ends, so a unidirectional recurrent encoder is a structural fit and a bidirectional or full-attention model is not without modification</li>
+<li><strong>Edge and microcontroller deployment.</strong> A GRU's state is a few hundred numbers, which fits where a KV cache does not. Constant memory per token is what makes kilobyte-scale devices viable</li>
+<li><strong>Very long or unbounded streams.</strong> Sensor and transaction data has no natural end, so an O(T) per-token cost is not merely expensive, it is unusable</li>
+</ul>
+<div class="card-body" style="margin-top:8px"><strong>And the idea has come back.</strong> Modern state-space models — S4, Mamba and relatives — are essentially linear RNNs with structured state, designed so training can be parallelised (via a scan or convolution) while inference keeps the O(1)-per-token recurrent form. They are an explicit attempt to get the transformer's trainability and the RNN's inference profile at once, which is the clearest evidence that recurrence was never the mistake — the <em>non-parallelisable training</em> was.</div></div>
+
+<div class="card cb"><div class="card-title">Training details that decide whether it works</div>
 <ul class="bul">
-  <li><strong>"LSTMs solved the vanishing gradient problem"</strong> — LSTMs greatly mitigate vanishing gradients via the cell state highway (additive gradient flow), but not fully. For sequences &gt;500 steps, LSTMs still struggle. Transformers with attention handle long-range dependencies fundamentally better</li>
-  <li><strong>Using a vanilla RNN instead of LSTM/GRU</strong> — vanilla RNNs suffer severe vanishing gradients on sequences longer than ~10 steps. Always use LSTM or GRU for sequence modelling; vanilla RNNs are only for teaching the concept</li>
-  <li><strong>Not setting forget gate bias = 1</strong> — PyTorch LSTM default forget gate bias is 0 (gate sigmoid(0) ≈ 0.5 — immediately starts forgetting). Setting forget gate bias=1 initialises the gate to ~0.73, encouraging the model to retain context early in training</li>
-  <li><strong>Using bidirectional LSTMs for autoregressive generation</strong> — bidirectional LSTMs see the full sequence in both directions; they cannot generate tokens left-to-right because they require the future to process the past. Use unidirectional LSTMs for generation; bidirectional only for encoding/classification where the full sequence is available</li>
-  <li><strong>Not clipping gradients for RNN training</strong> — RNNs are especially prone to exploding gradients due to repeated matrix multiplication through time. Always apply gradient clipping (clip_grad_norm=1.0 or 5.0) when training RNNs/LSTMs</li>
+<li><strong>Truncated backpropagation through time.</strong> You do not backpropagate through a 10,000-step sequence; you cut the graph every k steps, carrying the hidden state forward but not the gradient. Memory is then O(k·h) rather than O(T·h) — and the model structurally cannot learn dependencies longer than k, which is a modelling choice disguised as a memory setting</li>
+<li><strong>Gradient clipping at global norm 1–5.</strong> Mandatory here for the reason in the first card</li>
+<li><strong>Padding and masking.</strong> Batching variable-length sequences requires padding, and the loss must be masked so pad tokens contribute nothing. Unmasked padding teaches the model to predict padding — a silent bug that shows up as suspiciously low loss</li>
+<li><strong>Sort by length into buckets.</strong> Padding a 10-token sequence to 500 wastes almost all the compute. Length-bucketed batching is often the single largest speedup available</li>
+<li><strong>Bidirectional only where the full sequence exists.</strong> A bidirectional model reads the sequence backwards as well as forwards, so it cannot generate left to right and cannot stream. Fine for classification and tagging, impossible for generation</li>
+<li><strong>Stateful versus stateless.</strong> Carrying the hidden state between batches only makes sense if consecutive batches are consecutive in time; otherwise you are initialising each sequence with an unrelated sequence's state</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Google (on-device speech — RNN-T):</strong> streaming speech recognition uses RNN Transducer (RNN-T) — unidirectional LSTM encoder processes audio frames as they arrive, enabling real-time transcription without seeing future audio; Transformers can't do this without modification</li>
-  <li><strong>Spotify (music generation — early):</strong> LSTM-based melody generation models before transformers dominated; still used in resource-constrained mobile generation tasks where transformer inference is too slow</li>
-  <li><strong>Financial time series:</strong> stacked LSTMs for stock return prediction and anomaly detection in transaction streams; advantage over Transformers: O(n) inference time vs O(n²) attention — critical for high-frequency streaming data</li>
-  <li><strong>Manufacturing / IoT (edge devices):</strong> GRUs (simpler than LSTMs, fewer parameters) deployed on microcontrollers for real-time sensor anomaly detection — GRU's smaller memory footprint fits in KB-scale device RAM</li>
+<li><strong>No gradient clipping.</strong> The reused matrix makes explosion abrupt rather than gradual. One bad batch ends the run</li>
+<li><strong>Claiming LSTMs solved vanishing gradients.</strong> They changed the multiplier from a fixed spectral radius to a learned gate. At f = 0.9 the decay is identical to a vanilla RNN's</li>
+<li><strong>Leaving the forget-gate bias at 0.</strong> Starts by discarding half the cell state every step. PyTorch's default is 0, so this is a change you have to make deliberately</li>
+<li><strong>A bidirectional model for generation.</strong> It needs the future to compute the present. Structurally impossible, not merely inaccurate</li>
+<li><strong>Unmasked padding in the loss.</strong> The model learns to predict pad tokens, and the loss looks great</li>
+<li><strong>Using a vanilla RNN for anything real.</strong> It exists to explain the problem that LSTMs and GRUs address. Past about ten steps it does not work</li>
+<li><strong>Assuming an LSTM will find a long-range dependency.</strong> If the signal is 800 steps back, it almost certainly will not, and truncated BPTT may have made it formally impossible. Check your truncation length against the dependency you need</li>
+<li><strong>Reaching for an RNN on a task with no sequential structure.</strong> Tabular rows in arbitrary order are not a sequence, and the recurrence will invent an ordering effect that is not there</li>
+<li><strong>Ignoring that <code>batch_first</code> is a real source of silent bugs.</strong> PyTorch defaults to (sequence, batch, feature). Getting the axes wrong trains a model over the wrong dimension and nothing errors</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "LSTMs solve the vanishing gradient problem of vanilla RNNs via the cell state — an additive gradient highway that carries information across hundreds of steps without multiplicative decay. Three gates: forget (what to erase from cell state), input (what new info to write), output (what to read to hidden state). Today, for most NLP tasks I default to Transformer-based architectures — better long-range dependencies, parallelisable training. LSTMs remain valuable for: streaming/online processing (no future context needed), time series, and resource-constrained edge deployment."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "LSTMs completely solved vanishing gradients." — They greatly mitigate it but don't eliminate it. For very long sequences (&gt;500 steps), LSTMs still degrade. Transformers with attention are architecturally superior for long-range dependencies.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What's the difference between LSTM and GRU?" — Answer: GRU merges the forget and input gates into a single update gate and combines cell and hidden state. Result: fewer parameters (~75% of LSTM), faster training, often comparable performance. GRU is preferred for smaller datasets or constrained compute; LSTM is preferred for very long sequences where the extra gate expressivity helps.</p>
+<div class="card ca"><div class="card-title">Where recurrence still ships</div>
+<ul class="bul">
+<li><strong>On-device streaming speech.</strong> RNN-Transducer architectures remain standard for real-time transcription because the encoder must consume audio as it arrives and emit text before the utterance ends. Constant per-frame cost and no future context is exactly the recurrent profile</li>
+<li><strong>Industrial and IoT anomaly detection.</strong> GRUs on microcontrollers monitoring sensor streams, where the entire model plus state must fit in kilobytes and run on a battery. Transformer inference is not a candidate at that budget</li>
+<li><strong>High-frequency financial streams.</strong> Constant-time updates per tick with bounded state, on unbounded sequences. The O(1) inference property is the requirement, not an optimisation</li>
+<li><strong>As the ancestor of the current alternative.</strong> The interesting position today is that state-space models reintroduced recurrence deliberately, having made training parallelisable. Understanding why the original recurrence failed — serial training, not the recurrent form — is what makes that development legible rather than surprising</li>
+<li><strong>What they no longer do:</strong> general language modelling, translation, or anything where long-range dependencies and training throughput dominate. Choosing an LSTM there needs a reason beyond familiarity</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Explain the RNN failure with the spectral radius.</strong> "The same W<sub>hh</sub> applies every step, so the gradient involves that one matrix to the power t. At λ = 0.9 over 100 steps that is 2.7 × 10⁻⁵; at 1.1 it is 13,781. One number decides, and unlike a deep feed-forward net there is no cancellation across different matrices." That is a sharper answer than "gradients vanish over long sequences".</p>
+<p style="margin-top:8px"><strong>Then be careful about the LSTM claim</strong>, because the careless version is the common answer. The cell state makes ∂C<sub>t</sub>/∂C<sub>t−1</sub> = f<sub>t</sub>, so the product is over <em>learned gate values</em> rather than weight matrices — the exponential is still there but you control its base. At f = 0.99 over 100 steps you retain 0.37; at f = 0.9 you get 2.7 × 10⁻⁵, identical to the vanilla RNN. <strong>LSTMs mitigate rather than solve</strong>, and that is exactly why attention's O(1) path was a categorical change.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why did transformers replace RNNs?" — Not accuracy first: parallelism. h<sub>t</sub> needs h<sub>t−1</sub>, so training is O(T) sequential steps, while a transformer does all positions at once. Note the counter-intuitive part, which is the good bit: <strong>the RNN does fewer total FLOPs and still loses</strong>, because its work is serial and cannot fill the hardware. Then flip it — at inference the RNN is O(1) per token with O(1) state against the transformer's O(T) and a growing KV cache, which is why streaming ASR and edge devices still use recurrence, and why state-space models are bringing it back.</p>
+<p style="margin-top:8px"><strong>Volunteer:</strong> forget-gate bias to 1 (σ(1) ≈ 0.73, so the default is remember); clipping is mandatory; GRU is exactly 75% of an LSTM's parameters because three matrices instead of four; and truncated BPTT caps the dependency length the model can learn at all, not just the memory it uses.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>
