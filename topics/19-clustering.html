@@ -1,67 +1,41 @@
 <section class="section" id="sec-clustering">
 <div class="sec-title">Clustering</div>
-<div class="sec-desc">Unsupervised grouping of data points — find natural structure without labels. Used for customer segmentation, anomaly detection, data exploration, and compression.</div>
-<div class="card"><div class="card-title">K-Means</div>
-<ol class="num"><li>Initialize k centroids (randomly or K-Means++ for better start)</li><li>Assign each point to nearest centroid</li><li>Update centroids to mean of assigned points</li><li>Repeat until convergence (assignments don't change)</li></ol>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Minimize: } & \sum_i \sum_{x \in C_i} \|x - \mu_i\|^2 \\
-\text{Time: } & O(nkt) \;\text{---}\; n\text{ points, }k\text{ clusters, }t\text{ iterations}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li><strong>Choosing k:</strong> Elbow method (inertia vs k), Silhouette score (higher = better defined clusters)</li><li><strong>Limitations:</strong> assumes spherical clusters, sensitive to outliers, must specify k</li><li><strong>K-Means++:</strong> smart initialization that spreads centroids — avoids bad random starts</li></ul></div>
-<div class="g2">
-<div class="card ca"><div class="card-title">DBSCAN</div>
-<div class="card-body">Density-Based Spatial Clustering of Applications with Noise.</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Core point:} & \geq \mathit{minPts} \text{ neighbors within } \varepsilon \\
-\text{Border point:} & \text{ within } \varepsilon \text{ of a core point} \\
-\text{Noise:} & \text{ not within } \varepsilon \text{ of any core point}
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>Discovers arbitrary-shaped clusters</li><li>Automatically detects outliers (noise points)</li><li>No need to specify k — just ε and minPts</li><li>Fails in varying-density datasets; O(n²) naively (use KD-tree for O(n log n))</li></ul></div>
-<div class="card cp"><div class="card-title">Hierarchical Clustering</div>
-<ul class="bul"><li><strong>Agglomerative (bottom-up):</strong> start with each point as cluster, merge closest pairs iteratively</li><li><strong>Divisive (top-down):</strong> start with one cluster, split iteratively</li><li><strong>Linkage criteria:</strong> single (min distance), complete (max), average (mean), Ward (minimize intra-cluster variance)</li><li>Output: dendrogram — choose number of clusters by cutting at a level</li><li>No need to specify k upfront; O(n³) — doesn't scale to large data</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Evaluating Clusters (no ground truth)</div>
-<table class="tbl"><tr><th>Metric</th><th>Measures</th><th>Range</th></tr>
-<tr><td>Silhouette score</td><td>(b−a)/max(a,b). a=intra-cluster dist, b=nearest-cluster dist</td><td>[−1, 1], higher=better</td></tr>
-<tr><td>Davies-Bouldin index</td><td>Average ratio of intra- to inter-cluster distance</td><td>Lower is better</td></tr>
-<tr><td>Calinski-Harabasz</td><td>Ratio of between-cluster to within-cluster variance</td><td>Higher is better</td></tr>
-<tr><td>Inertia (K-Means)</td><td>Sum of squared distances to centroids</td><td>Lower is better</td></tr></table></div>
-<div class="box story"><div class="bl">📖 City Neighborhoods Analogy</div><p>K-Means is like drawing equal-radius circles on a city map and calling everything in each circle a "neighborhood" — works if neighborhoods are round. DBSCAN is like a city planner who walks through the streets and groups areas by density — naturally follows the actual urban structure, even if it's irregular.</p></div>
+<div class="sec-desc">The only problem here with no answer key — which means the algorithms cannot tell you when they have failed. Ask k-means for five segments and it returns five, on structured data and on pure noise alike, each one ready for a slide with a persona name attached. The techniques take an afternoon to learn; knowing whether the output means anything is the actual skill, and it is where almost all of the value is.</div>
 
-<div class="card"><div class="card-title">Worked Numerical Example — K-Means (k=2, 2D points)</div>
-<div class="card-body">Points: A=(1,1), B=(1.5,2), C=(3,4), D=(5,7), E=(3.5,5). Initialize centroids: μ₁=(1,1), μ₂=(5,7).</div>
-<table class="tbl"><tr><th>Iteration</th><th>Assign to μ₁</th><th>Assign to μ₂</th><th>New μ₁</th><th>New μ₂</th></tr>
-<tr><td>1</td><td>A(1,1), B(1.5,2), C(3,4)</td><td>D(5,7), E(3.5,5)</td><td>(1.83, 2.33)</td><td>(4.25, 6.0)</td></tr>
-<tr><td>2</td><td>A(1,1), B(1.5,2)</td><td>C(3,4), D(5,7), E(3.5,5)</td><td>(1.25, 1.5)</td><td>(3.83, 5.33)</td></tr>
-<tr><td>3 (converged)</td><td>A(1,1), B(1.5,2)</td><td>C(3,4), D(5,7), E(3.5,5)</td><td>(1.25, 1.5)</td><td>(3.83, 5.33)</td></tr>
+<div class="card cb"><div class="card-title">k-means: what it optimises, and the guarantee it does not give</div>
+<div class="card-body">k-means minimises the within-cluster sum of squares — total squared distance from each point to its assigned centre:</div>
+<div class="formula math-formula">$$\text{WCSS} = \sum_{j=1}^{k}\ \sum_{x \in C_j} \|x - \mu_j\|^2$$</div>
+<div class="card-body" style="margin-top:8px">Lloyd's algorithm alternates two steps, each of which provably cannot increase WCSS: <strong>assign</strong> every point to its nearest centre, then <strong>move</strong> every centre to the mean of its members. Monotone decrease over a finite number of possible assignments means it always terminates.</div>
+<ol class="num" style="margin-top:8px"><li>Place k initial centres — k-means++ spreads them deliberately rather than uniformly at random</li><li>Assign each point to the nearest centre</li><li>Recompute each centre as the mean of its assigned points</li><li>Repeat until assignments stop changing</li></ol>
+<div class="box warn"><div class="bl">it converges — to a local optimum</div>
+<p>The global problem is NP-hard, and Lloyd's algorithm only promises it will stop, not that it will stop anywhere good. Different initialisations genuinely land on different answers with different WCSS. <strong>This is why <code>n_init</code> exists and is not a formality</strong> — sklearn runs the whole thing several times and keeps the best-scoring result. k-means++ reduces how often a bad start happens; it does not remove the need for restarts. If you set <code>n_init=1</code> to save time, you have swapped a reliable answer for a fast one.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>And why does it insist on round clusters?</strong> Not by accident of the algorithm — it is the model hiding inside the objective. Minimising squared distance to a centre is exactly fitting a Gaussian mixture with spherical, equal-sized covariances and hard assignments. Spheres are what the objective believes in, so an elongated cluster gets chopped in half and two touching clusters of different sizes get a boundary in the wrong place. Neither is a bug; both are the model being applied where it does not hold.</div></div>
+
+<div class="card cg"><div class="card-title">One run, done by hand</div>
+<div class="card-body">Five points: A = (1,1), B = (1.5,2), C = (3,4), D = (5,7), E = (3.5,5). Start with centres at μ₁ = (1,1) and μ₂ = (5,7).</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Point</th><th>d to μ₁ = (1,1)</th><th>d to μ₂ = (5,7)</th><th>Assigned</th></tr>
+<tr><td>A (1,1)</td><td>0.000</td><td>7.211</td><td>μ₁</td></tr>
+<tr><td>B (1.5,2)</td><td>1.118</td><td>6.103</td><td>μ₁</td></tr>
+<tr><td>C (3,4)</td><td><strong>3.606</strong></td><td><strong>3.606</strong></td><td><strong>exact tie</strong> → μ₁ by tie-break</td></tr>
+<tr><td>D (5,7)</td><td>7.211</td><td>0.000</td><td>μ₂</td></tr>
+<tr><td>E (3.5,5)</td><td>4.717</td><td>2.500</td><td>μ₂</td></tr>
 </table>
-<div class="card-body" style="margin-top:8px">Assignments unchanged in iteration 3 → converged. Inertia = sum of squared distances each point to its centroid. Note C moved from cluster 1 to cluster 2 in iteration 2 as centroid estimates improved — this is why multiple restarts matter.</div>
-</div>
+<div class="card-body" style="margin-top:10px">Clusters are {A, B, C} and {D, E}, so the new centres are the group means: <strong>μ₁ = (1.833, 2.333)</strong> and <strong>μ₂ = (4.25, 6.0)</strong>. Re-assign with those and C now sits 2.034 from μ₁ against 2.358 from μ₂ — it stays put, every other point stays put, and the algorithm has converged after a single update.</div>
+<div class="box warn"><div class="bl">what this tiny example is really showing</div>
+<p>C was <em>exactly</em> equidistant from both initial centres, and after one update it is still nearly so — 2.034 against 2.358. Its cluster membership was decided by an arbitrary tie-break rule and then by a margin of 0.3. <strong>The reported clustering is stable; C's membership is not.</strong> Nothing in the output tells you which points were near-arbitrary, and on a real dataset a large share of them are. That is what the next card measures.</p></div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Forgetting to scale features</strong> — K-Means and DBSCAN are distance-based; a feature with range [0,10000] dominates one with range [0,1]. Always StandardScaler or MinMaxScaler before clustering</li>
-  <li><strong>Using inertia (elbow) as the sole k selector</strong> — inertia always decreases with k. The elbow is often ambiguous. Pair it with silhouette score and domain sense; the "right" k is often a business decision</li>
-  <li><strong>Applying K-Means to non-spherical clusters</strong> — K-Means assumes equal-radius, convex clusters. Use DBSCAN or Gaussian Mixture Models for elongated or irregular shapes</li>
-  <li><strong>DBSCAN with bad ε choice</strong> — ε too large merges all points into one cluster; too small makes everything noise. Use a k-nearest-neighbor distance plot: sort distances to k-th neighbor, find the "elbow" — that's your ε</li>
-  <li><strong>Evaluating clusters with accuracy</strong> — clustering is unsupervised; there are no labels. Use silhouette, Davies-Bouldin, or business-relevant downstream metrics (e.g., churn rate per cluster)</li>
-  <li><strong>Single random init for K-Means</strong> — plain random init is sensitive to bad starting positions. Always use K-Means++ (sklearn default) or set n_init=10+ to run multiple inits</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Spotify:</strong> K-Means on audio feature embeddings (tempo, energy, valence) for playlist clustering; centroids become genre or mood "archetypes" used in Discover Weekly recommendations</li>
-  <li><strong>Airbnb:</strong> K-Means on host/listing features for market segmentation; clusters inform pricing policy and host support prioritisation by segment</li>
-  <li><strong>Uber:</strong> DBSCAN on GPS coordinates to identify ride demand hotspots; noise points (isolated rides) filtered out; density clusters define surge pricing zones</li>
-  <li><strong>Netflix:</strong> hierarchical clustering on viewing behaviour to define viewer persona archetypes used in content commissioning decisions</li>
-  <li><strong>Credit card companies:</strong> K-Means on spending pattern features for customer lifecycle segmentation; each cluster gets a tailored retention or upsell campaign</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For customer segmentation I default to K-Means with K-Means++ initialization — fast, interpretable, and actionable. I select k by combining the elbow curve, silhouette scores, and business requirements (e.g., 'we have 5 regional sales teams' constrains k). I always StandardScale features first — distance metrics are meaningless on mixed-scale data. For anomaly detection, DBSCAN is superior: noise points are natural anomalies. For unknown cluster shapes, I compare K-Means vs DBSCAN vs Gaussian Mixture Models on silhouette score."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I chose k=3 because the elbow plot showed 3." — Silhouette + business context must support it. Pure elbow selection signals mechanical thinking.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How do you validate that your clusters are meaningful?" — Answer: silhouette score for internal validity; downstream business metric (e.g., do clusters have different churn rates?) for external validity; stability check by re-running with different seeds and measuring cluster assignment overlap (Adjusted Rand Index).</p>
-</div>
+<div class="card cp"><div class="card-title">Silhouette, computed for one point</div>
+<div class="card-body">Everyone quotes silhouette; far fewer can define it. For a single point: let <em>a</em> be its mean distance to the other members of its own cluster, and <em>b</em> its mean distance to the members of the nearest other cluster.</div>
+<div class="formula math-formula">$$s = \frac{b - a}{\max(a,\,b)} \qquad s \in [-1, 1]$$</div>
+<div class="card-body" style="margin-top:8px">Take C = (3,4) from the clustering above — own cluster {A, B}, other cluster {D, E}:</div>
+<div class="formula math-formula">$$\begin{aligned}
+a &= \tfrac{1}{2}\big[d(C,A) + d(C,B)\big] = \tfrac{1}{2}[3.606 + 2.500] = 3.053 \\
+b &= \tfrac{1}{2}\big[d(C,D) + d(C,E)\big] = \tfrac{1}{2}[3.606 + 1.118] = 2.362 \\
+s_C &= \frac{2.362 - 3.053}{3.053} = \mathbf{-0.226}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>Negative — so C is on average closer to the cluster it was not assigned to.</strong> Run the same calculation for A and you get a = 2.362, b = 5.964, s = <strong>+0.604</strong>: comfortably placed. One clustering, one point clearly right and one clearly misassigned, and only the arithmetic distinguishes them.</div>
+<div class="card-body" style="margin-top:8px">That is the whole value of silhouette. <strong>Near +1</strong> means tight and well-separated. <strong>Near 0</strong> means the point sits on a boundary and the clustering is not telling you much. <strong>Negative means it is in the wrong cluster.</strong> Averaging over all points gives one number for the clustering, but the per-point distribution is far more informative — a mean of 0.4 hiding 20% negative values is a very different situation from a uniform 0.4, and only one of them survives being shown to a stakeholder.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">k-means assumes spheres; the data rarely agrees</div>
 <svg viewBox="0 0 500 194" xmlns="http://www.w3.org/2000/svg">
@@ -211,6 +185,81 @@
 <text x="410.0" y="164.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">follows linkage</text>
 <text x="250.0" y="184.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">k-means can only draw convex boundaries — that is a property of the algorithm, not the data.</text>
 </svg></div>
+
+<div class="card ca"><div class="card-title">Choosing k, and why the elbow cannot answer</div>
+<div class="card-body">The elbow method plots WCSS against k and looks for a bend. The problem is structural: <strong>WCSS decreases monotonically in k no matter what the data looks like</strong>, because more centres can only ever reduce total squared distance. At k = n every point is its own centre and WCSS is exactly 0.</div>
+<div class="card-body" style="margin-top:8px">So "inertia dropped when I added a cluster" is never evidence of anything — it is arithmetic. And on genuinely structureless data the curve is a smooth convex sweep with no bend at all, which the method has no way to report. <strong>The elbow method cannot express the answer "there are no clusters here"</strong>, and that is frequently the true answer.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>What it actually tells you</th></tr>
+<tr><td><strong>Elbow / WCSS</strong></td><td>weakest of the four. Monotone by construction; the bend is often invisible or imaginary</td></tr>
+<tr><td><strong>Silhouette across k</strong></td><td>genuinely has an interior maximum, so it can prefer a k. Crucially it can also stay near 0 for every k — which is the honest reading of "no structure"</td></tr>
+<tr><td><strong>Stability under reseeding</strong></td><td>cluster twice with different seeds and compare with Adjusted Rand Index. Real structure is recovered repeatedly; imposed structure is not. The most under-used check on this list</td></tr>
+<tr><td><strong>The downstream metric</strong></td><td>do the clusters differ in something you care about — churn, spend, conversion? If not, the partition is real and useless</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">In practice k is very often decided outside the data entirely: there are five regional teams, or the campaign budget covers three segments. That is a legitimate answer, and stating it plainly is better than reverse-engineering an elbow to justify a number you had already chosen.</div></div>
+
+<div class="g2">
+<div class="card cg"><div class="card-title">DBSCAN: density instead of distance-to-a-centre</div>
+<div class="card-body">Two parameters, no k. A point is a <strong>core point</strong> if at least <em>minPts</em> points lie within radius ε of it. Core points within ε of each other join into one cluster, non-core points within ε of a core point join as <strong>border</strong> points, and anything left over is labelled <strong>noise</strong>.</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Finds arbitrary shapes</strong> — it grows clusters by connectivity, so crescents and spirals are no harder than blobs</li>
+<li><strong>Labels outliers explicitly</strong> rather than forcing every point into a group. For anomaly detection that label is the output you wanted</li>
+<li><strong>k is not required</strong>, which removes the entire elbow problem</li>
+<li><strong>Choosing ε:</strong> sort every point's distance to its <em>minPts</em>-th neighbour, plot it, and take the knee. Start minPts around 2×(number of dimensions)</li>
+</ul>
+<div class="box warn"><div class="bl">the limitation, stated precisely</div>
+<p>ε is a <em>single global density threshold</em>. If one genuine cluster is dense and another is diffuse, no single ε works: tighten it and the diffuse cluster becomes noise, loosen it and the dense clusters merge into one. This is not a tuning failure, it is the assumption. <strong>HDBSCAN exists specifically to fix it</strong> by allowing the threshold to vary and extracting clusters that persist across scales — and it is usually the better default now.</p></div></div>
+
+<div class="card cp"><div class="card-title">Hierarchical, and the rest of the toolbox</div>
+<ul class="bul">
+<li><strong>Agglomerative:</strong> start with every point as its own cluster and repeatedly merge the closest pair, producing a dendrogram. You choose k <em>after</em> looking at the tree, by cutting it — which is a real advantage when you do not know k and want to see the structure at every scale</li>
+<li><strong>Linkage is the actual decision.</strong> Single linkage uses the minimum distance and chains through thin bridges; complete uses the maximum and forces compact blobs; <strong>Ward</strong> minimises the increase in within-cluster variance and is the sensible default, being the closest hierarchical analogue of k-means</li>
+<li><strong>O(n²) memory and up to O(n³) time</strong> — it does not scale past tens of thousands of points, which is the main reason it is used for exploration rather than production</li>
+<li><strong>Gaussian Mixture Models</strong> are the right step up from k-means when clusters are elliptical or overlapping: full covariances allow stretched shapes, and you get <em>soft</em> assignments with a probability per cluster. BIC or AIC then gives a principled way to pick k, which none of the geometric methods offer</li>
+<li><strong>Spectral clustering</strong> handles connectivity-based structure that defeats centroids, by clustering in the eigenspace of a similarity graph</li>
+</ul></div>
+</div>
+
+<div class="card cb"><div class="card-title">Evaluation without labels</div>
+<table class="tbl">
+<tr><th>Metric</th><th>What it measures</th><th>Reading</th></tr>
+<tr><td><strong>Silhouette</strong></td><td>(b − a)/max(a,b) per point, then averaged</td><td>[−1, 1], higher better. Inspect the distribution, not just the mean</td></tr>
+<tr><td><strong>Davies–Bouldin</strong></td><td>mean ratio of within-cluster spread to between-cluster separation</td><td>lower better; 0 is the floor</td></tr>
+<tr><td><strong>Calinski–Harabasz</strong></td><td>ratio of between- to within-cluster variance</td><td>higher better; tends to grow with k, so compare cautiously</td></tr>
+<tr><td><strong>WCSS / inertia</strong></td><td>total squared distance to centroids</td><td>monotone in k — <strong>never a model-selection criterion on its own</strong></td></tr>
+<tr><td><strong>Adjusted Rand Index</strong></td><td>agreement between two clusterings, corrected for chance</td><td>the stability check: cluster twice with different seeds and compare</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">All the internal metrics share one blind spot: they reward geometry, so they systematically favour whatever shape your algorithm produces. Silhouette will happily prefer k-means' spheres on data whose real clusters are crescents. <strong>Never let an internal metric be the only evidence</strong> — pair it with a stability check and a downstream outcome.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Not scaling.</strong> Every method here is distance-based, so an unscaled column with a wide range becomes the only column that matters. This is the same 400-million-to-one failure as k-NN, and it is silent</li>
+<li><strong>Treating the output as discovered truth.</strong> The single most consequential error in the topic. <strong>k-means on uniform noise returns k tidy, plausible, presentable segments</strong> and reports no distress. Validate with silhouette, reseed stability, and a business metric before anyone builds a campaign on it</li>
+<li><strong>Selecting k from the elbow alone.</strong> Inertia falls monotonically; the bend is frequently an artefact of the aspect ratio you plotted. Pair with silhouette and say out loud when k came from the business instead</li>
+<li><strong>Clustering in high dimensions without reducing first.</strong> Distance concentration hits this exactly as it hits k-NN — at 100 raw dimensions "nearest" stops meaning much. PCA or UMAP first, then cluster, and remember that changes what you are clustering</li>
+<li><strong>k-means on non-spherical data.</strong> It will split one elongated cluster and merge two adjacent ones, and the silhouette may still look acceptable. Use DBSCAN/HDBSCAN for shapes, a GMM for ellipses</li>
+<li><strong>k-means on categorical or one-hot data.</strong> A mean of one-hot columns is not a point in the data's space, so the centroid is uninterpretable. Use k-modes, or a Gower distance with a method that accepts a precomputed metric</li>
+<li><strong>Leaving <code>n_init=1</code>.</strong> You are reporting one local optimum and calling it the clustering</li>
+<li><strong>Scoring clusters with accuracy.</strong> There are no labels; cluster ids are arbitrary and permutable. If you have labels, this was a classification problem</li>
+<li><strong>Forgetting DBSCAN's noise label.</strong> Points marked −1 are not cluster −1. Aggregating without filtering silently creates a fake segment out of every outlier in the dataset</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">What it is actually used for</div>
+<ul class="bul">
+<li><strong>Customer segmentation, with the honest caveat.</strong> The most common commercial use and the most commonly oversold. Clusters over RFM or behavioural features give marketing an actionable partition — and the value comes from the segments being <em>different in a metric that matters</em>, not from the algorithm. The right validation is a downstream test: do these groups respond differently to the same campaign?</li>
+<li><strong>Retrieval and recommendation infrastructure.</strong> IVF indexes in vector databases cluster the corpus so a query searches only the nearest few cells. Here clustering is invisible plumbing, and it is judged purely on recall and latency — no interpretation required, which makes it the least controversial use on this list</li>
+<li><strong>Geospatial density: DBSCAN's home turf.</strong> Ride pickups, delivery hotspots, disease case locations. Arbitrary shapes and explicit noise labelling are exactly right for coordinates, where clusters follow streets and coastlines rather than circles</li>
+<li><strong>Anomaly detection.</strong> DBSCAN's noise points and distance-to-nearest-centroid both serve as unsupervised outlier scores — valuable precisely where you have no labelled anomalies to train on</li>
+<li><strong>Single-cell biology.</strong> The canonical pipeline is PCA, then UMAP, then cluster, then annotate clusters as cell types. Notable because the clusters here are checked against known marker genes — external validation, which is what makes the field's use of clustering unusually trustworthy</li>
+<li><strong>Image and colour quantisation.</strong> k-means on pixel colours to reduce a palette is compression with an objective measure of success, and one of the few uses where "is this clustering correct" has a clean answer</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>The question behind the question is always validation.</strong> Say early that clustering always returns clusters, including on noise, so the algorithm choice is the easy part. Then give three checks: silhouette (with the distribution inspected, not just the mean), stability across seeds measured by Adjusted Rand Index, and a downstream business metric that differs between clusters. Candidates who only discuss algorithms sound like they have never shipped a segmentation.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How do you choose k?" — Lead with why the elbow is weak: inertia is monotone decreasing in k and hits zero at k = n, so a drop is arithmetic rather than evidence. Silhouette has a real interior maximum and can also report "no structure" by staying near zero. Then say that k is frequently a business constraint, and that naming it as such is more honest than manufacturing an elbow.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does k-means assume spherical clusters?" — Because minimising squared distance to a centroid is fitting a spherical, equal-variance Gaussian mixture with hard assignments. The assumption is in the objective, not the implementation — which is why no amount of restarting fixes an elongated cluster, and why a GMM with full covariances does.</p>
+<p style="margin-top:8px"><strong>Be able to compute a silhouette.</strong> a = mean distance within your cluster, b = mean distance to the nearest other cluster, s = (b − a)/max(a, b); negative means the point is in the wrong cluster. <strong>Do not say</strong> "the elbow showed 3" as a complete answer, and do not present a clustering as discovered structure without saying how you checked it.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">k-means needs k chosen in advance and finds spheres; DBSCAN finds shapes and labels noise. Running both on the same non-spherical data makes the failure mode obvious.</div>

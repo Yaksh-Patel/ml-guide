@@ -1,54 +1,38 @@
 <section class="section" id="sec-dimred">
 <div class="sec-title">Dimensionality Reduction</div>
-<div class="sec-desc">Compress high-dimensional data into fewer dimensions — removing noise, revealing structure, enabling visualization, and speeding up downstream models.</div>
-<div class="card"><div class="card-title">PCA — Principal Component Analysis</div>
-<div class="card-body">Find orthogonal directions of maximum variance in the data via eigendecomposition of the covariance matrix.</div>
-<div class="formula math-formula">$$\begin{aligned}
-\Sigma &= \tfrac{1}{n}X^TX \quad \text{(covariance matrix, after mean-centering)} \\
-\Sigma \mathbf{v} &= \lambda \mathbf{v} \quad \text{(eigendecomposition)} \\
-\mathbf{PC}_1 &= \text{eigenvector with largest eigenvalue} \\
-\mathbf{PC}_2 &= \text{eigenvector with 2nd largest (orthogonal to } \mathbf{PC}_1) \\
-\text{Explained variance ratio} &= \lambda_i \;/\; \textstyle\sum_j \lambda_j
-\end{aligned}$$</div>
-<ul class="bul" style="margin-top:8px"><li>How many components? Choose k such that cumulative explained variance ≥ 95%</li><li>Assumes linear relationships between features</li><li>Interpretability suffers: PCs are linear combinations of all features</li><li>Standardize features first — PCA is scale-sensitive</li></ul></div>
-<div class="g2">
-<div class="card ca"><div class="card-title">t-SNE</div>
-<div class="card-body">t-Distributed Stochastic Neighbor Embedding. Non-linear, preserves local structure, excellent for 2D/3D visualization.</div>
-<ul class="bul" style="margin-top:8px"><li>Converts distances to probabilities; minimizes KL divergence between high-D and low-D probability distributions</li><li>Perplexity parameter (5–50): controls neighborhood size</li><li><strong>Not for features:</strong> t-SNE is only for visualization — distances in 2D plot don't have meaningful scale</li><li>Non-deterministic; computationally expensive O(n²)</li></ul></div>
-<div class="card cp"><div class="card-title">UMAP</div>
-<div class="card-body">Uniform Manifold Approximation and Projection. Faster than t-SNE, preserves global structure better.</div>
-<ul class="bul" style="margin-top:8px"><li>Based on Riemannian geometry and fuzzy topology — mathematically rigorous</li><li>Preserves both local AND global structure (t-SNE loses global)</li><li>Much faster: O(n log n) vs O(n²)</li><li>Can be used for feature engineering (unlike t-SNE)</li><li>Parameters: n_neighbors (local), min_dist (spread)</li></ul></div>
-</div>
-<div class="card"><div class="card-title">Which to Use When</div>
-<table class="tbl"><tr><th>Method</th><th>Best For</th><th>Limitation</th></tr>
-<tr><td>PCA</td><td>Linear compression, preprocessing before ML, decorrelating features</td><td>Only captures linear structure</td></tr>
-<tr><td>Truncated SVD</td><td>Sparse data (TF-IDF), text, recommenders</td><td>Linear; like PCA without mean-centering</td></tr>
-<tr><td>t-SNE</td><td>2D/3D visualization only</td><td>Slow; no out-of-sample extension; non-deterministic</td></tr>
-<tr><td>UMAP</td><td>Visualization + feature engineering; large datasets</td><td>Less interpretable than PCA</td></tr>
-<tr><td>Autoencoder</td><td>Non-linear compression; anomaly detection</td><td>Needs data, compute, tuning</td></tr></table></div>
+<div class="sec-desc">Two unrelated jobs share this chapter: <strong>compressing features</strong> so a model trains on less noise, and <strong>projecting to two dimensions</strong> so a human can look at the data. PCA does the first and can do the second; t-SNE does only the second and is routinely misused for the first. Keeping the two apart is most of what there is to get right here — a t-SNE plot is a picture, not a feature space.</div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Fitting PCA on the full dataset before train/test split</strong> — PCA fitted on test data leaks test distribution into the components. Always fit PCA on training data only, then transform both train and test with the same components</li>
-  <li><strong>Using t-SNE for anything other than visualization</strong> — t-SNE distances in 2D have no meaning: distances between clusters are arbitrary, angles are meaningless, and the same data with different perplexity produces very different layouts. Never use t-SNE embeddings as features for downstream models</li>
-  <li><strong>Choosing n_components arbitrarily</strong> — for PCA, plot explained variance ratio vs component count; choose the "elbow" or the point where cumulative variance ≥ 95%. Never pick a round number (e.g., 10) without justification</li>
-  <li><strong>Applying PCA to categorical/binary features</strong> — PCA is designed for continuous features and assumes linear relationships. Use MCA (Multiple Correspondence Analysis) for categorical data, or encode then normalise before PCA</li>
-  <li><strong>Assuming dimensionality reduction always improves model performance</strong> — PCA discards variance, which can include signal. Always compare model performance with and without PCA on a validation set; it's a preprocessing choice, not a guaranteed improvement</li>
-</ul></div>
+<div class="card cb"><div class="card-title">PCA is a rotation you choose by variance</div>
+<div class="card-body">Find the direction in which the data is most spread out and make it your first axis. Then the most spread-out direction perpendicular to that, and so on. You end up with the same data in a rotated coordinate system, ordered so that the early axes carry the most variation — and you compress by keeping the first few and discarding the rest.</div>
+<div class="formula math-formula">$$\Sigma = \tfrac{1}{n}X^{T}X \quad\text{(mean-centred)}, \qquad \Sigma v_i = \lambda_i v_i, \qquad \text{explained ratio} = \frac{\lambda_i}{\sum_j \lambda_j}$$</div>
+<div class="card-body" style="margin-top:8px">Each eigenvector <em>v<sub>i</sub></em> is a principal component — a direction in the original feature space, and a set of <em>loadings</em> telling you how much each original feature contributes to it. Its eigenvalue λ<sub>i</sub> is the variance the data has along it. The components are mutually orthogonal, which is why PCA also decorrelates: <strong>whatever multicollinearity you had is gone by construction.</strong></div>
+<div class="card-body" style="margin-top:8px">Because it is a rotation followed by truncation, PCA has an <code>inverse_transform</code>: project down, project back, and you recover the data minus whatever the discarded components held. That reconstruction error is measurable, which is what makes PCA usable as compression and as an anomaly score — and it is exactly the property t-SNE lacks.</div>
+<div class="box warn"><div class="bl">compute it with SVD, never by eigendecomposing XᵀX</div>
+<p>Forming XᵀX squares the condition number: κ(XᵀX) = κ(X)². At a mildly ill-conditioned κ(X) ≈ 10⁴ you get 10⁸, and double precision carries about 16 digits — so half your significant figures are gone before the eigensolver starts. <strong>Taking the SVD of the centred X directly gives the same components without ever forming the covariance matrix</strong>, which is what sklearn does. It is the same numerical argument as never implementing the normal equations for least squares by hand.</p></div></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Spotify (music embeddings):</strong> PCA on audio feature vectors (tempo, energy, valence, danceability) to compress 20+ features into 5–6 principal components for clustering and recommendation retrieval</li>
-  <li><strong>Netflix (content understanding):</strong> Truncated SVD (LSA) on movie-tag co-occurrence matrices; PCA on user-rating matrices for collaborative filtering — standard dimensionality reduction in classic recommender systems</li>
-  <li><strong>10x Genomics / biotech:</strong> PCA then UMAP on single-cell RNA-seq data (20,000+ gene dimensions → 2D); standard pipeline for visualizing cell type clusters in computational biology</li>
-  <li><strong>Finance (risk management):</strong> PCA on correlated asset return matrices to extract independent risk factors; the first few principal components often correspond to market, sector, and style factors</li>
-</ul></div>
+<div class="card cg"><div class="card-title">How many components — and why 95% is often disappointing</div>
+<div class="card-body">Sort the eigenvalues, take the running total, and keep enough components to reach your threshold. Suppose five features give eigenvalues 4.0, 2.5, 1.5, 0.8, 0.2 — summing to 9.0:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Components kept</th><th>Variance captured</th><th>Cumulative share</th></tr>
+<tr><td>PC1</td><td>4.0 / 9.0</td><td><strong>44.4%</strong></td></tr>
+<tr><td>PC1–2</td><td>6.5 / 9.0</td><td><strong>72.2%</strong></td></tr>
+<tr><td>PC1–3</td><td>8.0 / 9.0</td><td><strong>88.9%</strong></td></tr>
+<tr><td>PC1–4</td><td>8.8 / 9.0</td><td><strong>97.8%</strong> ← first to clear 95%</td></tr>
+<tr><td>all 5</td><td>9.0 / 9.0</td><td>100%</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Four of five components to reach 95% is a 20% reduction — not the dramatic collapse people expect.</strong> That is the honest general lesson: PCA compresses well only when features are strongly correlated, because correlation is the redundancy it exploits. On roughly independent features the eigenvalues are all similar, no direction dominates, and the 95% rule retains nearly everything. If your scree plot is a gentle slope rather than a cliff, PCA is telling you there is not much redundancy to remove — which is useful information, not a failure.</div>
+<div class="card-body" style="margin-top:8px">Pick the threshold by what it is for: <strong>95–99%</strong> when PCA is preprocessing and you want to lose nothing important; <strong>the scree elbow</strong> when you are looking for how many real underlying factors there are; <strong>exactly 2 or 3</strong> when the output is a plot. And do not report a round number without the variance figure attached — "50 components" means nothing on its own, "50 components, 97% of variance" is a decision.</div></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "I use PCA when features are highly correlated — it removes multicollinearity and reduces compute for downstream linear models. I fit PCA on training data only, choose n_components where cumulative explained variance ≥ 95%, and whittle down from there if compute is constrained. For visualization of high-dimensional embeddings, UMAP is now my default over t-SNE: faster, preserves global structure, and supports out-of-sample projection. Key gotcha: t-SNE output is not a feature space — distances are meaningless after projection."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I applied PCA to get 50 components." — Without justifying component count via explained variance, this signals cargo-cult ML. Always justify n_components with a scree plot or explicit variance threshold.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What does each principal component represent?" — Answer: each PC is a linear combination of original features (a direction in feature space) chosen to maximise variance in that direction, subject to orthogonality to previous PCs. PC1 = direction of greatest variance, PC2 = next greatest orthogonal direction, etc. The loadings (feature weights in each PC) show which original features contribute most to each component.</p>
-</div>
+<div class="card cp"><div class="card-title">Scaling decides the answer, with a number</div>
+<div class="card-body">PCA maximises variance, and variance carries the square of your units. So the component ordering is decided by how you happened to record the columns.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Feature</th><th>Standard deviation</th><th>Variance</th></tr>
+<tr><td>income, in dollars</td><td>40,000</td><td><strong>1,600,000,000</strong></td></tr>
+<tr><td>credit utilisation, 0–1</td><td>0.25</td><td><strong>0.0625</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A ratio of <strong>2.56 × 10¹⁰</strong>. PC1 will point almost exactly along the income axis and explain essentially 100% of the variance — and it will have told you nothing you did not already know, because it is approximately just "income, rescaled". Every other feature is invisible. <strong>Unstandardised PCA ranks your features by their units.</strong></div>
+<div class="card-body" style="margin-top:8px">So standardise first, which makes PCA operate on the correlation matrix rather than the covariance matrix. The one genuine exception is when features are already in the same meaningful unit and their relative variances are the signal — pixel intensities, or returns across assets, where a genuinely more volatile asset <em>should</em> dominate the first factor. Outside that, scale.</div>
+<div class="card-body" style="margin-top:8px"><strong>And fit on training data only.</strong> A PCA fitted on the full dataset has seen the test rows' covariance structure, and the components are built from it — the same leak as fitting a scaler before the split, and just as invisible in the score. Put it in a <code>Pipeline</code> so it refits inside every CV fold.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Scree plot, and the line between reduction and visualisation</div>
 <svg viewBox="0 0 500 158" xmlns="http://www.w3.org/2000/svg">
@@ -79,6 +63,67 @@
 <text x="380.0" y="106.0" fill="#8e97b8" font-size="8.3" text-anchor="middle" font-family="DM Sans">no inverse · no transform() · for looking at only</text>
 <text x="250.0" y="148.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Cluster sizes and between-cluster distances in a t-SNE plot are not meaningful. Do not feed it to a model.</text>
 </svg></div>
+
+<div class="card ca"><div class="card-title">t-SNE: a picture, and why it is not a space</div>
+<div class="card-body">t-SNE converts pairwise distances into a probability distribution over neighbours, then searches for a two-dimensional layout whose neighbour distribution has minimum KL divergence from the original. It optimises <em>who is near whom</em>, and deliberately does not preserve anything else. The consequences are specific and each one is a way people misread the plots:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Cluster sizes are meaningless.</strong> The algorithm expands dense regions and contracts sparse ones to fit them all on one page. A visually large blob is not a bigger or more variable group</li>
+<li><strong>Distances between clusters are meaningless.</strong> Two clusters at opposite corners are not more different than two that are adjacent. Only local neighbourhoods were fitted; the global arrangement is largely an artefact</li>
+<li><strong>Perplexity changes the picture materially.</strong> It sets roughly how many neighbours count as local (5–50). The same data at perplexity 5 and 50 can give layouts you would not guess were related — so report the value, and look at more than one</li>
+<li><strong>It is stochastic.</strong> Different seeds, different layouts. Apparent structure that does not survive a reseed was not structure</li>
+<li><strong>There is no <code>transform</code>.</strong> sklearn's <code>TSNE</code> exposes only <code>fit_transform</code>, and that is not an API oversight — the output is the result of an optimisation over <em>this specific set of points</em>, so there is no function to apply to a new one. It therefore cannot be a step in a pipeline that will ever see new data</li>
+</ul>
+<div class="box warn"><div class="bl">the mistake this card exists to prevent</div>
+<p>Running t-SNE to two dimensions and feeding those two columns to a classifier as features. It is appealing — the plot showed clean separation — and it is wrong three times over: the coordinates have no meaning outside this run, there is no way to compute them for a new row, and the apparent separation partly reflects t-SNE's tendency to exaggerate gaps. <strong>If you want a low-dimensional feature representation, use PCA or UMAP or an autoencoder. t-SNE's output is a figure for a human.</strong></p></div></div>
+
+<div class="card cg"><div class="card-title">UMAP, and the rest of the toolbox</div>
+<ul class="bul">
+<li><strong>UMAP</strong> — the default for visualising embeddings now. Substantially faster than t-SNE, preserves more of the global arrangement, and critically it <em>does</em> provide a <code>transform</code> for new points, so it can legitimately be used for feature engineering. Its knobs are <code>n_neighbors</code> (local versus global emphasis) and <code>min_dist</code> (how tightly points may pack). The axes still mean nothing — do not interpret them</li>
+<li><strong>Truncated SVD</strong> — PCA without the mean-centring step. That sounds like a downgrade and is the entire point: centring a sparse matrix fills in every zero and can turn a manageable TF-IDF matrix into one that will not fit in memory. This is why text and recommender pipelines use Truncated SVD (as LSA) rather than PCA</li>
+<li><strong>Autoencoders</strong> — a neural bottleneck learns a non-linear compression, and reconstruction error doubles as an anomaly score. Needs enough data and tuning to be worth it over PCA, and rarely is on tabular problems</li>
+<li><strong>Supervised alternatives</strong> — LDA maximises class separation instead of variance; PLS finds directions covarying with the target. Reach for these when the reason for reducing dimensions is a downstream prediction, since they optimise for the thing you actually want</li>
+<li><strong>The standard combination:</strong> PCA down to ~50 components, then UMAP or t-SNE to 2. PCA removes noise cheaply and makes the expensive non-linear step both faster and better behaved. This is the canonical single-cell genomics pipeline and it generalises well beyond biology</li>
+</ul></div>
+
+<div class="card cb"><div class="card-title">Which to use when</div>
+<table class="tbl">
+<tr><th>Method</th><th>Use for</th><th>Limitation</th></tr>
+<tr><td><strong>PCA</strong></td><td>linear compression, decorrelating features, denoising, preprocessing before a model</td><td>linear only; components are combinations of all features, so interpretability drops</td></tr>
+<tr><td><strong>Truncated SVD</strong></td><td>sparse data — TF-IDF, interaction matrices, recommenders</td><td>linear; no centring, so components are not variance-maximising in the PCA sense</td></tr>
+<tr><td><strong>t-SNE</strong></td><td>visualisation, and nothing else</td><td>no <code>transform</code>, stochastic, O(n²), cluster sizes and separations not meaningful</td></tr>
+<tr><td><strong>UMAP</strong></td><td>visualisation, and features when you need them</td><td>axes uninterpretable; sensitive to <code>n_neighbors</code></td></tr>
+<tr><td><strong>Autoencoder</strong></td><td>non-linear compression, anomaly detection via reconstruction error</td><td>needs data, compute and tuning; a black box compressing into a black box</td></tr>
+<tr><td><strong>LDA / PLS</strong></td><td>reduction aimed at a known target</td><td>supervised, so it leaks if fitted outside the CV fold</td></tr>
+</table></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Fitting PCA before the train/test split.</strong> The components encode the test set's covariance. Same leak as a prematurely fitted scaler, equally invisible, and it inflates every number downstream</li>
+<li><strong>Not standardising.</strong> Without it PCA sorts features by unit magnitude — see the 2.56 × 10¹⁰ table. The result looks like a successful reduction and is a rescaled copy of your widest column</li>
+<li><strong>Using t-SNE output as features.</strong> No <code>transform</code> exists, the coordinates are run-specific, and the separation is partly manufactured</li>
+<li><strong>Interpreting a t-SNE layout quantitatively.</strong> "These two clusters are far apart so they are very different" and "this cluster is large" are both unsupported. Only local neighbourhood membership survived the projection</li>
+<li><strong>Assuming PCA improves model performance.</strong> It is unsupervised — it maximises variance with no knowledge of your target, so <strong>if the signal lives in a low-variance direction, PCA discards exactly the thing you needed</strong>. It is a preprocessing hypothesis to be tested on validation, never a free win. Boosted trees in particular usually do worse on principal components than on raw features, because rotating destroys the axis-aligned splits they rely on</li>
+<li><strong>PCA on one-hot or binary columns.</strong> Variance on a binary column is a function of its base rate, so components end up ordered by category frequency. Use MCA for categoricals, or reconsider whether reduction is what you need</li>
+<li><strong>Reporting a component count without the variance.</strong> "We used 50 components" is not a justification; "50 components, 97% of variance, and validation AUC was unchanged" is</li>
+<li><strong>Forgetting PCA destroys interpretability.</strong> Every component mixes all original features, so downstream coefficients and SHAP values are about components, not about anything a stakeholder recognises. In a regulated setting that alone can rule it out</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where it earns its place</div>
+<ul class="bul">
+<li><strong>Single-cell genomics — the textbook pipeline.</strong> 20,000+ gene dimensions, PCA to ~50, UMAP to 2, cluster, then annotate clusters by known marker genes. Worth noticing that the last step is <em>external</em> validation: the projection is checked against biology rather than trusted on its own, which is why the field's use of this stack is unusually reliable</li>
+<li><strong>Risk factor models in finance.</strong> PCA on a correlated matrix of asset returns extracts orthogonal factors, and the leading components reliably turn out to correspond to recognisable things — a market factor, then sector and style factors. One of the few settings where principal components are genuinely interpretable, because the domain supplies the names</li>
+<li><strong>Latent semantic analysis and recommenders.</strong> Truncated SVD on TF-IDF or on a sparse user–item matrix was the standard approach for years and remains a strong, cheap baseline. Modern embedding models replaced it for quality, not for cost</li>
+<li><strong>Denoising and compression as preprocessing.</strong> Dropping trailing components drops the directions where variance is mostly measurement noise — useful on spectra, sensor arrays and image data, where the noise really is low-variance and isotropic</li>
+<li><strong>Making an expensive step affordable.</strong> Reducing to 50 dimensions before clustering, nearest-neighbour search, or a t-SNE/UMAP run is standard because it attacks the curse of dimensionality directly and cuts the cost of everything downstream</li>
+<li><strong>Anomaly detection by reconstruction error.</strong> Fit PCA on normal data; a point that reconstructs badly lies off the manifold the normal data occupies. Cheap, needs no anomaly labels, and works well when normal behaviour is genuinely low-dimensional</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Separate the two purposes in your first sentence.</strong> "PCA is a linear rotation into variance-ordered axes — I use it to decorrelate and compress features, and it inverts, so reconstruction error is measurable. t-SNE and UMAP are visualisation: they preserve local neighbourhoods and nothing else." That framing pre-empts most of the follow-ups.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "What does a principal component represent?" — A direction in the original feature space, chosen to maximise variance subject to being orthogonal to all previous components. The loadings say which original features make it up, and the eigenvalue is the variance along it. Add that you would read the loadings before claiming a component means something.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How many components?" — Cumulative explained variance to a stated threshold, or the scree elbow, and never a round number without the variance attached. Then volunteer the caveat that separates people: <strong>PCA is unsupervised, so the highest-variance directions are not necessarily the predictive ones</strong> — it is a hypothesis you validate, and it frequently hurts tree models because it destroys the axis-aligned structure they split on.</p>
+<p style="margin-top:8px"><strong>Two things that read as real experience:</strong> that PCA should be computed by SVD of X rather than by eigendecomposing XᵀX, because forming XᵀX squares the condition number; and that Truncated SVD exists for sparse data because mean-centring would destroy the sparsity. <strong>Do not say</strong> you used t-SNE features, and do not read distances or cluster sizes off a t-SNE plot.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">PCA is a rotation you can invert; t-SNE and UMAP are visualisations you cannot. Treating a t-SNE layout as features is a mistake this snippet is meant to prevent.</div>

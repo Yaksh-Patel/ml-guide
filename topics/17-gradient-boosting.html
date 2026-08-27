@@ -1,73 +1,44 @@
 <section class="section" id="sec-boosting">
 <div class="sec-title">Gradient Boosting</div>
-<div class="sec-desc">Sequential ensemble where each tree corrects the residual errors of all previous trees. Reduces bias (unlike Random Forest which reduces variance). The dominant algorithm for structured data competitions.</div>
-<div class="card"><div class="card-title">Core Algorithm</div>
-<div class="formula math-formula">$$\begin{aligned}
-F_0(x) = \text{base prediction (e.g., mean of } y) \\
-r_{im} = -\frac{\partial L(y_i, F_{m-1}(x_i))}{\partial F_{m-1}(x_i)} \quad \text{[pseudo-residuals]} \\
-\text{Fit tree } h_m \text{ to pseudo-residuals } \{r_{im}\} \\
-F_m(x) = F_{m-1}(x) + \eta \cdot h_m(x) \\
-F(x) = F_0 + \eta \cdot \sum_m h_m(x)
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">For squared loss: pseudo-residuals = actual − predicted (simple residuals). For log-loss: pseudo-residuals = y − σ(F(x)). Each tree is a <em>weak learner</em> (shallow, high bias) trained on the gradient direction of the loss.</div></div>
-<div class="g3">
-<div class="card cb"><div class="card-title">XGBoost</div>
-<ul class="bul"><li>Second-order Taylor expansion for faster convergence</li><li>Built-in L1/L2 regularization on leaf weights</li><li>Handles missing values natively (learns default direction)</li><li>Parallel tree construction per level</li></ul>
-<span class="tag tg">Gold standard</span></div>
-<div class="card cg"><div class="card-title">LightGBM</div>
-<ul class="bul"><li>Leaf-wise growth (vs level-wise in XGBoost) → deeper, more accurate</li><li>GOSS: only large-gradient samples for split finding</li><li>EFB: bundles mutually exclusive features</li><li>10-20x faster than XGBoost on large data</li></ul>
-<span class="tag tb">Speed king</span></div>
-<div class="card ca"><div class="card-title">CatBoost</div>
-<ul class="bul"><li>Native categorical encoding (ordered target encoding)</li><li>Ordered boosting prevents target leakage</li><li>Symmetric trees → fast inference</li><li>Minimal hyperparameter tuning needed</li></ul>
-<span class="tag ta">Best for cats</span></div>
-</div>
-<div class="card"><div class="card-title">Key Hyperparameters</div>
-<table class="tbl"><tr><th>Parameter</th><th>Effect</th><th>Typical Range</th></tr>
-<tr><td>n_estimators</td><td>Number of trees — use early stopping</td><td>100–10000</td></tr>
-<tr><td>learning_rate (η)</td><td>Smaller → needs more trees, generalizes better</td><td>0.01–0.3</td></tr>
-<tr><td>max_depth</td><td>Depth per tree (complexity)</td><td>3–8</td></tr>
-<tr><td>subsample</td><td>Row subsampling per tree</td><td>0.6–0.9</td></tr>
-<tr><td>colsample_bytree</td><td>Feature subsampling per tree</td><td>0.6–0.9</td></tr>
-<tr><td>min_child_weight</td><td>Minimum hessian sum in leaf</td><td>1–10</td></tr>
-<tr><td>gamma</td><td>Min gain to create a split</td><td>0–5</td></tr>
-<tr><td>lambda / alpha</td><td>L2 / L1 on leaf weights</td><td>1, 0</td></tr></table></div>
-<div class="box story"><div class="bl">📖 The Consulting Analogy</div><p>XGBoost hires 500 consultants sequentially. Consultant 1 gives a report. Consultant 2 reads report 1 and specifically studies its mistakes, then corrects them. Consultant 3 corrects what 1 and 2 missed together. Each expert focuses only on the residual errors of all predecessors. By the end, the team has collectively covered every blind spot. Too many rounds? The last consultants start memorizing trivia (overfitting) — early stopping saves you.</p></div>
+<div class="sec-desc">The idea that a long sequence of deliberately mediocre models, each one looking only at what its predecessors got wrong, beats a single strong model. It has held the top of tabular prediction for a decade. The reason is the direction it attacks error from: Random Forest averages away variance, boosting grinds down bias — and almost every practical difference between them follows from that one fact.</div>
 
-<div class="card"><div class="card-title">Worked Numerical Example — 3 Boosting Rounds (Squared Loss)</div>
-<div class="card-body">Labels: y = [3, 5, 2, 8]. Initial prediction F₀ = mean(y) = 4.5. η = 0.5.</div>
-<table class="tbl"><tr><th>Round</th><th>Residuals r = y − F</th><th>Tree predicts h(x)</th><th>Update F += η·h</th><th>New F</th></tr>
-<tr><td>0 (init)</td><td>—</td><td>—</td><td>—</td><td>[4.5, 4.5, 4.5, 4.5]</td></tr>
-<tr><td>1</td><td>[−1.5, +0.5, −2.5, +3.5]</td><td>[−1.5, +0.5, −2.5, +3.5]</td><td>+0.5×h₁</td><td>[3.75, 4.75, 3.25, 6.25]</td></tr>
-<tr><td>2</td><td>[−0.75, +0.25, −1.25, +1.75]</td><td>[−0.75, +0.25, −1.25, +1.75]</td><td>+0.5×h₂</td><td>[3.38, 4.88, 2.63, 7.13]</td></tr>
-<tr><td>3</td><td>[−0.38, +0.12, −0.63, +0.87]</td><td>[−0.38, +0.12, −0.63, +0.87]</td><td>+0.5×h₃</td><td>[3.19, 4.94, 2.31, 7.56]</td></tr>
+<div class="card cb"><div class="card-title">It is gradient descent, but the parameter is the function</div>
+<div class="card-body">"Each tree fits the previous trees' residuals" is true and it hides the actual idea. Ordinary gradient descent improves a model by nudging its <em>parameters</em> down the loss gradient. Boosting nudges the <em>predictions</em> themselves:</div>
+<div class="formula math-formula">$$\theta \leftarrow \theta - \eta\,\frac{\partial L}{\partial \theta} \qquad\text{versus}\qquad F(x) \leftarrow F(x) - \eta\,\frac{\partial L}{\partial F(x)}$$</div>
+<div class="card-body" style="margin-top:8px">The second update wants to move a whole function, and you cannot store an arbitrary function — so you fit a small tree to approximate the gradient and add that instead. <strong>The tree is not the model; the tree is one step of gradient descent.</strong> Everything else is bookkeeping:</div>
+<div class="formula math-formula">$$r_{im} = -\left[\frac{\partial L(y_i, F(x_i))}{\partial F(x_i)}\right]_{F=F_{m-1}} \qquad F_m(x) = F_{m-1}(x) + \eta\, h_m(x)$$</div>
+<div class="card-body" style="margin-top:8px">where <em>r<sub>im</sub></em> is the pseudo-residual for row i at round m, <em>h<sub>m</sub></em> is the tree fitted to those pseudo-residuals, and η is the learning rate. Now the "residuals" story becomes a special case rather than the definition:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>Squared loss</strong> L = ½(y − F)² gives ∂L/∂F = −(y − F), so the negative gradient <em>is</em> the plain residual. This is the only loss for which the folklore is literally true</li>
+<li><strong>Log loss</strong> gives a negative gradient of y − σ(F): the residual in probability space, not in log-odds space. The trees are fitted on a different scale from the one they are added on</li>
+<li><strong>Absolute error</strong> gives sign(y − F) — just ±1. The tree learns <em>which direction</em> to move each row, not how far, which is exactly why MAE-boosting is robust to outliers</li>
+</ul>
+<div class="card-body" style="margin-top:8px">This is why any differentiable loss can be boosted — ranking objectives, Poisson counts, quantiles, Tweedie for insurance claims. You supply a gradient; the machinery is unchanged.</div></div>
+
+<div class="card cg"><div class="card-title">Four rounds by hand</div>
+<div class="card-body">Labels y = [3, 5, 2, 8]. Start at the mean, F₀ = 4.5, with η = 0.5. To keep the arithmetic readable, assume each tree captures its target exactly — see the caveat below, which matters.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Round</th><th>Residual r = y − F</th><th>Update F += 0.5·r</th><th>New F</th></tr>
+<tr><td>0</td><td>—</td><td>—</td><td>[4.5, 4.5, 4.5, 4.5]</td></tr>
+<tr><td>1</td><td>[−1.5, +0.5, −2.5, +3.5]</td><td>+0.5·h₁</td><td>[3.75, 4.75, 3.25, 6.25]</td></tr>
+<tr><td>2</td><td>[−0.75, +0.25, −1.25, +1.75]</td><td>+0.5·h₂</td><td>[3.375, 4.875, 2.625, 7.125]</td></tr>
+<tr><td>3</td><td>[−0.375, +0.125, −0.625, +0.875]</td><td>+0.5·h₃</td><td>[3.1875, 4.9375, 2.3125, 7.5625]</td></tr>
 </table>
-<div class="card-body" style="margin-top:8px">Each round, residuals shrink by factor η. After many rounds, F(x) converges to y. Learning rate η &lt; 1 prevents overshoot — you take a fraction of each correction, allowing later trees to fine-tune rather than overcorrect.</div>
-</div>
+<div class="card-body" style="margin-top:10px">Read down the residual column: every entry is <strong>exactly half the one above it.</strong> That is not a coincidence of these numbers — take a fraction η of a correction and (1 − η) of the error survives. The error decays geometrically at rate (1 − η), and that single fact is what makes the learning rate predictable.</div>
+<div class="box warn"><div class="bl">the caveat that makes this honest</div>
+<p>A real depth-3 tree has at most 8 leaves and must give every row in a leaf the same output, so it captures only <em>part</em> of the residual pattern — never all of it. That is deliberate: a tree flexible enough to fit the residual vector exactly would drive training error to zero in one round and generalise nothing. <strong>The weakness of the base learner is a feature.</strong> It is also why real models need hundreds or thousands of rounds where this table needed four.</p></div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Not using early stopping</strong> — setting n_estimators=1000 and hoping for the best. Always pair with eval_set + early_stopping_rounds; let the data decide when to stop</li>
-  <li><strong>Tuning n_estimators via grid search</strong> — it's redundant with early stopping and expensive. Fix n_estimators large, tune other params, let early stopping find the right tree count</li>
-  <li><strong>Confusing boosting and bagging</strong> — boosting is sequential (reduces bias), bagging is parallel (reduces variance). Gradient boosting of deep trees reduces both</li>
-  <li><strong>Leaking the validation set into early stopping</strong> — if the eval_set is used to select any preprocessing parameters (e.g., imputation, scaling) it's leaked. Put all preprocessing inside a Pipeline</li>
-  <li><strong>Assuming LightGBM always wins</strong> — on small datasets (&lt;10k rows) XGBoost is often comparable; CatBoost is better when raw categoricals dominate</li>
-  <li><strong>Ignoring scale_pos_weight for imbalance</strong> — set scale_pos_weight = n_negative / n_positive in XGBoost for imbalanced classification; it scales the gradient of positive examples</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Meta (Ads ranking):</strong> LightGBM for click-through rate prediction on hundreds of sparse categorical features; inference latency under 10ms per request at billions of daily calls</li>
-  <li><strong>Stripe (Fraud detection):</strong> XGBoost trained on transaction graph features; early stopping with PR-AUC on a held-out time slice to prevent temporal leakage</li>
-  <li><strong>Booking.com:</strong> gradient boosting for price ranking and conversion prediction; heavily regularized (lambda, subsample) to prevent overfitting on sparse user history</li>
-  <li><strong>Kaggle competitions:</strong> XGBoost / LightGBM win the vast majority of structured-data competitions — the de facto first choice before neural nets</li>
-  <li><strong>Credit scoring industry:</strong> XGBoost with monotone constraints (feature must have monotone effect on score) for regulatory compliance — ensures income always positively correlates with creditworthiness</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "Gradient boosting fits trees sequentially, each one targeting the negative gradient (pseudo-residuals) of the loss. Unlike Random Forest which reduces variance via bagging, boosting primarily reduces bias. The learning rate η shrinks each tree's contribution — small η needs more trees but generalises better. I always use early stopping: set n_estimators=5000 and let the eval metric on a hold-out determine the optimal round. LightGBM is my default — leaf-wise growth and GOSS make it 10–20× faster than XGBoost on large data with comparable accuracy."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I tune n_estimators in a grid search." — This signals you don't know early stopping. Always say early stopping instead.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost differ from vanilla gradient boosting?" — Answer: second-order Taylor approximation of the loss (uses curvature, not just gradient), built-in L1/L2 regularization on leaf weights, and column/row subsampling per tree. These together make it more regularized and faster to converge than sklearn GradientBoostingClassifier.</p>
-</div>
+<div class="card cp"><div class="card-title">The learning rate, and the trade it forces</div>
+<div class="card-body">Since a fraction (1 − η) of the error survives each round, you can compute how many rounds you need. To remove 95% of the initial error, solve (1 − η)<sup>m</sup> ≤ 0.05:</div>
+<div class="formula math-formula">$$m \ \ge\ \frac{\ln 0.05}{\ln(1-\eta)}$$</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>η</th><th>Rounds to remove 95% of the error</th><th>η × rounds</th></tr>
+<tr><td>0.50</td><td><strong>5</strong></td><td>2.5</td></tr>
+<tr><td>0.10</td><td><strong>29</strong></td><td>2.9</td></tr>
+<tr><td>0.05</td><td><strong>59</strong></td><td>3.0</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The product is nearly constant</strong>, which is the practical rule: η and <code>n_estimators</code> are one parameter wearing two hats. Halve the learning rate and you need roughly twice the trees for the same fit. So there is no point tuning them jointly on a grid — fix η at 0.05 or 0.1, set <code>n_estimators</code> generously, and let early stopping find the count.</div>
+<div class="card-body" style="margin-top:8px"><strong>Why small η generalises better, given the same final fit.</strong> Each tree is fitted to the residual as it stands at that moment, so with a small η the ensemble takes many small steps and every tree sees a slightly different, still-noisy target. The result is closer to an average over many weak corrections than to a short sequence of confident ones. Large η lets a single tree — including a single tree that latched onto noise — move the ensemble a long way with nothing following it to compensate. Shrinkage is the most reliable regulariser boosting has, and it is why the default is small and the tree count is large.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Boosting: fitting the leftovers, round after round</div>
 <svg viewBox="0 0 500 202" xmlns="http://www.w3.org/2000/svg">
@@ -91,6 +62,82 @@ F(x) = F_0 + \eta \cdot \sum_m h_m(x)
 <text x="250.0" y="178.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">For squared error the negative gradient IS the residual — that is the whole trick.</text>
 <text x="250.0" y="192.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Halve the learning rate and you need roughly twice the trees for the same fit.</text>
 </svg></div>
+
+<div class="card ca"><div class="card-title">Against Random Forest: one table that settles most questions</div>
+<table class="tbl">
+<tr><th></th><th>Random Forest (bagging)</th><th>Gradient boosting</th></tr>
+<tr><td><strong>Trees are fitted</strong></td><td>independently, all on the same target</td><td>sequentially, each on what remains</td></tr>
+<tr><td><strong>Reduces</strong></td><td>variance</td><td><strong>bias</strong></td></tr>
+<tr><td><strong>So base learners are</strong></td><td>deep, low-bias — <code>max_depth=None</code></td><td>shallow, high-bias — depth 3–6</td></tr>
+<tr><td><strong>Adding trees</strong></td><td>converges to ρσ²; cannot overfit</td><td>eventually fits noise; <strong>needs early stopping</strong></td></tr>
+<tr><td><strong>Parallelism</strong></td><td>trivial — trees are independent</td><td>sequential by construction</td></tr>
+<tr><td><strong>Label noise</strong></td><td>robust — averaging dilutes it</td><td><strong>fragile</strong> — see below</td></tr>
+<tr><td><strong>Tuning effort</strong></td><td>defaults are close to right</td><td>real work: η, depth, subsample, regularisation</td></tr>
+</table>
+<div class="box warn"><div class="bl">the noise sensitivity nobody mentions</div>
+<p>Boosting works by attending to whatever is still wrong, so a mislabelled row is a row it can never satisfy — and its gradient stays large while everything else shrinks. Round after round the ensemble devotes more capacity to explaining a mistake in your data. <strong>Bagging has the opposite reflex: a bad row appears in ~63% of trees and gets averaged down.</strong> On a dataset you suspect is noisily labelled, a forest is the safer default, and boosting needs its regularisation taken seriously — subsampling, higher <code>min_child_weight</code>, and a loss like Huber or MAE that refuses to chase a single point.</p></div></div>
+
+<div class="card cg"><div class="card-title">Early stopping, and the trap inside it</div>
+<div class="card-body">Because more rounds eventually overfit, the tree count is not a hyperparameter you guess — it is one you read off a validation curve. Set <code>n_estimators</code> high, pass an evaluation set, stop when the metric has not improved for <code>early_stopping_rounds</code>.</div>
+<div class="card-body" style="margin-top:8px">The diagnostic is unusually legible: <strong>training loss falls monotonically forever while validation loss falls, flattens, and turns back up.</strong> The turn is the round to keep. A forest cannot produce this curve, which is the clearest practical demonstration that the two methods fail in different directions.</div>
+<div class="box warn"><div class="bl">the number you then report is not honest</div>
+<p>You chose the tree count by looking at the validation set, so that set has been <em>selected on</em> — its score is optimistically biased in exactly the way a tuned hyperparameter always biases the data it was tuned on. Early stopping is model selection, and it needs the same discipline as any other model selection.</p>
+<p style="margin-top:8px"><strong>Use three splits, not two:</strong> train, an early-stopping set, and a test set touched once. Or nest it — early-stop inside each outer CV fold. Reporting the early-stopping set's score as the model's performance is one of the most common ways a boosted model looks better in a notebook than in production, and it is invisible unless you go looking.</p></div></div>
+
+<div class="g3">
+<div class="card cb"><div class="card-title">XGBoost</div>
+<ul class="bul"><li>Second-order (Hessian) expansion, so leaf values have a closed form</li><li>Regularisation written into the objective — γ per leaf, λ on leaf weights</li><li><strong>Level-wise</strong> growth: expands a whole depth at a time, which is implicitly conservative</li><li>Learns a default direction for missing values</li><li>The reference implementation; monotone constraints make it the regulated-industry choice</li></ul>
+<span class="tag tg">Gold standard</span></div>
+<div class="card cg"><div class="card-title">LightGBM</div>
+<ul class="bul"><li><strong>Leaf-wise</strong> growth: splits the single highest-gain leaf anywhere in the tree, so trees go deep and lopsided. More gain per tree, and easier to overfit — control with <code>num_leaves</code> and <code>min_data_in_leaf</code>, not <code>max_depth</code></li><li>GOSS keeps the large-gradient rows and samples the rest, since small-gradient rows are already fitted</li><li>EFB bundles mutually exclusive sparse features into one column</li><li>Often 10× faster on large data at comparable accuracy — the default above a few hundred thousand rows</li></ul>
+<span class="tag tb">Speed king</span></div>
+<div class="card ca"><div class="card-title">CatBoost</div>
+<ul class="bul"><li>Ordered target statistics: encodes a category using only rows that came <em>earlier</em> in a random permutation</li><li>That ordering exists to kill a real leak — plain target encoding lets a row's own label into its own feature, which inflates CV and collapses in production</li><li>Ordered boosting applies the same trick to the gradients themselves</li><li>Symmetric trees: weaker per tree, very fast at inference</li><li>The right default when raw high-cardinality categoricals dominate</li></ul>
+<span class="tag ta">Best for cats</span></div>
+</div>
+
+<div class="card cb"><div class="card-title">Hyperparameters, in the order worth tuning them</div>
+<table class="tbl">
+<tr><th>Parameter</th><th>What it does</th><th>Range</th></tr>
+<tr><td><code>learning_rate</code> (η)</td><td>step size. Fix it early — smaller is better if you can afford the trees</td><td>0.01–0.1</td></tr>
+<tr><td><code>n_estimators</code></td><td>never tuned directly. Set it high and early-stop</td><td>2000–10000 + early stopping</td></tr>
+<tr><td><code>max_depth</code> / <code>num_leaves</code></td><td>capacity per tree — the strongest single lever after η</td><td>3–8, or 31–255 leaves</td></tr>
+<tr><td><code>min_child_weight</code></td><td>minimum Hessian sum per leaf. Raise it on noisy data — this is the anti-memorisation knob</td><td>1–10</td></tr>
+<tr><td><code>subsample</code></td><td>rows per tree. Adds bagging-style variance reduction on top of boosting</td><td>0.6–0.9</td></tr>
+<tr><td><code>colsample_bytree</code></td><td>features per tree. Decorrelates trees, same logic as a forest's <code>max_features</code></td><td>0.6–0.9</td></tr>
+<tr><td><code>reg_lambda</code> / <code>reg_alpha</code></td><td>L2 / L1 on leaf weights</td><td>1–10 / 0–1</td></tr>
+<tr><td><code>scale_pos_weight</code></td><td>multiplies positive-class gradients. Set to n<sub>neg</sub>/n<sub>pos</sub> for imbalance — and expect calibration to break</td><td>ratio</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Note that <code>subsample</code> and <code>colsample_bytree</code> import the forest's two randomness sources into boosting. Stochastic gradient boosting is genuinely both mechanisms at once — sequential bias reduction with a variance-reduction layer bolted on — which is a large part of why it wins.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Grid-searching <code>n_estimators</code>.</strong> Redundant with early stopping and expensive. It also signals not knowing the tool, which in an interview costs more than the compute</li>
+<li><strong>Reporting the early-stopping set's score.</strong> That set chose the tree count, so it is contaminated. Keep a third split, or nest the early stopping inside CV</li>
+<li><strong>Tuning η and <code>n_estimators</code> jointly.</strong> Their product is roughly fixed. Two parameters, one degree of freedom, and a grid that wastes most of its budget</li>
+<li><strong>Bringing forest habits.</strong> Deep trees are right for a forest and wrong here — boosting reduces bias, so it wants high-bias base learners. Depth 12 in XGBoost is usually a bug</li>
+<li><strong>Preprocessing outside the pipeline.</strong> Any imputer or scaler fitted before the split leaks into the early-stopping set, which then picks the wrong round for the wrong reason. Everything inside a <code>Pipeline</code></li>
+<li><strong>Boosting hard on noisily labelled data.</strong> The algorithm chases what it cannot fit. Check for label noise before blaming the hyperparameters, and consider a forest or a robust loss</li>
+<li><strong>Shuffled CV on temporal data.</strong> Boosting's capacity makes it exceptionally good at exploiting a leak. A shuffled split on time-ordered data produces a beautiful score and a worthless model</li>
+<li><strong>Trusting the probabilities after <code>scale_pos_weight</code>.</strong> You deliberately changed the implied base rate. Fine for ranking; recalibrate before anything is multiplied by money</li>
+<li><strong>Forgetting the seed.</strong> Row and column subsampling are random, so runs differ. Set it, or you cannot tell a real improvement from a reseed</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Why it still owns tabular data</div>
+<ul class="bul">
+<li><strong>It wins the benchmark that matters and keeps winning.</strong> On heterogeneous tabular data — mixed types, missing values, non-linear interactions, a few hundred columns — boosted trees still match or beat deep learning while training in minutes on a CPU. Repeated head-to-head studies find the same thing, which is why the "just use a neural net" advice never took over this domain</li>
+<li><strong>Ad and content ranking.</strong> CTR and relevance models run boosted trees on sparse categorical features at single-digit-millisecond latency and billions of daily calls. Inference is a few hundred short tree traversals — cheap, predictable, and easy to serve</li>
+<li><strong>Fraud and risk, with the temporal discipline attached.</strong> The standard pattern is training on a time window, early stopping on the following slice, and testing on the one after that, because a fraud model validated on shuffled data always looks excellent. Retraining is scheduled, not occasional</li>
+<li><strong>Credit scoring with monotone constraints.</strong> This is the feature that got boosting past model risk review: you can force the score to move monotonically with income or utilisation, so the model is auditable in the direction regulators care about, and SHAP supplies the per-applicant reasons. It is how a non-linear model became acceptable where scorecards used to be mandatory</li>
+<li><strong>Where it is the wrong tool:</strong> anything needing extrapolation beyond the training range (it inherits the tree staircase in full), genuine perceptual data — images, audio, raw text — and very wide sparse problems where a linear model is both faster and better</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the gradient-descent framing.</strong> "Boosting is gradient descent in function space — each tree approximates the negative gradient of the loss with respect to the current predictions, and you add a fraction η of it. For squared loss that gradient is the residual, which is why the residual story works; for log loss it is y − σ(F)." That answer immediately covers "why does it work with any loss function", which is the usual follow-up.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Boosting versus bagging." — Do not list properties; give the cause. Bagging fits independent trees and reduces variance, so it wants deep low-bias trees and cannot overfit by adding more. Boosting fits sequentially and reduces bias, so it wants shallow high-bias trees and must be early-stopped. Every other difference — parallelism, tuning effort, noise sensitivity — follows from that.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How do you choose the learning rate?" — Show you know it is not independent: error decays like (1 − η) per round, so η × <code>n_estimators</code> is roughly constant. Fix η small, set the tree count high, early-stop. Then volunteer the part most people miss — the early-stopping set has been selected on, so an honest number needs a third split.</p>
+<p style="margin-top:8px"><strong>The differentiator:</strong> mention that boosting is sensitive to label noise because it keeps escalating attention on rows it cannot fit, while bagging averages them away. Almost nobody says this, and it demonstrates you have debugged a boosted model rather than only tuned one.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Gradient boosting in fifteen lines, so the "fit the next tree to the residual" claim stops being a slogan. The final loop shows the learning-rate / n_estimators trade.</div>

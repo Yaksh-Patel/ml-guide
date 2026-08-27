@@ -1,61 +1,42 @@
 <section class="section" id="sec-xgb">
 <div class="sec-title">XGBoost — Deep Dive</div>
-<div class="sec-desc">The algorithm that dominated Kaggle for 5 years. Understanding it mathematically separates "I used XGBoost" from "I understand why XGBoost works."</div>
-<div class="card"><div class="card-title">XGBoost Objective Function</div>
+<div class="sec-desc">Gradient boosting says "fit a tree to the gradient" and leaves open how the tree is grown and what its leaf values should be. XGBoost answers both by writing regularisation into the objective and solving it exactly — so the leaf value, the split score, and the pruning rule all fall out of one equation instead of being three separate heuristics. That derivation is the interview question, and it is short enough to do from memory.</div>
+
+<div class="card cb"><div class="card-title">The objective, with complexity priced in</div>
+<div class="card-body">Standard boosting minimises training loss and controls complexity from outside — via depth caps and a learning rate. XGBoost puts the cost of complexity <em>inside</em> the thing being minimised:</div>
+<div class="formula math-formula">$$\mathcal{L} = \sum_i L\big(y_i, \hat y_i\big) \;+\; \sum_k \Omega(f_k), \qquad \Omega(f) = \underbrace{\gamma T}_{\text{price per leaf}} + \underbrace{\tfrac{1}{2}\lambda\|w\|^2}_{\text{L2 on leaf values}} + \underbrace{\alpha\|w\|_1}_{\text{L1 on leaf values}}$$</div>
+<div class="card-body" style="margin-top:8px">where <em>T</em> is the number of leaves in the tree and <em>w</em> the vector of leaf output values. Two things are being charged for: <strong>having leaves at all</strong> (γ) and <strong>leaves with large outputs</strong> (λ, α). Everything below is a consequence of asking what tree minimises this.</div></div>
+
+<div class="card cg"><div class="card-title">Second order, and why it buys a closed form</div>
+<div class="card-body">Expand the loss at round t around the current predictions to second order. Writing <em>g<sub>i</sub></em> for the first derivative and <em>h<sub>i</sub></em> for the second, both evaluated at the previous round's prediction:</div>
+<div class="formula math-formula">$$\mathcal{L}^{(t)} \simeq \sum_i \Big[ g_i f_t(x_i) + \tfrac{1}{2} h_i f_t(x_i)^2 \Big] + \gamma T + \tfrac{1}{2}\lambda \sum_j w_j^2$$</div>
+<div class="card-body" style="margin-top:8px">Now fix the tree's <em>structure</em> and ask for its best leaf values. Every row in leaf j gets the same output w<sub>j</sub>, so grouping the sums by leaf and writing G<sub>j</sub> = Σg<sub>i</sub>, H<sub>j</sub> = Σh<sub>i</sub> over the rows landing in that leaf, each leaf contributes G<sub>j</sub>w<sub>j</sub> + ½(H<sub>j</sub> + λ)w<sub>j</sub>². <strong>That is a one-dimensional quadratic in w<sub>j</sub></strong> — so it has an exact minimum, not an approximate one:</div>
+<div class="formula math-formula">$$w_j^{*} = -\frac{G_j}{H_j + \lambda} \qquad\text{with optimal value}\qquad -\frac{1}{2}\,\frac{G_j^2}{H_j + \lambda}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>This is what the Hessian buys.</strong> First-order boosting knows only which direction to move and must borrow a step size from the learning rate; second-order boosting knows the curvature, so it can compute how far to move in one shot. Where the loss is flat (small h) it takes a big step; where the loss curves sharply (large h) it takes a small one. That is also why λ appears in a denominator — it is ridge regression on the leaf values:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Leaf with G = −6, H = 3</th><th>w* = 6/(3 + λ)</th></tr>
+<tr><td>λ = 0</td><td><strong>2.00</strong> — unregularised</td></tr>
+<tr><td>λ = 1</td><td><strong>1.50</strong></td></tr>
+<tr><td>λ = 10</td><td><strong>0.46</strong> — leaf outputs pulled hard toward zero</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Small leaves are the ones λ affects most: a leaf with few rows has a small H, so λ dominates its denominator and its output is shrunk aggressively. <strong>Regularisation is automatically strongest exactly where the evidence is thinnest</strong>, which is a much better behaviour than a uniform cap on depth.</div></div>
+
+<div class="card cp"><div class="card-title">The split score is not a heuristic — it is the objective</div>
+<div class="card-body">Since every structure has a known optimal value, comparing two structures is arithmetic. Splitting one leaf into L and R replaces one −½G²/(H+λ) term with two, and adds one leaf at price γ:</div>
+<div class="formula math-formula">$$\text{Gain} = \frac{1}{2}\left[\frac{G_L^2}{H_L+\lambda} + \frac{G_R^2}{H_R+\lambda} - \frac{G^2}{H+\lambda}\right] - \gamma$$</div>
+<div class="card-body" style="margin-top:8px">Compare this with the Gini gain of an ordinary decision tree: that one measures class purity, a proxy for what you care about. <strong>This measures the actual reduction in the actual objective.</strong> Nothing is being approximated except the second-order Taylor step itself.</div>
+<div class="card-body" style="margin-top:8px"><strong>Work one through.</strong> A node has G = 4, H = 10, and λ = 1. A candidate split sends gradient mass 6 with Hessian 5 to the left and −2 with Hessian 5 to the right:</div>
 <div class="formula math-formula">$$\begin{aligned}
-\mathcal{L} &= \sum_i L(y_i,\hat{y}_i) + \sum_k \Omega(f_k) \\
-\Omega(f) &= \gamma T + \tfrac{1}{2}\lambda\|w\|^2 + \alpha\|w\|_1 \\
-&\quad T = \text{leaves},\; w = \text{leaf weights} \\
-&\quad \gamma\text{: tree complexity},\; \lambda\text{: L2},\; \alpha\text{: L1 on weights}
+\text{Gain} &= \tfrac{1}{2}\left[\frac{6^2}{5+1} + \frac{(-2)^2}{5+1} - \frac{4^2}{10+1}\right] - \gamma \\
+&= \tfrac{1}{2}\big[6.000 + 0.667 - 1.455\big] - \gamma \;=\; \mathbf{2.606} - \gamma
 \end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">This is the key innovation: regularization inside the tree structure itself. XGBoost optimizes a regularized objective, not just prediction error. Other boosting implementations lack this.</div></div>
-<div class="card"><div class="card-title">Second-Order Taylor Expansion (why it's faster)</div>
-<div class="formula math-formula">$$\begin{aligned}
-L(y_i, \hat{y}_i^{(t)}) &\approx L(y_i, \hat{y}_i^{(t-1)}) + g_i f_t(x_i) + \tfrac{1}{2} h_i f_t(x_i)^2 \\
-g_i &= \partial L / \partial \hat{y}_i^{(t-1)} \quad [\text{gradient}] \\
-h_i &= \partial^2 L / \partial (\hat{y}_i^{(t-1)})^2 \quad [\text{hessian}] \\
-w_j^* &= -\frac{\sum_{i \in j} g_i}{\sum_{i \in j} h_i + \lambda} \quad [\text{optimal leaf weight for leaf } j]
-\end{aligned}$$</div>
-<div class="card-body" style="margin-top:8px">Using the hessian (2nd derivative) means XGBoost takes curvature into account — it takes larger steps where the loss is flat and smaller steps where it curves sharply. This is why it converges faster than vanilla gradient boosting.</div></div>
-<div class="card"><div class="card-title">Split Gain Formula</div>
-<div class="formula math-formula">$$\begin{aligned}
-\text{Gain} &= \frac{1}{2}\left[\frac{G_L^2}{H_L+\lambda} + \frac{G_R^2}{H_R+\lambda} - \frac{G^2}{H+\lambda}\right] - \gamma \\
-G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
-&\quad L/R\text{ subscripts} = \text{left/right child} \\
-&\quad \text{Split is rejected if Gain} < 0 \quad\text{(this IS the pruning)}
-
-\end{aligned}$$</div></div>
-<div class="g2">
-<div class="card cb"><div class="card-title">Missing Value Handling</div>
-<div class="card-body">XGBoost learns the default direction for missing values during training. At each split, it tries sending missing values both left and right, picks the one with higher Gain. This is why XGBoost handles NaNs natively without imputation.</div></div>
-<div class="card cg"><div class="card-title">System Optimizations</div>
-<ul class="bul"><li><strong>Column blocks:</strong> pre-sorted feature values stored in compressed blocks for parallel access</li><li><strong>Cache-aware access:</strong> allocates internal buffers to reduce cache misses</li><li><strong>Out-of-core computation:</strong> processes data larger than RAM in blocks</li><li><strong>Approximate algorithm:</strong> sketch/histogram for continuous features — faster split finding</li></ul></div>
-</div>
-
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
-<ul class="bul">
-  <li><strong>Tuning n_estimators in a grid search</strong> — always use early stopping instead. Set n_estimators=5000, pass an eval_set, and let XGBoost stop when validation metric stops improving. Grid-searching n_estimators is slow and redundant</li>
-  <li><strong>Not setting a random seed</strong> — XGBoost uses randomness (column/row subsampling). Always set seed/random_state for reproducibility in experiments and reproducible model artifacts</li>
-  <li><strong>Ignoring scale_pos_weight for imbalanced problems</strong> — set scale_pos_weight = neg_count / pos_count to upweight the minority class gradient. Forgetting this leads to low recall on the positive class</li>
-  <li><strong>Treating XGBoost and LightGBM as identical</strong> — LightGBM uses leaf-wise growth (can go deeper per step, faster, more accurate on large data); XGBoost uses level-wise (more regularized by default). For &gt;100K rows, try LightGBM first</li>
-  <li><strong>Not using monotone constraints for regulated models</strong> — for credit scoring, income must always positively correlate with approval probability. Set monotone_constraints=(1,-1,...) to enforce this; XGBoost guarantees monotonicity in the specified features</li>
-  <li><strong>Forgetting to handle missing values correctly</strong> — XGBoost learns a default direction for missing values during training (one of its strengths). Do not impute missing values before XGBoost — let it learn the optimal direction from data</li>
-</ul></div>
-
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
-<ul class="bul">
-  <li><strong>Kaggle (structured data):</strong> XGBoost / LightGBM win the vast majority of tabular data competitions; the standard stack is LightGBM + XGBoost + CatBoost averaged for ensembling</li>
-  <li><strong>Meta (ads click prediction):</strong> gradient boosting on sparse categorical features (user demographics, ad metadata) for CTR estimation; served billions of times daily with &lt;10ms latency</li>
-  <li><strong>Airbnb (price prediction &amp; fraud):</strong> XGBoost with monotone constraints for price suggestions (price should monotonically increase with guest count); LightGBM for fraud where speed matters</li>
-  <li><strong>JPMorgan / Goldman (credit risk):</strong> XGBoost with monotone constraints and SHAP-based adverse action reasons for regulatory compliance; model retraining triggered monthly with data drift checks</li>
-  <li><strong>Instacart (delivery time prediction):</strong> LightGBM on order-level features for delivery ETA; re-trained daily on rolling window of recent orders to adapt to traffic and demand patterns</li>
-</ul></div>
-
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "XGBoost's edges over vanilla gradient boosting: second-order Taylor expansion (uses curvature, not just gradient — better leaf weight estimates), built-in L1/L2 regularization on leaf weights (γ penalizes tree count, λ regularizes weights), and approximate split finding via weighted quantile sketch. My tuning strategy: fix learning_rate=0.05, n_estimators=5000 with early stopping on eval_set, then tune max_depth, min_child_weight, subsample, colsample_bytree via Bayesian optimization (Optuna). For &gt;500K rows I switch to LightGBM — 10–20× faster with similar accuracy."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I grid-searched n_estimators." — This shows unfamiliarity with early stopping, which is the correct approach. Always say: early stopping with eval_set determines tree count automatically.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does XGBoost handle missing values?" — Answer: during training, XGBoost tries both directions (left and right child) for missing values at each split and picks whichever gives better gain. This learned default direction is stored in the model and applied at inference — no imputation needed.</p>
-</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>γ</th><th>Gain</th><th>Outcome</th></tr>
+<tr><td>0</td><td>+2.606</td><td>split accepted</td></tr>
+<tr><td>2</td><td>+0.606</td><td>accepted, marginally</td></tr>
+<tr><td>3</td><td><strong>−0.394</strong></td><td><strong>rejected — this is the pruning</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">So <strong>γ is a minimum-gain threshold denominated in the units of the objective</strong>, and pruning is not a separate pass over a grown tree — a split that does not pay γ is never made. Note also why this split was worth making: the two children have gradients of <em>opposite sign</em> (leaf values −1.00 and +0.33), meaning the rows were pulling in different directions and averaging them was costing real objective. That is what a good split looks like in gradient space.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">XGBoost = gradient boosting + four engineering decisions</div>
 <svg viewBox="0 0 500 178" xmlns="http://www.w3.org/2000/svg">
@@ -81,6 +62,68 @@ G &= \text{sum of gradients in node},\quad H = \text{sum of hessians in node} \\
 <text x="250.0" y="150.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">A split happens only if the gain clears γ. That single line is the pruning rule.</text>
 <text x="250.0" y="168.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">monotone_constraints is what makes it defensible in a regulated model.</text>
 </svg></div>
+
+<div class="card ca"><div class="card-title">min_child_weight is a Hessian sum, and that surprises people</div>
+<div class="card-body">It reads like <code>min_samples_leaf</code> and it is not. The constraint is on <strong>ΣH in the leaf</strong>, and what the Hessian means depends entirely on the loss.</div>
+<div class="formula math-formula">$$\text{squared loss: } h_i = 1 \qquad\qquad \text{log loss: } h_i = p_i(1-p_i)$$</div>
+<div class="card-body" style="margin-top:8px">For regression with squared loss, h = 1 for every row, so ΣH is exactly the row count and <code>min_child_weight</code> does behave like a minimum sample size. For classification it does not, because p(1 − p) collapses as predictions become confident:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Current prediction p</th><th>h = p(1−p)</th><th>ΣH for 100 such rows</th><th>Passes <code>min_child_weight=1</code>?</th></tr>
+<tr><td>0.50 — maximally uncertain</td><td>0.2500</td><td><strong>25.0</strong></td><td>yes, easily</td></tr>
+<tr><td>0.90</td><td>0.0900</td><td>9.0</td><td>yes</td></tr>
+<tr><td>0.99 — already confident</td><td>0.0099</td><td><strong>0.99</strong></td><td><strong>no — leaf rejected</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A hundred rows can fail a threshold of 1. That is the intended behaviour and it is rather elegant: <strong>the parameter counts <em>useful</em> rows, not rows.</strong> A hundred already-well-predicted examples carry almost no information about how to improve, so refusing to build a leaf for them is correct. But it means the number has no intuitive scale on a classification problem — <code>min_child_weight=1</code> is a far weaker constraint than <code>min_samples_leaf=1</code> sounds, and raising it to 10 or 50 is a normal, strong regularisation move rather than an extreme one.</div></div>
+
+<div class="g2">
+<div class="card cb"><div class="card-title">Missing values, learned rather than imputed</div>
+<div class="card-body">At every candidate split, XGBoost puts the non-missing rows on their sides, then tries the missing rows <em>both</em> ways and keeps whichever gives more gain. That direction is stored in the node.</div>
+<div class="card-body" style="margin-top:8px">This is genuinely better than imputation, because missingness is frequently informative — an unfilled income field is not a typical income, it is a different kind of applicant. Mean-imputing throws that signal away; XGBoost gets to use it. It is also fast, since the sparsity-aware pass only visits present values.</div>
+<div class="box warn"><div class="bl">the production bug this creates</div>
+<p>The direction is learned <em>from the missing values seen in training</em>. If a column has no missing values in your training data and starts arriving as NaN in production — a broken upstream join, a new client who does not send the field — then no direction was ever learned for it and the rows go left by default. The model does not error and the predictions are quietly meaningless for those rows. <strong>Check that your training data's missingness pattern matches production's</strong>, and if a field can go missing later, make sure some of it is missing now.</p></div></div>
+
+<div class="card cg"><div class="card-title">The engineering that made it feasible</div>
+<ul class="bul">
+<li><strong>Histogram / approximate splits.</strong> Exact greedy search considers every distinct value as a threshold. Bucket each feature into ~256 bins and the search is over 256 candidates instead. On 10 million rows that is roughly <strong>40,000× fewer candidate evaluations per feature per node</strong>, at a cost in split precision that is almost never measurable. This is the single change that took boosting from research to production scale, and LightGBM pushed it further</li>
+<li><strong>Column blocks, sorted once.</strong> Feature values are pre-sorted into compressed blocks and reused at every node, so the O(n log n) sort is paid once per training run rather than once per split</li>
+<li><strong>Cache-aware prefetching.</strong> Gradient statistics are gathered into contiguous buffers, because the naive access pattern is a random walk through memory and cache misses dominate the runtime</li>
+<li><strong>Out-of-core blocks.</strong> Compressed, shardable blocks let it train on data larger than RAM — which mattered a great deal in 2016 and still does on a single large machine</li>
+<li><strong>Level-wise growth.</strong> Expanding one whole depth at a time is implicitly conservative: every leaf gets the same budget. LightGBM's leaf-wise alternative always splits the highest-gain leaf anywhere, which fits faster and overfits more readily</li>
+</ul></div>
+</div>
+
+<div class="card cp"><div class="card-title">Monotone constraints: the feature that passed model risk review</div>
+<div class="card-body">A boosted ensemble is free to learn that default risk <em>falls</em> then <em>rises</em> with income, because some noisy region of the training data said so. That is indefensible in a regulated setting even when it improves validation AUC.</div>
+<div class="card-body" style="margin-top:8px">Setting <code>monotone_constraints</code> makes XGBoost reject any split that would violate the required direction, and clamp child leaf values so the ordering holds across the whole tree. <strong>The guarantee is structural, not statistical</strong> — it holds for every possible input, not merely on the data you tested. You can hand a validator a proof rather than a chart.</div>
+<div class="card-body" style="margin-top:8px">This, plus TreeSHAP for per-applicant adverse-action reasons, is the whole story of how a non-linear model became acceptable in credit decisioning where logistic scorecards were effectively mandatory. Expect to give up a little accuracy; the constraint is a real restriction. Expect that to be an acceptable trade, because a model that cannot be deployed has an accuracy of zero.</div></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Imputing before XGBoost.</strong> You are replacing information with a guess. Pass the NaNs through and let the split learn a direction — then verify that production missingness looks like training missingness</li>
+<li><strong>Reading <code>min_child_weight</code> as a row count.</strong> It is a Hessian sum. On classification, 1 is very permissive; on regression it is literally a row count. Two different meanings, one parameter name</li>
+<li><strong>Leaving γ at 0 and controlling complexity only with depth.</strong> γ is the one knob that prunes on the objective itself, which is strictly better-targeted than a blanket depth cap. It is underused</li>
+<li><strong>Assuming <code>max_depth</code> transfers to LightGBM.</strong> Leaf-wise growth means depth is the wrong handle — <code>num_leaves</code> and <code>min_data_in_leaf</code> are the controls, and a LightGBM model with <code>num_leaves=255</code> is far more complex than an XGBoost model at depth 8 despite looking comparable</li>
+<li><strong>Forgetting the seed</strong> with subsampling on. Two runs then differ, and you cannot distinguish a real gain from a reseed</li>
+<li><strong>Skipping <code>scale_pos_weight</code> on imbalanced data</strong> — or setting it and then quoting the probabilities. It multiplies positive gradients, so it deliberately shifts the implied base rate</li>
+<li><strong>Reaching for XGBoost on 500 rows.</strong> Its whole advantage is capacity plus regularisation at scale. Below a few thousand rows, a regularised linear model or an SVM usually generalises better and always explains itself better</li>
+<li><strong>Using it where extrapolation is required.</strong> The leaves are constants, so the ensemble is a staircase capped by the training range — the tree limitation, inherited whole</li>
+</ul></div>
+
+<div class="card ca"><div class="card-title">Where it runs, and what replaced it where</div>
+<ul class="bul">
+<li><strong>The default first model for tabular problems, still.</strong> Mixed types, missing values, non-linear interactions, hundreds of columns: it trains in minutes on a CPU and is very hard to beat. This is why it remains the baseline that any deep tabular architecture is measured against</li>
+<li><strong>Credit and insurance risk.</strong> Monotone constraints plus SHAP is the combination that satisfies validation and adverse-action requirements. Retraining is scheduled, drift is monitored, and constraint sets are documented artefacts reviewed alongside the model</li>
+<li><strong>Fraud and abuse.</strong> Fast enough to retrain daily on a rolling window, which matters because adversaries adapt. Time-based splitting is non-negotiable here — the failure mode is a leak, not a bad fit</li>
+<li><strong>Ranking and CTR.</strong> Pairwise and listwise ranking objectives are supported directly, since boosting only needs a gradient. Inference is a few hundred short traversals, so single-digit millisecond serving is routine</li>
+<li><strong>Displaced by LightGBM above roughly half a million rows</strong>, where leaf-wise growth and GOSS give most of the accuracy at a fraction of the training time; and by CatBoost when raw high-cardinality categoricals dominate and its ordered target statistics prevent an encoding leak you would otherwise have to hand-build</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>"How does XGBoost differ from vanilla gradient boosting?" is the question, and the answer is the derivation.</strong> Take the loss to second order, and each leaf's contribution becomes a quadratic Gw + ½(H+λ)w². Minimise it: w* = −G/(H+λ), worth −½G²/(H+λ). Sum over leaves and the split gain is just the difference between structures, minus γ for the extra leaf. <strong>Leaf value, split score and pruning rule all come from one equation</strong> — that is the contribution, and being able to walk it through is the differentiator.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "Why does the second-order term help?" — Curvature gives a step size. First-order boosting knows the direction and takes whatever step the learning rate dictates; with the Hessian, the optimal leaf value is available in closed form — large steps where the loss is flat, small where it curves.</p>
+<p style="margin-top:8px"><strong>Expect:</strong> "How does it handle missing values?" — It tries both directions at each split and keeps the higher-gain one, storing that direction in the node. Then add the failure case, because it shows production experience: if nothing was missing in training, no direction was learned, and NaNs arriving later go left silently.</p>
+<p style="margin-top:8px"><strong>Worth volunteering:</strong> that <code>min_child_weight</code> is a Hessian sum, so on classification a hundred confident rows can sum to less than 1 — it counts informative rows rather than rows. And that monotone constraints are why boosting is deployable in regulated credit at all. Both are things people who have only tuned XGBoost do not say.</p>
+</div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The three things XGBoost adds over plain gradient boosting — second-order gradients, structural regularisation, and early stopping on a real validation set.</div>
