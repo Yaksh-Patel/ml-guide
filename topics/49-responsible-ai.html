@@ -1,6 +1,6 @@
 <section class="section" id="sec-responsibleai">
 <div class="sec-title">Responsible AI &amp; Fairness</div>
-<div class="sec-desc">ML models embedded in hiring, lending, healthcare, and criminal justice make decisions that affect people's lives. Responsible AI covers the technical, ethical, and governance practices for building systems that are fair, accountable, transparent, and safe. This is increasingly a mandatory competency — regulators, employers, and customers now demand it.</div>
+<div class="sec-desc">The uncomfortable centre of this topic is a theorem, not a checklist: when two groups have different base rates, a model <em>cannot</em> be calibrated, have equal false-positive rates, and have equal false-negative rates at the same time. Not "it is hard" — it is arithmetically impossible. So there is no fair model in the abstract; there is only a choice about which unfairness you are prepared to defend, made explicit and written down. Everything else here — bias sources, audits, mitigations, model cards, the regulation — is machinery for making that choice deliberately instead of by accident.</div>
 
 <!-- Why it matters -->
 <div class="g2">
@@ -10,7 +10,9 @@
   <li><strong>Business risk:</strong> ProPublica's COMPAS analysis, Amazon's hiring tool, Apple Card credit discrimination — all caused major reputational damage</li>
   <li><strong>Technical debt:</strong> unfair models are often <em>less accurate</em> on underrepresented groups — fixing fairness frequently improves overall model quality</li>
   <li><strong>Trust:</strong> users and regulators require explainability; a black-box that cannot be audited cannot be deployed in regulated industries</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px">The third bullet is the one to lead with in an interview, because it reframes the whole conversation. <strong>A minority group at 10% of the data contributes 10% of the loss</strong>, so a model minimising average error is <em>correctly</em> trading their accuracy for the majority's. That is not malice in the objective, it is the objective working — which is why the fix is usually a change to the loss, the sampling, or the evaluation, and why "fairness versus accuracy" is often a false dilemma rather than a real frontier.</div>
+</div>
 
 <div class="card ca"><div class="card-title">Taxonomy of Harm</div>
 <table class="tbl">
@@ -20,7 +22,8 @@
 <tr><td><strong>Quality of service</strong></td><td>Worse performance for some groups</td><td>Speech recognition 30% less accurate on Black American English</td></tr>
 <tr><td><strong>Denigration</strong></td><td>Offensive or degrading outputs targeted at groups</td><td>Language model generates harmful stereotypes when prompted about certain nationalities</td></tr>
 <tr><td><strong>Erasure</strong></td><td>Underrepresentation in model outputs</td><td>Image generation model produces mostly white faces for "professional" prompt</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px">The taxonomy earns its place because <strong>only the first row is what fairness metrics measure.</strong> Disparate impact ratios and TPR gaps are allocative instruments — they assume a decision with winners and losers. A captioning model that stereotypes, or a generator that erases, produces no allocation at all and will pass every metric in the next section while causing the harm it was audited for. Generative systems are mostly rows two to five, which is why their evaluation looks like red-teaming and benchmark suites rather than confusion matrices.</div></div>
 </div>
 
 <!-- Bias sources -->
@@ -49,12 +52,26 @@
   <li><strong>Use case mismatch:</strong> model designed for one purpose repurposed for higher-stakes decisions</li>
   <li><strong>Missing context:</strong> model score used without the uncertainty/confidence information</li>
 </ul></div>
-</div></div>
+</div>
+<div class="card-body" style="margin-top:10px"><strong>Historical bias is the one no technique fixes, because the label itself is the problem.</strong> If past hiring discriminated, then "was hired" is a biased target, and a model that reproduces it perfectly is working exactly as specified — the bias is in what you asked it to predict, not in how it predicted. Reweighting and constrained optimisation adjust <em>how</em> the model uses a biased label; they do not make the label mean something else. That is why the serious answer is often to change the target (promotion at 18 months rather than hired), and why "we'll fix it in post-processing" is the wrong instinct when the label is corrupt.</div>
+<div class="card-body" style="margin-top:8px">And <strong>label bias is invisible to every metric on this page</strong>, since all of them compare predictions against those same labels. If annotators applied a harsher standard to one group, your TPR gap is computed against a biased ground truth and can read as zero while the system is unfair. Auditing labels — re-annotation with blind review, inter-annotator agreement by group — is a separate exercise from auditing the model, and it is skipped almost every time.</div></div>
+
+<div class="card cr"><div class="card-title">"We removed the protected attribute" — why that does not work</div>
+<div class="card-body">Fairness through unawareness is the most common first response and the most reliably wrong one. Dropping the column removes the model's ability to <em>name</em> the group, not its ability to <em>find</em> it, because the remaining features are correlated with it and the model has every incentive to use them.</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — dropping the column, measured</div><p>60,000 applicants. Merit is real and drives the outcome, but the <strong>historical label carries past discrimination</strong>: at equal merit, group 1 was hired less often. Observed historical hire rates are <strong>50.1%</strong> for group 0 and <strong>29.6%</strong> for group 1. A postcode-like feature is correlated with group at <strong>r = 0.60</strong> and has no causal link to merit. Train logistic regression on the historical label, select the top 40%, and measure the disparate-impact ratio:</p></div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Features given to the model</th><th>Selection rate g=0</th><th>Selection rate g=1</th><th>DI ratio</th><th>4/5ths rule</th></tr>
+<tr><td>merit + group + postcode</td><td>0.552</td><td>0.248</td><td><strong>0.45</strong></td><td>fails badly</td></tr>
+<tr><td>merit + postcode <em>(group dropped)</em></td><td>0.457</td><td>0.343</td><td><strong>0.75</strong></td><td><strong>still fails</strong></td></tr>
+<tr><td>merit only</td><td>0.403</td><td>0.397</td><td>0.99</td><td>passes</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Deleting the protected attribute moved the ratio from 0.45 to 0.75 — an improvement that is still illegal under the US four-fifths rule.</strong> The proxy carried most of the signal, because with a biased label the proxy is <em>genuinely predictive</em> of it and the fit reaches for it automatically. Note what the third row also shows: you cannot generally get to 0.99 by dropping features, because in a real problem the proxy usually carries legitimate predictive signal too, and removing it costs accuracy on the honest part of the task.</div>
+<div class="card-body" style="margin-top:8px">Two conclusions follow, and they are the ones that matter in practice. <strong>You must retain the protected attribute to measure fairness at all</strong> — you cannot compute a disparate-impact ratio for a group you did not record, which is the awkward tension with privacy law and the reason regulated lenders keep protected attributes in a separate, access-controlled table used only for audit. And <strong>unawareness is not a defence</strong>: disparate impact is assessed on outcomes, not intent, so "the model never saw race" is legally irrelevant if the selection rates diverge.</div></div>
 
 <!-- Fairness definitions -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Fairness Definitions &amp; Metrics</div>
 
-<div class="card cp"><div class="card-title">The Impossibility Theorem — You Cannot Satisfy All Fairness Criteria Simultaneously</div>
+<div class="card cp"><div class="card-title">The impossibility theorem — with the algebra that forces it</div>
 <div class="card-body">Chouldechova (2017) and Kleinberg et al. (2016) proved that calibration, equal FPR, and equal FNR cannot all hold simultaneously when base rates differ across groups. Every fairness metric is a tradeoff — choosing one often violates another.</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Let } G \in \{0,1\} &= \text{protected attribute (e.g. sex, race)} \\
@@ -62,6 +79,12 @@
 \text{If } P(Y=1|G=0) &\neq P(Y=1|G=1) \text{ (different base rates),} \\
 \text{then: Calibration} &+ \text{Equal FPR} + \text{Equal FNR cannot all hold}
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:10px">The proof is a single identity, and it is worth memorising because it turns a slogan into arithmetic. For any classifier, prevalence $p$, precision (PPV), false-positive rate and false-negative rate are locked together:</div>
+<div class="formula math-formula">$$\text{FPR} = \underbrace{\frac{p}{1-p}}_{\text{base-rate odds}} \cdot \underbrace{\frac{1-\text{PPV}}{\text{PPV}}}_{\text{precision term}} \cdot \underbrace{(1-\text{FNR})}_{\text{recall}}$$</div>
+<div class="card-body" style="margin-top:8px">Three of those four quantities are all you get to choose. <strong>Fix PPV equal across groups (predictive parity) and fix FNR equal, and FPR is then determined by $p$ alone</strong> — so unequal base rates force unequal false-positive rates. No modelling choice escapes it, because it is not a fact about models; it is a fact about $2\times2$ tables.</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — COMPAS, and why both sides of the argument were right</div><p>ProPublica reported that COMPAS flagged Black defendants who did not reoffend as high-risk at <strong>44.9%</strong> against <strong>23.5%</strong> for white defendants. Northpointe replied that the score was equally <em>predictive</em> for both groups — roughly equal PPV — and was therefore fair. Put the published figures through the identity: two-year recidivism base rates of <strong>51%</strong> and <strong>39%</strong>, PPV of 0.63 and 0.59, FNR of 0.28 and 0.477. It predicts FPR = <strong>0.440</strong> and <strong>0.232</strong>, against the observed 0.449 and 0.235 — within one percentage point.</p></div>
+<div class="card-body" style="margin-top:10px"><strong>The disparity was not a bug and not a hidden racial feature; it was arithmetic.</strong> Both parties were describing the same table with different metrics, and both were correct. To see the force of it, hold PPV at 0.63 and FNR at 0.28 for <em>both</em> groups — a model that is equally precise and equally sensitive by construction — and the identity gives FPR of <strong>0.440</strong> at a 51% base rate and <strong>0.270</strong> at 39%. Perfect predictive parity still produces a 17-point gap in who gets wrongly flagged.</div>
+<div class="card-body" style="margin-top:8px">Which is why the only defensible position is to <strong>pick the metric your domain can justify and say so out loud</strong>. In criminal justice and lending, a false positive is a person harmed by an error, so equalised odds and FPR gaps are usually the right currency. In screening for a treatable disease, a false negative is the catastrophic case, so equal opportunity dominates. In risk scoring where the number is multiplied by money, calibration is what makes the number usable at all. Report all of them regardless — the one you did not optimise is the one you will be asked about.</div>
 <div class="box warn" style="margin-top:10px"><div class="bl">Practical implication</div><p>You must choose which fairness criterion matters most for your use case — there is no universally "fair" model. This is a values and policy decision, not a purely technical one. Document the choice and justify it.</p></div>
 </div>
 
@@ -74,7 +97,8 @@
 <tr><td><strong>Calibration</strong></td><td>Predicted probability matches true probability for each group</td><td>$P(Y=1|\hat{p},G=0) = P(Y=1|\hat{p},G=1) = \hat{p}$</td><td>Risk scoring (criminal justice, credit); individual fairness</td></tr>
 <tr><td><strong>Individual Fairness</strong></td><td>Similar individuals receive similar predictions</td><td>$d(x_i,x_j) \small \Rightarrow d(\hat{y}_i,\hat{y}_j)$</td><td>When group membership shouldn't matter for similar profiles</td></tr>
 <tr><td><strong>Counterfactual Fairness</strong></td><td>Prediction unchanged if protected attribute were different, all else equal</td><td>$P(\hat{Y}|G=0, X) = P(\hat{Y}|G=1, X)$</td><td>Causal fairness; high-stakes individual decisions</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Demographic parity is the odd one out and the source of most confusion.</strong> It ignores $Y$ entirely, so it demands equal selection rates even where the groups genuinely differ on the outcome — which makes it the right instrument for compliance thresholds and the wrong one for accuracy claims. Everything else conditions on the truth: equal opportunity on $Y=1$, equalised odds on both, calibration on the score. If a stakeholder says "make it fair", the first question is <em>which of those conditionings do you mean</em>, because they lead to different models and, per the theorem above, cannot be combined.</div></div>
 
 <div class="card cc"><div class="card-title">Practical Fairness Metrics — What to Actually Measure</div>
 <table class="tbl">
@@ -84,7 +108,15 @@
 <tr><td><strong>FPR gap</strong></td><td>$|\text{FPR}_{G=0} - \text{FPR}_{G=1}|$</td><td>Difference in false positive rates; high = one group penalised more</td><td>&lt; 5–10%</td></tr>
 <tr><td><strong>AUC by subgroup</strong></td><td>$\text{AUC}_{G=0}$ vs $\text{AUC}_{G=1}$</td><td>Large gap = model is systematically less accurate for one group</td><td>Gap &lt; 2–3%</td></tr>
 <tr><td><strong>Calibration by subgroup</strong></td><td>Expected Calibration Error (ECE) per group</td><td>Large gap = model overconfident/underconfident for one group</td><td>ECE gap &lt; 0.03</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Report them together, because one number alone will mislead you.</strong> The code card at the end of this topic builds a deliberately group-blind score over two groups with base rates of 30% and 15%, and audits it:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Group</th><th>Selection rate</th><th>TPR</th><th>FPR</th><th>PPV</th></tr>
+<tr><td>A (base rate 30%)</td><td>0.398</td><td>0.875</td><td>0.206</td><td><strong>0.631</strong></td></tr>
+<tr><td>B (base rate 15%)</td><td>0.317</td><td>0.886</td><td>0.219</td><td><strong>0.411</strong></td></tr>
+<tr><td><strong>Gap</strong></td><td>0.081</td><td><strong>0.011</strong></td><td>0.013</td><td><strong>0.220</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The model never sees group membership. Audited on <strong>equal opportunity it looks excellent</strong> — a TPR gap of 0.011, well inside any threshold you would set — and on <strong>predictive parity it is severe</strong>, a 22-point PPV gap meaning a positive prediction means something quite different depending on which group you belong to. <strong>Same model, same data, opposite verdicts</strong>, and the cause is the base-rate difference rather than anything in the code. Pick your audit metric after choosing what harm you care about, not before, and never let a single passing number stand as the fairness result.</div></div>
 
 <!-- Bias detection -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 3 — Bias Detection &amp; Auditing</div>
@@ -101,6 +133,7 @@
 <tr><td><strong>SHAP</strong></td><td>Feature importance by subgroup; reveals proxy features</td></tr>
 <tr><td><strong>What-If Tool</strong></td><td>Google; interactive counterfactual exploration</td></tr>
 </table>
+<div class="card-body" style="margin-top:8px"><strong>Check the sample size in each cell before believing any of it.</strong> A subgroup with 40 positives gives a TPR with a confidence interval wide enough to cover almost any conclusion, and disaggregating hard enough will always produce an alarming-looking cell. Put intervals on subgroup metrics, and treat intersectional slices — where counts get small fastest — as the place where this bites first.</div>
 </div>
 <div>
 <pre class="formula">from fairlearn.metrics import (
@@ -128,7 +161,7 @@ print("DPD:", demographic_parity_difference(
 </div>
 </div>
 <div class="box story" style="margin-top:10px"><div class="bl">Audit checklist</div><p>(1) Identify protected attributes and their proxies. (2) Compute disparate impact ratio — flag &lt;0.8. (3) Compute TPR/FPR gap by subgroup — flag &gt;10%. (4) Check AUC by subgroup — flag gap &gt;3%. (5) Check calibration by subgroup. (6) Inspect SHAP values for protected attribute or proxy features appearing as top predictors.</p></div>
-</div>
+<div class="card-body" style="margin-top:10px"><strong>Audit intersections, not just marginals.</strong> Buolamwini and Gebru's Gender Shades result is the canonical demonstration: commercial face classifiers were near-perfect on lighter-skinned men and had error rates up to <strong>34.7%</strong> on darker-skinned women, while the one-dimensional breakdowns by gender and by skin tone each looked far less alarming. A model can be within threshold on every single attribute and badly broken on a combination, because averaging over the other dimension hides it.</div></div>
 
 <!-- Mitigation -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 4 — Bias Mitigation Techniques</div>
@@ -158,7 +191,9 @@ print("DPD:", demographic_parity_difference(
   <li><strong>Output re-ranking:</strong> re-rank model outputs to ensure diversity across protected attributes (search/recommendation)</li>
 </ul></div>
 </div>
-<div class="box info" style="margin-top:10px"><div class="bl">Which mitigation to choose</div><p>Post-processing (threshold optimisation) is the easiest to apply without retraining — start here. Pre-processing (reweighting) is the most model-agnostic. In-processing gives the best accuracy-fairness tradeoff but requires modifying training. Always measure the accuracy cost of mitigation — there is always a tradeoff.</p></div>
+<div class="box warn" style="margin-top:10px"><div class="bl">⚠️ the legal trap in the easiest technique</div><p>Per-group thresholds are the simplest way to equalise TPR or FPR, and in US employment and credit they can constitute <strong>disparate treatment</strong> — explicitly using a protected attribute in the decision — which is unlawful even when the intent is to reduce disparate impact. <em>Ricci v. DeStefano</em> and subsequent guidance make this genuinely contested territory. The practical consequence: post-processing is technically the cheapest mitigation and often the least deployable in exactly the regulated domains that need it most, so check with counsel before proposing it, and prefer fixing the data or the objective where you can.</p></div>
+<div class="card-body" style="margin-top:10px"><strong>Measure the accuracy cost honestly, and measure it per group.</strong> A mitigation that equalises TPR by lowering the majority group's recall has redistributed harm rather than removed it, which may well be the right call but must be stated as such. The genuinely good outcome — both fairness and accuracy improving — happens when the original problem was representation or a mis-specified objective rather than a real trade-off, and you can tell which case you are in by checking whether the minority group's <em>own</em> metrics improved or merely the gap narrowed.</div>
+<div class="box info" style="margin-top:8px"><div class="bl">Which mitigation to choose</div><p>Post-processing (threshold optimisation) is the easiest to apply without retraining — start here. Pre-processing (reweighting) is the most model-agnostic. In-processing gives the best accuracy-fairness tradeoff but requires modifying training. Always measure the accuracy cost of mitigation — there is always a tradeoff.</p></div>
 </div>
 
 <!-- Explainability -->
@@ -173,7 +208,9 @@ print("DPD:", demographic_parity_difference(
 <tr><td><strong>Counterfactual explanations</strong></td><td>Local</td><td>"What's the smallest change to this input that flips the prediction?"</td><td>Individual recourse — "what would you need to do to get approved?"</td></tr>
 <tr><td><strong>Partial Dependence Plots</strong></td><td>Global</td><td>Average model output as a single feature varies, all others held constant</td><td>Understanding feature effects; non-linear relationships</td></tr>
 <tr><td><strong>Attention visualisation</strong></td><td>Local</td><td>Which tokens the transformer attended to most for a given prediction</td><td>NLP models — intuitive but not formally an explanation</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Explainability is not fairness, and conflating them is the most common senior-level mistake in this area.</strong> SHAP will explain a discriminatory model with perfect clarity — it tells you <em>what the model did</em>, not <em>whether it should have</em>. A model can be fully transparent and unfair, or opaque and fair; the two properties are independent and are audited by different means.</div>
+<div class="card-body" style="margin-top:8px">Two more cautions worth carrying. <strong>Correlated features make attributions unstable</strong> — SHAP splits credit among collinear inputs in ways that shift with the background distribution you choose, so a proxy's importance can be masked by hiding behind its correlates rather than genuinely absent. And <strong>counterfactual explanations are the only row in that table that gives a person something to do.</strong> "Income contributed −0.3 to your score" is not actionable; "approval would follow at 6,000 more annual income, or one fewer recent enquiry" is recourse, and it is what adverse-action notices under ECOA are actually trying to achieve. Prefer the actionable form whenever the explanation is going to a person rather than to an auditor.</div></div>
 
 <!-- Model cards & governance -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent,#5b7df8);margin:28px 0 12px;padding:0">Part 6 — Model Cards, Governance &amp; Regulatory Landscape</div>
@@ -203,7 +240,8 @@ print("DPD:", demographic_parity_difference(
   <li><strong>Financial regulators (OCC, CFPB):</strong> model risk management guidance requires documentation of model limitations and validation</li>
 </ul>
 </div>
-</div></div>
+</div>
+<div class="card-body" style="margin-top:10px"><strong>The section that does the work is "out-of-scope uses".</strong> Most documented harm comes from a model applied outside the population or purpose it was validated for — a triage tool repurposed as a diagnosis, a US-trained credit model deployed in another market. Writing down what the model is <em>not</em> for is the cheapest control available, and it is the section teams skip because it reads as admitting weakness. Treat the card as a versioned artefact regenerated by the training pipeline, not a document written once at launch; a card describing a model two retrains ago is worse than none, because it is trusted.</div></div>
 
 <div class="card ca"><div class="card-title">Regulatory Landscape — What You Need to Know</div>
 <table class="tbl">
@@ -213,17 +251,24 @@ print("DPD:", demographic_parity_difference(
 <tr><td><strong>NYC Local Law 144</strong></td><td>New York City</td><td>Employers using AI for hiring decisions must conduct annual bias audits and disclose results publicly. First US law specifically targeting automated employment decisions.</td></tr>
 <tr><td><strong>ECOA / Fair Lending</strong></td><td>United States</td><td>Credit models must comply with Equal Credit Opportunity Act — adverse action notices, no disparate impact on protected classes. CFPB requires explainability for adverse decisions.</td></tr>
 <tr><td><strong>GDPR Article 22</strong></td><td>European Union</td><td>Right to explanation for fully automated decisions. Users can request human review of AI decisions.</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px">The pattern across all five, and the thing to say rather than reciting names: <strong>they regulate by risk tier and they demand documentation, not a particular algorithm.</strong> None mandates a fairness metric — which is consistent with the impossibility theorem, since legislating one would legislate away the others. What they require is that you chose deliberately, wrote down the choice, measured the outcome, and kept a human in the loop for consequential decisions. <strong>Human oversight is a real design constraint, not a disclaimer:</strong> a reviewer who rubber-stamps the model's output satisfies nobody, so the system has to surface uncertainty and give the reviewer something to act on — which is why reject-option classification and counterfactual recourse show up in compliant designs.</div></div>
 
 <!-- Common mistakes -->
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>"We didn't include protected attributes so the model is fair"</strong> — proxy variables (zip code, name, browsing history) encode protected attributes. Omitting the feature does not remove the bias</li>
-  <li><strong>"High overall accuracy = fair"</strong> — a model can have 95% accuracy overall while performing at 70% for a minority group. Always disaggregate metrics by subgroup</li>
-  <li><strong>"Fairness and accuracy are always in tension"</strong> — often untrue. Bias frequently causes <em>worse</em> performance on underrepresented groups. Fixing data representation often improves both</li>
-  <li><strong>"One fairness metric is enough"</strong> — each metric encodes a different moral intuition. Report multiple; justify which matters most for your use case</li>
-  <li><strong>"Post-deployment, fairness is someone else's problem"</strong> — distribution shift can introduce new biases over time. Monitor fairness metrics in production alongside accuracy metrics</li>
-  <li><strong>"Explainability = fairness"</strong> — SHAP can explain a biased model clearly. Transparency and fairness are related but distinct properties</li>
+  <li><strong>"We dropped the protected attribute, so it's fair."</strong> Proxies carry it. In the worked example above, dropping the column moved the disparate-impact ratio from 0.45 to 0.75 — still failing the four-fifths rule</li>
+  <li><strong>Not recording protected attributes at all.</strong> Then you cannot measure fairness, and "we have no evidence of bias" is a statement about your instrumentation. Store them separately, access-controlled, for audit use</li>
+  <li><strong>Reporting one fairness metric.</strong> The same model above passes equal opportunity with a 0.011 TPR gap and fails predictive parity with a 0.220 PPV gap. One number is a choice of narrative</li>
+  <li><strong>Aggregate accuracy as the fairness answer.</strong> 10% of the data at 70% accuracy and the rest at 97% is <strong>94.5% overall</strong> — a healthy headline concealing a group the model fails</li>
+  <li><strong>Auditing marginals only.</strong> Gender Shades found up to 34.7% error on darker-skinned women where each single-attribute breakdown looked acceptable. Intersections are where it hides</li>
+  <li><strong>Subgroup metrics without confidence intervals.</strong> Slice far enough and some cell always looks alarming or reassuring; with 40 positives it means nothing either way</li>
+  <li><strong>Trusting metrics computed against biased labels.</strong> Every metric here compares predictions to the label. If annotation or history was discriminatory, a zero gap measures agreement with the bias</li>
+  <li><strong>Per-group thresholds without legal review.</strong> The easiest mitigation is potentially disparate treatment in US hiring and credit, whatever its intent</li>
+  <li><strong>Mitigating by degrading the majority group.</strong> Equalising the gap by lowering everyone is redistribution, not repair. Check that the disadvantaged group's own metrics improved</li>
+  <li><strong>Treating explainability as fairness evidence.</strong> SHAP explains a biased model perfectly well; the two properties are independent</li>
+  <li><strong>Auditing once, at launch.</strong> Populations drift and feedback loops compound, so a model fair at release is not fair a year later. Fairness metrics belong on the production dashboard next to accuracy</li>
+  <li><strong>A model card written by hand at launch.</strong> It goes stale on the next retrain and is then actively misleading. Generate it from the pipeline</li>
 </ul></div>
 
 <!-- Used at top companies -->
@@ -236,13 +281,13 @@ print("DPD:", demographic_parity_difference(
   <li><strong>Healthcare AI (Epic, Google Health):</strong> subgroup performance reporting mandatory before clinical deployment; FDA guidance on AI/ML-based software as medical device (SaMD) requires bias evaluation</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What is algorithmic fairness?</strong> "Algorithmic fairness is the study of whether ML model decisions are equitable across demographic groups. There are multiple mathematical definitions — demographic parity (equal positive rates), equal opportunity (equal TPR), equalised odds (equal TPR and FPR), and calibration (probabilities match outcomes per group). Critically, these definitions are mutually exclusive when base rates differ — a fundamental theorem in fairness — so choosing which metric to optimise is a values and policy decision, not a technical one."</p>
-<p style="margin-top:8px"><strong>How do you audit a model for bias?</strong> "I'd (1) identify protected attributes and their proxies — zip code encoding race, names encoding gender. (2) Compute disparate impact ratio — US EEOC flags anything below 0.8. (3) Compute TPR and FPR gaps by subgroup using Fairlearn's MetricFrame. (4) Check AUC and calibration per group. (5) Inspect SHAP values for protected attribute proxies appearing as top features. Then mitigate — usually starting with threshold optimisation (easiest, no retraining) or sample reweighting (next simplest)."</p>
-<p style="margin-top:8px"><strong>Fairness-accuracy tradeoff?</strong> "Often overstated. In many cases, bias in training data causes the model to perform worse on underrepresented groups — fixing bias via reweighting or better data collection improves both fairness AND accuracy for those groups. The tradeoff is real but smaller than assumed, and the framing 'accuracy or fairness' is frequently a false dilemma."</p>
-<p style="margin-top:8px"><strong>Common follow-up — 'What's disparate impact?'</strong> "Disparate impact is when a facially neutral policy disproportionately disadvantages a protected group, regardless of intent. In ML: the disparate impact ratio is the positive prediction rate for the minority group divided by the rate for the majority group. Below 0.8 triggers the US 4/5ths rule — presumptive evidence of illegal discrimination under Title VII and ECOA."</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the impossibility result, because it reframes the question.</strong> "There are several mathematical definitions — demographic parity, equal opportunity, equalised odds, calibration — and when base rates differ across groups they are provably incompatible. It follows from one identity: FPR equals the base-rate odds times (1−PPV)/PPV times recall. Fix precision and recall equal across groups and unequal prevalence forces unequal false-positive rates. So 'is this model fair' is not well posed until someone says which criterion the domain can defend."</p>
+<p style="margin-top:8px"><strong>Use COMPAS as the worked case, because it shows both sides were right.</strong> "ProPublica showed a 44.9% versus 23.5% false-positive-rate gap. Northpointe showed roughly equal predictive value. Put the published numbers through the identity — base rates 51% and 39%, PPV 0.63 and 0.59 — and it reproduces those FPRs to within a point. The disparity was forced by the base rates, not introduced by a feature. Then say what you would do: in criminal justice a false positive is a person harmed by an error, so I would target equalised odds and report calibration alongside it."</p>
+<p style="margin-top:8px"><strong>Kill "we removed the attribute" with numbers.</strong> "Fairness through unawareness fails because proxies remain and a biased label makes them predictive. On a simulated hiring set, the model with the attribute had a disparate-impact ratio of 0.45; dropping the column moved it to 0.75 — still below the 0.8 four-fifths threshold. And you need the attribute recorded anyway, or you cannot compute the audit at all — which is why regulated lenders keep it in a separate access-controlled table."</p>
+<p style="margin-top:8px"><strong>Give an audit as a sequence, and mention intersections.</strong> "Identify protected attributes and their proxies; disparate impact ratio against 0.8; TPR and FPR gaps; AUC and calibration per group; SHAP for proxies in the top features. Then the two things people miss — put confidence intervals on subgroup metrics, because small cells produce alarming noise, and audit <em>intersections</em>: Gender Shades found up to 34.7% error on darker-skinned women when the single-attribute breakdowns looked fine."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not claim a model is fair — name the criterion and the number. Do not offer explainability as evidence of fairness; SHAP explains a biased model perfectly. Do not present the fairness–accuracy trade-off as a law: when the cause is under-representation or a mis-specified objective, fixing it improves both, and the way to tell is whether the disadvantaged group's own metrics rose or just the gap narrowed. Do not propose per-group thresholds in a US hiring or credit context without flagging the disparate-treatment problem. And do not treat this as a launch gate — populations drift, so fairness metrics belong in production monitoring beside accuracy.</p>
 </div>
-
 
 <div class="anim-wrap"><div class="anim-title">The fairness impossibility result, drawn</div>
 <svg viewBox="0 0 500 188" xmlns="http://www.w3.org/2000/svg">

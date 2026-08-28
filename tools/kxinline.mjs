@@ -6,7 +6,10 @@ for (const f of fs.readdirSync(root+'/topics').filter(x=>x.endsWith('.html')).so
      .replace(/<script[\s\S]*?<\/script>/g,'').replace(/<svg[\s\S]*?<\/svg>/g,'')
      .replace(/\$\$[\s\S]*?\$\$/g,'');            // drop display blocks
   // per text node, exactly how KaTeX auto-render sees it
-  for (const node of s.split(/<[^>]*>/)) {
+  const unesc = t => t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"')
+                      .replace(/&#x27;|&apos;/g,"'").replace(/&nbsp;/g,' ').replace(/&amp;/g,'&');
+  // the browser decodes entities BEFORE KaTeX sees the text node -- match that
+  for (const node of s.split(/<[^>]*>/).map(unesc)) {
     for (const m of node.match(/\$[^$\n]+\$/g)||[]) { n++;
       try { katex.renderToString(m.slice(1,-1),{displayMode:false,throwOnError:true,strict:'error'}); }
       catch(e){ const st=/Unrecognized Unicode|LaTeX-incompatible/.test(e.message);

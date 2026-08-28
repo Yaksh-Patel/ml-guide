@@ -1,15 +1,16 @@
 <section class="section" id="sec-causal">
 <div class="sec-title">Causal Inference &amp; A/B Testing</div>
-<div class="sec-desc">Correlation is not causation — and most business decisions require knowing causes, not correlations. This topic covers the statistical foundations of A/B testing, power analysis, the potential outcomes framework, observational causal methods (DiD, IV, matching), uplift modelling, and the DoWhy causal ML library. Senior DS roles in product and growth companies treat this as a core competency.</div>
+<div class="sec-desc">Every other topic in this atlas answers <em>what will happen</em>. This one answers <em>what would happen if I changed something</em>, and they are different questions with different mathematics. A churn model that reads login frequency will be excellent at ranking who leaves and will tell you nothing about whether making people log in more keeps them — because it learned the correlation, and you are proposing to break it. The gap between $P(Y \mid X)$ and $P(Y \mid do(X))$ is where product decisions live, and closing it takes either randomisation or an explicit, defensible assumption about the counterfactual you never got to see.</div>
 
 <!-- Causation vs correlation -->
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Causation Matters in ML</div>
-<ul class="bul">
-  <li><strong>Correlation-based models fail under intervention:</strong> a model predicting retention based on login frequency will break if you force users to log in more — the feature changes but not through the causal pathway</li>
-  <li><strong>Simpson's paradox:</strong> a drug appears to help in aggregate data but harms every subgroup — direction of effect reverses when confounders are controlled</li>
-  <li><strong>Feedback loops:</strong> model predictions change user behaviour, which changes the training data — correlation breaks down</li>
-  <li><strong>Policy decisions require causes:</strong> "should we increase X?" requires knowing whether X causes Y, not just that they correlate</li>
+<div class="card cb"><div class="card-title">Seeing is not doing</div>
+<div class="card-body">The distinction that organises everything below: <strong>observing that treated units do better</strong> is a statement about who got treated, while <strong>intervening</strong> is a statement about what treatment does. They coincide only when assignment was independent of everything else — which is exactly what randomisation buys and nothing else gives for free.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Correlation-based models break under intervention.</strong> Login frequency predicts retention because engaged users do both. Force logins and you have moved the feature without moving the thing it was proxying for, and the model's coefficient no longer applies</li>
+  <li><strong>Confounding reverses signs, it does not merely weaken them.</strong> In the code card at the end of this topic the true effect is <strong>+2.0</strong> and the naive treated-minus-control comparison reads <strong>−1.13</strong>. Not attenuated — the wrong sign, because the treatment went to people who were already worse off</li>
+  <li><strong>Feedback loops make yesterday's data a function of yesterday's model.</strong> Predictions change behaviour, behaviour becomes training data, and the correlation you fit is partly your own reflection</li>
+  <li><strong>Policy questions are always interventional.</strong> "Should we raise X?" is $do(X)$. No amount of predictive accuracy answers it</li>
 </ul></div>
 
 <div class="card cg"><div class="card-title">The Potential Outcomes Framework (Rubin Causal Model)</div>
@@ -21,6 +22,8 @@ Y_i(0) &= \text{outcome for unit } i \text{ if not treated} \\
 \text{ATT} &= \mathbb{E}[Y(1) - Y(0) | T=1] \quad \text{(Effect on the Treated)}
 \end{aligned}$$</div>
 <div class="box warn" style="margin-top:8px"><div class="bl">Fundamental problem of causal inference</div><p>We can never observe both $Y_i(1)$ and $Y_i(0)$ for the same unit at the same time. We observe either the treated or the control outcome — never both. All causal methods are strategies for estimating the counterfactual we cannot observe.</p></div>
+<div class="card-body" style="margin-top:8px">Read that as a <em>missing data</em> problem and the whole field organises itself: exactly half of the table is always blank, so every method below is a different argument for what belongs in the blanks. Randomisation says the missing half is exchangeable with the observed half. Matching says it is exchangeable <em>conditional on covariates</em>. DiD says the missing half would have moved parallel to the controls. <strong>The assumption is the method</strong>, and the estimator is the easy part — which is why a causal answer without its stated assumption is not an answer.</div>
+<div class="card-body" style="margin-top:8px">Note also which quantities are even askable. ITE is never identified for an individual, so anything claiming per-person causal effects — uplift models included — is estimating a <em>conditional average</em> over people who look alike, not a personal counterfactual. ATT differs from ATE whenever the treated are not representative, and for "should we have run this campaign" ATT is usually the quantity you actually want.</div>
 </div>
 </div>
 
@@ -28,7 +31,7 @@ Y_i(0) &= \text{outcome for unit } i \text{ if not treated} \\
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — A/B Testing: The Gold Standard</div>
 
 <div class="card ca"><div class="card-title">Why Randomised Experiments Are the Gold Standard</div>
-<div class="card-body">Random assignment ensures treatment and control groups are identical in expectation on all covariates — observed and unobserved. This eliminates confounding: any difference in outcomes is caused by the treatment.</div>
+<div class="card-body">Random assignment makes treatment and control identical in expectation on every covariate — including the ones you never measured and the ones you never thought of. That last clause is the whole value proposition, and it is the one thing no observational method can replicate.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <strong style="font-size:12px;color:var(--text)">A/B test statistical setup</strong>
@@ -49,12 +52,21 @@ p\text{-value}&: P(\text{data this extreme} | H_0 \text{ true}) \\
   <li><strong>Minimum Detectable Effect (MDE):</strong> smallest effect size worth detecting; drives sample size</li>
   <li><strong>Two-tailed vs one-tailed:</strong> almost always use two-tailed — you can't know in advance which direction the effect will be</li>
 </ul>
+<div class="card-body" style="margin-top:8px">A p-value is <strong>not</strong> the probability the hypothesis is true, and 1−p is not confidence in the effect. It is the probability of data this extreme <em>if there were no effect at all</em>. Getting this backwards is what makes people treat p = 0.04 as "96% sure" and then ship a flat feature.</div>
 </div>
 </div></div>
 
-<div class="card cp"><div class="card-title">Power Analysis &amp; Sample Size Calculation</div>
+<div class="card cp"><div class="card-title">Power analysis — and what it costs to detect something smaller</div>
 <div class="formula math-formula">$$n \approx \frac{2(z_{\alpha/2} + z_\beta)^2 \sigma^2}{\delta^2}$$</div>
 <div class="card-body" style="margin-top:8px">where $\delta$ = MDE (minimum detectable effect), $\sigma^2$ = variance of metric, $z_{\alpha/2}$ = 1.96 for α=0.05, $z_\beta$ = 0.84 for 80% power.</div>
+<div class="card-body" style="margin-top:8px">The term that dominates is $\delta^2$ in the denominator, and it is worth seeing what that means in traffic. From a 10% baseline conversion rate, at 80% power and α = 0.05:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>MDE</th><th>n per group</th><th>Total users</th><th>At 5,000 users/day</th></tr>
+<tr><td>+2.0 pp (10% → 12%)</td><td>3,835</td><td>7,670</td><td>1.5 days</td></tr>
+<tr><td>+1.0 pp (10% → 11%)</td><td>14,745</td><td>29,490</td><td>5.9 days</td></tr>
+<tr><td>+0.5 pp (10% → 10.5%)</td><td><strong>57,756</strong></td><td>115,512</td><td><strong>23 days</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Halving the MDE multiplies the sample by about four</strong> (3.85× in the rows above — not exactly 4, because the variance term also shifts as the rate moves). This is the single most useful fact in experiment planning, and it runs both ways: a team that cannot afford 23 days is not choosing to be sloppy, it is discovering that a 0.5 pp effect is not measurable at its traffic. The honest response is to say so up front rather than run underpowered and report a null as "no effect".</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <pre class="formula">from scipy import stats
@@ -81,15 +93,35 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 <div>
 <strong style="font-size:12px;color:var(--text)">What drives sample size</strong>
 <table class="tbl" style="margin-top:6px">
-<tr><th>Factor</th><th>Effect on n</th></tr>
-<tr><td>Smaller MDE</td><td>n grows as 1/δ² — halving MDE quadruples n</td></tr>
-<tr><td>Higher variance metric</td><td>n grows linearly — use lower-variance metrics</td></tr>
-<tr><td>Lower α (0.05→0.01)</td><td>n increases ~50%</td></tr>
-<tr><td>Higher power (0.80→0.95)</td><td>n increases ~40%</td></tr>
+<tr><th>Change</th><th>Effect on n</th></tr>
+<tr><td>Halve the MDE</td><td>n grows as 1/δ² — roughly <strong>×4</strong></td></tr>
+<tr><td>Higher-variance metric</td><td>n ∝ σ² — linear, so switch to a lower-variance metric where you can</td></tr>
+<tr><td>α 0.05 → 0.01</td><td>×1.49</td></tr>
+<tr><td>Power 0.80 → 0.90</td><td>×1.34</td></tr>
+<tr><td>Power 0.80 → 0.95</td><td>×1.66</td></tr>
 </table>
 <div class="box tip" style="margin-top:8px"><div class="bl">Practical tip</div><p>Run your power analysis before launching the experiment — never stop early because it "looks significant." Peeking inflates Type I error. Pre-register the sample size and run to completion.</p></div>
 </div>
 </div></div>
+
+<div class="card cr"><div class="card-title">Peeking and multiple testing, quantified</div>
+<div class="card-body">These are the two ways an honest team ships a feature that does nothing, and both are arithmetic rather than judgement, so both can be stated exactly.</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — the cost of looking early</div><p>Simulate an A/B test where <strong>the null is true</strong>: both arms drawn from the same distribution, so every "win" is a false positive. Stop the moment <strong>p &lt; 0.05</strong> at any check. 20,000 simulated experiments give the false-positive rate below.</p></div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Checks during the test</th><th>Actual false-positive rate</th><th>Versus the 5% you think you have</th></tr>
+<tr><td>1 (at the planned end — correct)</td><td>0.051</td><td>as advertised</td></tr>
+<tr><td>2</td><td>0.086</td><td>1.7×</td></tr>
+<tr><td>5</td><td>0.139</td><td>2.8×</td></tr>
+<tr><td>10 (a daily dashboard on a two-week test)</td><td><strong>0.199</strong></td><td><strong>4×</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A dashboard refreshed daily for two weeks is not a mild convenience — it turns a 5% error rate into <strong>one false win in five</strong>. And note the mechanism, because it explains the fix: the sequence of running estimates wanders, so given enough looks it will eventually cross the boundary by chance. The remedy is not "look less"; it is to use a boundary that already accounts for looking — <strong>sequential testing</strong> (mSPRT, always-valid p-values, group-sequential alpha spending). Those let you stop early legitimately, which is what people wanted in the first place.</div>
+<div class="card-body" style="margin-top:10px"><strong>Multiple testing is the same arithmetic across metrics instead of across time.</strong> With independent tests at α = 0.05, the chance of at least one false positive is $1 - 0.95^k$:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Metrics examined</th><th>5</th><th>10</th><th>20</th><th>50</th></tr>
+<tr><td>P(at least one false "win")</td><td>22.6%</td><td>40.1%</td><td><strong>64.2%</strong></td><td>92.3%</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">A standard experiment dashboard carries more than 20 metrics, so <strong>the coin-flip default is that something on it is significant and meaningless.</strong> Designate one primary metric before launch and treat everything else as guardrails or exploration; use Bonferroni (α/k) when you genuinely have a small family of confirmatory tests, and Benjamini–Hochberg FDR when you are screening many. The important half is the pre-registration, not the correction.</div>
+</div>
 
 <div class="card"><div class="card-title">Common A/B Testing Pitfalls</div>
 <table class="tbl">
@@ -100,7 +132,10 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 <tr><td><strong>Novelty effect</strong></td><td>New feature gets more engagement just because it's new; effect decays</td><td>Run longer (4+ weeks); check if effect is stable over time</td></tr>
 <tr><td><strong>Sample ratio mismatch</strong></td><td>50/50 split shows 52/48 in data — logging bug or selection bias</td><td>Always check actual split ratio; abort if SRM &gt; 0.1%</td></tr>
 <tr><td><strong>Simpson's paradox</strong></td><td>Aggregate shows positive effect but every segment shows negative</td><td>Always stratify analysis by key dimensions (platform, cohort, geography)</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>SUTVA is the one that invalidates the experiment rather than weakening it.</strong> The stable-unit-treatment-value assumption says one user's outcome does not depend on another user's assignment. In a social product, a marketplace, or anything with shared inventory it is false by construction: give half the drivers a better dispatch algorithm and the control drivers get the leftovers, so the control group is <em>damaged by the treatment</em> and the measured lift is partly cannibalisation. Cluster-randomise by city or region, or run a switchback that alternates the whole market over time. The tell is a lift that shrinks as you roll out — the control group stops being harmed and the "gain" evaporates.</div>
+<div class="card-body" style="margin-top:8px"><strong>And check sample ratio mismatch first, every time.</strong> A chi-square on the observed split is brutally sensitive at scale: at 200,000 users per arm a 50.5/49.5 split gives p ≈ 8×10⁻⁶. That is not a rounding artefact, it is a bug — a redirect that drops slow clients, a bot filter applied to one arm, an SDK that fails differently on old Android. <strong>If the split is broken, every downstream number is meaningless</strong>, so SRM is a gate before analysis rather than a metric alongside it.</div>
+</div>
 
 <!-- Variance reduction -->
 <div class="card cc"><div class="card-title">Variance Reduction — Getting Significant Results Faster</div>
@@ -111,6 +146,13 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 <tr><td><strong>Delta method</strong></td><td>Correct variance estimation for ratio metrics (revenue per user = revenue / users)</td><td>Avoids underestimating SE for ratio metrics</td></tr>
 <tr><td><strong>Switchback / time-series design</strong></td><td>Alternate treatment and control in time periods for marketplace experiments</td><td>Controls for temporal confounding</td></tr>
 </table>
+<div class="card-body" style="margin-top:10px"><strong>The "30–80%" in that first row is not a rule of thumb, it is $\rho^2$.</strong> With the optimal coefficient $\theta^* = \operatorname{Cov}(Y,X)/\operatorname{Var}(X)$, the adjusted metric has $\operatorname{Var}(Y^*) = \operatorname{Var}(Y)\,(1-\rho^2)$ where $\rho$ is the correlation between the metric and its pre-experiment value. So the entire benefit is decided by one number you can measure before running anything:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>ρ (pre-period vs in-period metric)</th><th>0.3</th><th>0.5</th><th>0.7</th><th>0.9</th></tr>
+<tr><td>Variance remaining</td><td>0.91</td><td>0.75</td><td>0.51</td><td>0.19</td></tr>
+<tr><td>Equivalent sample-size multiplier</td><td>×1.10</td><td>×1.33</td><td><strong>×1.96</strong></td><td><strong>×5.26</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Three things fall straight out of that formula. <strong>Sticky per-user metrics benefit enormously</strong> — last month's spend predicts this month's, so ρ is high and you roughly double your traffic for free. <strong>New users get nothing</strong>, because they have no pre-period, which is why CUPED is usually applied to returning users with a separate untreated stratum. And <strong>the covariate must be strictly pre-experiment</strong>: use anything measured after assignment and you are conditioning on a post-treatment variable, which reintroduces exactly the bias randomisation removed. That last mistake is easy to make and invisible in the output.</div>
 <div class="box info" style="margin-top:8px"><div class="bl">CUPED — the most impactful technique</div><p>CUPED uses the same metric measured before the experiment as a covariate to remove noise. If last week's revenue predicts this week's, regressing it out dramatically reduces variance. Used by Netflix, Airbnb, Booking.com as standard practice. Requires no change to randomisation — pure post-hoc analysis step.</p></div>
 </div>
 
@@ -123,6 +165,7 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 &= \text{change in treated} - \text{change in control} \\
 \text{Parallel trends assumption}&: \text{treated and control would have evolved similarly absent treatment}
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">The idea in one line: <strong>the control group's change is your estimate of what the treated group's change would have been.</strong> Subtracting it removes anything that shifted both groups — seasonality, a pricing change, a pandemic — and also removes any fixed difference between the groups, which is why the two groups do not need to be comparable in <em>level</em>, only in <em>trend</em>.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <strong style="font-size:12px;color:var(--text)">Classic example</strong>
@@ -131,6 +174,7 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
   <li>Employment changed differently in NJ vs PA — the difference of differences is the causal effect</li>
   <li>Key assumption: <strong>parallel trends</strong> — NJ and PA employment would have moved together absent the policy change</li>
 </ul>
+<div class="card-body" style="margin-top:8px"><strong>Parallel trends is untestable</strong> — it is a claim about a counterfactual period. What you <em>can</em> do is check the pre-period: plot both series for several periods before treatment and run an event study with leads and lags. Significant "effects" before treatment started mean the assumption is already failing. That check is necessary and not sufficient, and saying so is the difference between a defensible estimate and a plausible one.</div>
 </div>
 <div>
 <pre class="formula">import statsmodels.formula.api as smf
@@ -147,6 +191,7 @@ result = smf.ols(
 did_estimate = result.params["post:treated"]
 print(f"DiD estimate: {did_estimate:.3f}")
 print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
+<div class="card-body" style="margin-top:8px">The interaction coefficient <em>is</em> the estimate — that is why DiD is usually written as a regression rather than four means. It also generalises for free: add unit and time fixed effects for many groups and periods, and cluster standard errors by unit, because outcomes within a unit are correlated over time and ignoring that understates the standard error badly.</div>
 </div>
 </div></div>
 
@@ -158,13 +203,23 @@ print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
 <tr><td><strong>Instrumental Variables (IV)</strong></td><td>Use an instrument Z that affects treatment but not outcome directly (except through treatment)</td><td>Exclusion restriction: Z affects Y only through T</td><td>When confounders are unmeasured; classic: distance to hospital as IV for healthcare</td></tr>
 <tr><td><strong>Regression Discontinuity (RDD)</strong></td><td>Compare units just above vs just below a threshold; near-threshold units are comparable</td><td>No sorting around threshold; continuity of potential outcomes</td><td>Threshold-based policies: scholarship cutoffs, age eligibility</td></tr>
 <tr><td><strong>Synthetic Control</strong></td><td>Construct a weighted combination of control units that matches treated unit pre-treatment</td><td>Parallel trends (weaker form); convex hull assumption</td><td>Single treated unit (one country, one city)</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Ranked by how much they ask you to believe:</strong> RDD asks least — near the cutoff, assignment is close to arbitrary, so it is the nearest thing to a local randomised trial, and its cost is that it only identifies the effect <em>at the threshold</em>. IV asks for an exclusion restriction that is untestable and usually contestable, and returns a LATE — the effect on the compliers, whoever they happen to be — not the ATE. PSM and IPW ask for the strongest thing of all, that you measured every confounder, which is unverifiable and usually false; they also need <strong>positivity</strong>, meaning every unit had some chance of either arm, and IPW blows up when a propensity approaches 0 or 1, so trim or stabilise the weights. Synthetic control is for the single-treated-unit case and its honest inference is a placebo permutation over the donor pool, not a t-test.</div>
+<div class="card-body" style="margin-top:8px">The practical framing for an interview: <strong>none of these recovers what randomisation gives you.</strong> They convert an unanswerable question into one answerable under a stated assumption, so the deliverable is the estimate <em>plus</em> the assumption <em>plus</em> a sensitivity analysis showing how wrong the assumption would have to be to overturn the conclusion.</div>
+</div>
+
+<div class="card cr"><div class="card-title">Colliders — the bias you create by controlling for something</div>
+<div class="card-body">"Control for more covariates" is the most common piece of bad causal advice. Confounders must be controlled; <strong>colliders must not be</strong>, and conditioning on one manufactures an association where none exists.</div>
+<div class="card-body" style="margin-top:8px">A collider is a variable caused by both of the things you are relating. Condition on it — by controlling for it, stratifying on it, or simply by collecting a sample selected on it — and you open a path between two independent causes.</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — a correlation conjured from nothing</div><p>Draw 200,000 people with independent <strong>talent</strong> and <strong>luck</strong>, then admit anyone whose sum exceeds a bar. In the full population the two are uncorrelated: <strong>r = −0.001</strong>. Among the admitted, <strong>r = −0.688</strong>. Nobody manipulated anything and no confounder exists — the negative relationship is entirely an artefact of looking only at people who got in, because among them a shortfall in one must be made up by the other. This is why "among our customers, feature use is negatively related to satisfaction" is usually a statement about who becomes a customer.</p></div>
+<div class="card-body" style="margin-top:10px">Two consequences that matter in practice. <strong>Selection is conditioning.</strong> Restricting to converted users, surviving accounts, or people who answered the survey is controlling for a collider whether or not a regression is involved — so the bias arrives through the sampling frame, silently, with no variable in the model to point at. And <strong>the direction is not predictable</strong>: collider bias can invent, reverse, or mask an effect, which is why "we added controls and the estimate got smaller, so the effect is real" is not valid reasoning. Draw the DAG first, decide what to condition on from the backdoor criterion, and treat any variable that could plausibly be caused by both treatment and outcome as radioactive — including anything measured after treatment.</div>
+</div>
 
 <!-- Uplift modelling -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 3 — Uplift Modelling (Heterogeneous Treatment Effects)</div>
 
 <div class="card cg"><div class="card-title">Uplift Modelling — Targeting Who Responds to Treatment</div>
-<div class="card-body">Average treatment effect tells you the mean effect. Uplift modelling estimates the <em>individual treatment effect</em> — who benefits most, who is unaffected, and who is harmed by the intervention.</div>
+<div class="card-body">A propensity model ranks who is <em>likely to convert</em>. An uplift model ranks who converts <em>because you intervened</em>. Those rankings are close to unrelated, and the gap between them is usually the entire return on the campaign — because the people most likely to convert are frequently the people who were going to convert anyway.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <strong style="font-size:12px;color:var(--text)">The four customer segments</strong>
@@ -175,6 +230,7 @@ print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
 <tr><td><strong>Lost causes</strong></td><td>Won't convert</td><td>Won't convert</td><td>❌ Wasted spend</td></tr>
 <tr><td><strong>Do-not-disturb</strong></td><td>Will convert</td><td>Won't convert (harmed)</td><td>🚫 AVOID</td></tr>
 </table>
+<div class="card-body" style="margin-top:8px">A propensity model puts <strong>sure things at the top</strong> — they have the highest conversion probability — so it spends the budget on people who needed nothing, and cannot see do-not-disturbs at all, because their high propensity looks like a reason to contact them.</div>
 </div>
 <div>
 <strong style="font-size:12px;color:var(--text)">Methods</strong>
@@ -185,8 +241,17 @@ print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
   <li><strong>Causal forests (Wager &amp; Athey):</strong> random forest variant that directly targets HTE estimation; gold standard in industry</li>
   <li><strong>Meta-learners (econML):</strong> plug-in estimation; works with any base learner</li>
 </ul>
+<div class="card-body" style="margin-top:8px">The reason T-learner is noisy is worth knowing: you are <strong>differencing two independently-fitted models</strong>, so the errors add while the signal — an uplift of a few percentage points — is far smaller than either model's own error. S-learner has the opposite failure: with a strong feature set, a single model can shrink the treatment indicator toward irrelevance and report almost no uplift anywhere. X-learner and causal forests exist because they target the <em>difference</em> directly instead of subtracting two things fitted for another purpose.</div>
 </div>
 </div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — targeting by uplift versus by propensity</div><p>100,000 customers: 15% persuadable (0% → 35% conversion), 25% sure things (80% either way), 55% lost causes (0% either way), 5% do-not-disturb (60% → 35%, actively harmed by contact). Margin £40 per conversion, contact cost £5.</p></div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Strategy</th><th>Contacted</th><th>Incremental conversions</th><th>Profit</th></tr>
+<tr><td>Treat everyone</td><td>100,000</td><td>4,036</td><td><strong>−£338,578</strong></td></tr>
+<tr><td>Top 30% by <em>propensity</em> (most likely to convert)</td><td>30,000</td><td>1,039</td><td><strong>−£108,432</strong></td></tr>
+<tr><td>Top 30% by <em>uplift</em></td><td>30,000</td><td><strong>5,298</strong></td><td><strong>+£61,932</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two things in that table are worth sitting with. <strong>The propensity model loses money</strong> — it is a competent model of the wrong quantity, spending £150,000 to reach sure things. And <strong>treating 30% of the list produces more incremental conversions than treating all of it</strong> (5,298 against 4,036), which is not a rounding oddity: the do-not-disturb segment destroys 1,250 conversions that would have happened anyway, so contacting everyone is worse than contacting the right third. That is the case for uplift modelling in one line — <em>the sign of the treatment effect is not constant across people</em>, and any method that estimates only an average is blind to it.</div>
 <pre class="formula" style="margin-top:10px">from econml.dml import CausalForestDML
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 
@@ -213,6 +278,8 @@ print(f"ATE: {ate:.4f}")
   <li><strong>AUUC</strong> (Area Under Uplift Curve): scalar summary; higher = better model at targeting persuadables</li>
   <li><strong>Uplift at decile:</strong> compare mean(Y|T=1) - mean(Y|T=0) within each decile of predicted uplift — should be monotonically decreasing</li>
 </ul>
+<div class="card-body" style="margin-top:8px"><strong>You cannot score an uplift model the way you score a classifier</strong>, because the label it predicts — the individual treatment effect — is never observed for anybody. Every metric here works by <em>grouping</em>: rank by predicted uplift, then within each bucket compare treated and control outcomes, which is an achievable measurement because the bucket contains both. This is also why uplift evaluation needs a genuinely randomised holdout: if assignment was not random, the within-bucket difference is confounded and the Qini curve measures selection rather than uplift.</div>
+<div class="card-body" style="margin-top:8px">The decile check is the one to run first, and a <strong>non-monotonic decile plot means the model is not ranking</strong> — a strong AUUC with a ragged decile profile usually indicates overfitting to a few high-variance cells rather than real heterogeneity.</div>
 </div>
 <div>
 <pre class="formula">from sklift.metrics import qini_auc_score, uplift_curve
@@ -232,6 +299,7 @@ print(f"AUUC: {auuc:.4f}")</pre>
 
 <div class="card cr"><div class="card-title">DoWhy — Microsoft's Causal Inference Library</div>
 <div class="card-body">DoWhy implements Pearl's causal framework: specify a causal graph (DAG), identify whether the causal effect is estimable from data, estimate it, and test robustness of the estimate.</div>
+<div class="card-body" style="margin-top:8px">The reason the library is shaped in four steps — <strong>model, identify, estimate, refute</strong> — is that it forces the order most analyses get wrong. Identification comes <em>before</em> estimation: you first ask whether the effect is recoverable from the data you have given the graph you drew, and only then pick an estimator. Most bad causal work runs a regression and then argues about what it means.</div>
 <pre class="formula">import dowhy
 from dowhy import CausalModel
 
@@ -275,6 +343,7 @@ print(refute)</pre>
   <li><strong>Backdoor criterion:</strong> a set of variables that blocks all backdoor paths from treatment to outcome and is not a descendant of treatment</li>
   <li><strong>Front-door criterion:</strong> estimate causal effect via mediators when confounders are unobserved</li>
 </ul>
+<div class="card-body" style="margin-top:8px">A <strong>mediator</strong> is the third case and it is distinct from both: it sits <em>on</em> the causal path, so controlling for it removes part of the effect you are trying to measure. Confounder — control. Collider — never. Mediator — only if you specifically want the direct effect, and then say so.</div>
 </div>
 <div>
 <strong style="font-size:12px;color:var(--text)">DoWhy refutation tests</strong>
@@ -285,18 +354,24 @@ print(refute)</pre>
 <tr><td>Data subset</td><td>Estimate on random subsample — effect should be stable</td></tr>
 <tr><td>Sensitivity (Rosenbaum bounds)</td><td>How strong would unmeasured confounder need to be to explain away the effect?</td></tr>
 </table>
+<div class="card-body" style="margin-top:8px">These are <strong>falsification tests, not validation</strong>. Passing them does not make an estimate causal — it fails to disprove it. The genuinely informative one is the last: reporting "an unmeasured confounder would need to be more strongly associated with both treatment and outcome than any variable we measured" is a claim a reviewer can argue with, which is exactly what makes it worth stating.</div>
 </div>
 </div></div>
 
 <!-- Common mistakes -->
-<div class="card ca"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card ca"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Stopping the A/B test early because it looks significant</strong> — peeking inflates α. A test that hits p&lt;0.05 at peek #5 has true α ≈ 0.19. Always pre-specify sample size and run to completion, or use sequential testing methods</li>
-  <li><strong>Confusing statistical significance with practical significance</strong> — a 0.001% conversion rate lift can be statistically significant at n=10M but completely meaningless for the business. Always compute effect size and confidence intervals alongside p-values</li>
-  <li><strong>Ignoring SUTVA violations in networked products</strong> — in social networks, marketplaces, or multiplayer games, treating one user affects others. Cluster randomisation or switchback designs are required</li>
-  <li><strong>Controlling for colliders</strong> — adding a variable that is caused by both treatment and outcome opens a spurious backdoor path and introduces bias. Use a DAG to identify which variables to control and which to avoid</li>
-  <li><strong>Confounding observational uplift estimates</strong> — self-selection means treated and untreated users differ systematically. Always use propensity score weighting or matching before computing uplift</li>
-  <li><strong>Using A/B test results for causal claims without randomisation</strong> — quasi-experiments (DiD, RDD) require strong assumptions. Be explicit about what must be true for the estimate to be causal</li>
+  <li><strong>Peeking, then reporting nominal α.</strong> Ten looks turns 5% into <strong>19.9%</strong>. If you want to stop early, use a method designed for it — mSPRT or alpha spending — rather than the same t-test applied more often</li>
+  <li><strong>No pre-registered primary metric.</strong> Twenty metrics at α = 0.05 give a <strong>64%</strong> chance of at least one false win. The dashboard will always have a green cell</li>
+  <li><strong>Analysing before checking SRM.</strong> A 50.5/49.5 split at 200k per arm is p ≈ 8×10⁻⁶ — a bug, not noise. Every downstream estimate is void until it is explained</li>
+  <li><strong>Statistical significance read as business significance.</strong> At n = 10M a 0.01 pp lift is significant and worthless. Report the effect size and its confidence interval; decide against the MDE you committed to beforehand</li>
+  <li><strong>Underpowered null read as "no effect".</strong> Absence of evidence is not evidence of absence — quote the confidence interval, and if it spans effects you would have shipped, the honest conclusion is that the test could not tell</li>
+  <li><strong>Ignoring SUTVA in networked or marketplace products.</strong> The control group is damaged by the treatment, so the lift is partly cannibalisation. Cluster-randomise or switchback</li>
+  <li><strong>Controlling for a collider or a post-treatment variable.</strong> Adding controls can create bias as easily as remove it, and selecting the sample on an outcome does the same thing invisibly</li>
+  <li><strong>CUPED on a covariate measured after assignment.</strong> It is no longer pre-experiment, so it reintroduces the bias randomisation removed — and nothing in the output looks wrong</li>
+  <li><strong>Observational uplift without propensity adjustment.</strong> Self-selected treatment means treated and untreated differ systematically; the "uplift" is selection</li>
+  <li><strong>Quoting a quasi-experimental estimate as if it were an experiment.</strong> DiD, IV and RDD each buy an answer with an assumption. State it, test what can be tested, and report how much it would have to be violated to change the decision</li>
+  <li><strong>Targeting a campaign with a propensity model and calling it personalisation.</strong> It ranks the wrong quantity; on the worked example above it turns a £62k profit into a £108k loss</li>
 </ul></div>
 
 <!-- Used at top companies -->
@@ -310,13 +385,14 @@ print(refute)</pre>
   <li><strong>Retail (Walmart, Target):</strong> synthetic control for evaluating store-level interventions (remodels, new product placement) where no randomisation is possible</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What's the difference between correlation and causation?</strong> "Correlation measures how two variables move together. Causation tells you that changing X produces a change in Y. Correlation can arise from confounding (a third variable causes both), reverse causation (Y causes X), or coincidence. The only way to establish causation is through randomisation (A/B test) or a valid natural experiment that mimics randomisation (DiD, IV, RDD)."</p>
-<p style="margin-top:8px"><strong>How do you design an A/B test?</strong> "Five steps: (1) Define the primary metric and MDE — the smallest lift worth detecting. (2) Run a power analysis to compute required n per group. (3) Randomise users (or clusters for networked products). (4) Run to the pre-specified sample size — no peeking, no early stopping. (5) Analyse: check sample ratio mismatch first, then run two-sided t-test, report effect size and 95% CI not just p-value."</p>
-<p style="margin-top:8px"><strong>What is CUPED?</strong> "CUPED reduces the variance of A/B test estimates by regressing out variance explained by a pre-experiment covariate (usually the same metric from the week before the experiment). The adjusted metric Y* = Y - θ(X - X̄) has lower variance but the same expectation. This is equivalent to running a larger experiment — 50% variance reduction halves the required sample size."</p>
-<p style="margin-top:8px"><strong>When can't you run an A/B test?</strong> "When randomisation is infeasible — policy changes affecting everyone, historical analysis, marketplace interventions. Then I'd use: DiD if there's a control group and parallel trends holds, RDD if there's a threshold with arbitrary assignment near it, IV if there's a valid instrument, or synthetic control for a single treated unit. Each requires explicit assumptions that must be stated and tested."</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Open on seeing versus doing.</strong> "Correlation is $P(Y \mid X)$ — what I expect having observed X. Causation is $P(Y \mid do(X))$ — what I expect having set X. They differ when a confounder drives both, when the arrow runs the other way, or when I am selecting on the outcome. Randomisation makes them equal because assignment is independent of everything, measured or not, and every observational method is a different argument for why they are equal <em>conditional on something</em>."</p>
+<p style="margin-top:8px"><strong>Design an A/B test in five steps, with the number that shows you have run one.</strong> "Pick one primary metric and the MDE worth detecting. Power-analyse: from a 10% baseline, a 2 pp MDE needs about 3,800 per arm, 1 pp needs 14,700, and 0.5 pp needs 57,800 — <em>n scales as 1/δ²</em>, so halving the MDE roughly quadruples the traffic. Randomise, by cluster if the product has network effects. Run to the pre-registered n. Then analyse: <strong>check sample ratio mismatch first</strong>, then effect size with a confidence interval, not just a p-value."</p>
+<p style="margin-top:8px"><strong>Be exact about peeking, because everyone claims to know it.</strong> "Ten looks at a two-week test takes the false-positive rate from 5% to about 20% — a one-in-five chance of shipping nothing. The fix is not discipline, it is a boundary that accounts for looking: mSPRT or alpha spending. Same arithmetic across metrics — 20 metrics at α = 0.05 gives a 64% chance of at least one false win, which is why the primary metric is designated before launch."</p>
+<p style="margin-top:8px"><strong>On CUPED, give the formula rather than the folklore.</strong> "Variance drops by $1-\rho^2$ where ρ is the correlation with the pre-experiment value of the same metric, so ρ = 0.7 nearly doubles effective sample size. It changes nothing about randomisation — it is a post-hoc adjustment — but the covariate must be strictly pre-assignment, or you have conditioned on a post-treatment variable and put the bias back."</p>
+<p style="margin-top:8px"><strong>Have the uplift answer ready, because it separates candidates.</strong> "A propensity model ranks who will convert; an uplift model ranks who converts <em>because</em> of the treatment. Targeting by propensity spends the budget on people who would have converted anyway, and it cannot see the segment you actively harm by contacting. On a realistic segment mix, targeting the top 30% by uplift earns money while targeting the top 30% by propensity loses it — and treating the right third beats treating everyone on incremental conversions, because the do-not-disturb group has a negative effect."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Never call a quasi-experimental estimate causal without naming its assumption — parallel trends for DiD, exclusion for IV, no sorting for RDD — and note that IV gives a LATE on compliers, not the ATE. Do not offer "control for more variables" as the fix for confounding: colliders exist, and conditioning on one manufactured an r of −0.69 between two independent variables in the example above. Do not report a null from an underpowered test as "no effect". And do not say a p-value is the probability the hypothesis is true.</p>
 </div>
-
 
 <div class="anim-wrap"><div class="anim-title">A confounder pointing at both treatment and outcome</div>
 <svg viewBox="0 0 500 190" xmlns="http://www.w3.org/2000/svg">

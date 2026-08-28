@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C17 done (47 topics), C18–C20 remaining (8 topics)** |
+| **Prose quality** | **C1–C18 done (49 topics), C19–C20 remaining (6 topics)** |
 
-### Prose progress: 47 / 55
+### Prose progress: 49 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -44,7 +44,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C15 42 agentic-ai · 43 multimodal
 - [x] C16 44 time-series · 45 credit-risk
 - [x] C17 46 gnns · 47 bipartite-graphs
-- [ ] C18 48 causal-inference · 49 responsible-ai
+- [x] C18 48 causal-inference · 49 responsible-ai
 - [ ] C19 50 data-engineering · 51 mlops · 52 system-design
 - [ ] C20 53 python-sql-dsa · 54 model-cheatsheet · 55 tf-keras-pytorch
 
@@ -269,25 +269,27 @@ This caught a wrong printed vector in a C17 comment that no validator would see.
   tag, the divs still *balance*, so `check_topics.py` reports ok. Two rules that
   follow: find boxes with `<div class="box X"[^>]*>` and depth-match, and after
   any box edit assert that every `.bl` label closes immediately and contains no
-  `<p>`. That check now runs repo-wide (162 boxes, 0 malformed).
+  `<p>`. That check now runs repo-wide (168 boxes, 0 malformed).
 
 - **Unsupported Unicode inside `\text{}`.** KaTeX's *text* mode rejects maths
   symbols: `×`, `→`, `←`, `÷`, `≤`, `≥` and friends all warn (and would fail under
   `strict:'error'`). Em dashes and en dashes are fine. Fixed in `39-llms-rlhf`,
   `43-multimodal` and `52-system-design` by closing the text group and emitting
-  `\times` / `\rightarrow` in maths mode. **All 151 display and 157 inline formulas across all
+  `\times` / `\rightarrow` in maths mode. **All 152 display and 174 inline formulas across all
   56 topics now compile under `strict:'error'`** — re-run that check rather than
   the default, because the default only warns:
 
   ```bash
   # in /tmp/domtest (see §6) with katex installed
   cp <repo>/tools/kx*.mjs .
-  node kxstrict.mjs <repo>   # 151 display formulas: 0 failures, 0 strict warnings
-  node kxinline.mjs <repo>   # 157 inline formulas: 0 failures, 0 strict warnings
+  node kxstrict.mjs <repo>   # 152 display formulas: 0 failures, 0 strict warnings
+  node kxinline.mjs <repo>   # 174 inline formulas: 0 failures, 0 strict warnings
   ```
 
   Inline `$…$` needs its own pass — `kxstrict.mjs` only matches `$$` blocks, and a
-  revamp that explains its symbols in prose adds inline maths fast (83 → 157 in C17).
+  revamp that explains its symbols in prose adds inline maths fast (83 → 174 over C17–C18).
+  `kxinline.mjs` decodes HTML entities first, because the browser hands KaTeX the
+  decoded text node — without that step a legitimate `&lt;` inside `$…$` reads as a failure.
 
 - **Dollar amounts in prose rendering as maths.** KaTeX matches `$…$` inside a
   *single text node*, so two `$` in one sentence ("costs $5 … costs $500") render
