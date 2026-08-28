@@ -1,6 +1,6 @@
 <section class="section" id="sec-pipelines">
 <div class="sec-title">Data Engineering for ML</div>
-<div class="sec-desc">Most ML projects fail not because of bad models but because of bad data pipelines. Data engineering for ML covers the full journey from raw data to features ready for training — batch and streaming pipelines, transformation frameworks (Spark, dbt), table formats (Delta Lake, Iceberg), data quality, and the feature engineering infrastructure that keeps training and serving in sync.</div>
+<div class="sec-desc">The two failures that kill more production models than any modelling mistake are <strong>training–serving skew</strong> and <strong>point-in-time leakage</strong>, and they are the same bug wearing different clothes: the offline job can see the future and across the whole dataset, while the live service sees one row at one instant. Almost everything here — feature stores, as-of joins, table formats with time travel, idempotent partitioned writes — exists to make the offline world obey the constraints the online world cannot escape. Get that right and the modelling is the easy part; get it wrong and you ship a model with a beautiful offline score and no production value.</div>
 
 <div class="g2">
 <div class="card cb"><div class="card-title">Why Data Engineering Is an ML Bottleneck</div>
@@ -9,7 +9,8 @@
   <li><strong>Training-serving skew:</strong> features computed differently in training pipelines vs inference APIs causes silent model degradation — the most common production ML failure</li>
   <li><strong>Reproducibility:</strong> without versioned data and deterministic pipelines, experiments can't be reproduced and bugs can't be traced</li>
   <li><strong>Scale:</strong> pandas works for millions of rows; real training data is often hundreds of billions of rows requiring distributed compute</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px">The word doing the work in the second bullet is <strong>silent</strong>. A skewed feature does not raise an exception, fail a test, or show up in the model's logs — it produces a confident prediction from a distribution the model never trained on. There is no stack trace, so the failure surfaces weeks later as an unexplained drop in a business metric, which is why the engineering answer is structural (one definition, used by both paths) rather than diligence.</div></div>
 
 <div class="card cg"><div class="card-title">The Modern ML Data Stack</div>
 <table class="tbl">
@@ -21,13 +22,14 @@
 <tr><td><strong>Feature store</strong></td><td>Feast, Hopsworks, Tecton</td><td>Serve features consistently for training + inference</td></tr>
 <tr><td><strong>Data quality</strong></td><td>Great Expectations, Soda, dbt tests</td><td>Validate data contracts; catch upstream failures early</td></tr>
 <tr><td><strong>Catalogue</strong></td><td>DataHub, Amundsen, dbt docs</td><td>Discover, document, and trace lineage of data assets</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Do not build all seven layers before the first model ships.</strong> A single scheduled job writing partitioned parquet, with a schema assertion at the top, will carry a team a long way — and the layers earn their place one incident at a time. The layer to add first is whichever one your last outage came from, and the one teams most often add too late is <em>data quality</em>, because it is the only one that turns a silent corruption into a loud failure.</div></div>
 </div>
 
 <!-- Spark -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Apache Spark for ML Data Pipelines</div>
 
-<div class="card ca"><div class="card-title">Spark — Distributed Data Processing</div>
+<div class="card ca"><div class="card-title">Spark — and the three numbers that decide whether a job finishes</div>
 <div class="card-body">Spark is the dominant framework for processing data too large for pandas. It distributes computation across a cluster, processes data in-memory (vs Hadoop MapReduce's disk-based approach), and provides DataFrame, SQL, and ML APIs.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -75,7 +77,17 @@ df_features.write \
 </div>
 </div>
 
+<div class="card-body" style="margin-top:10px">Those bullets become actionable once you put numbers through them, and in practice three numbers explain most slow Spark jobs.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Symptom</th><th>The arithmetic</th><th>Fix</th></tr>
+<tr><td><strong>Executors spilling to disk / OOM</strong></td><td>1 TB shuffled with the default <code>spark.sql.shuffle.partitions = 200</code> gives <strong>5.12 GB per partition</strong>. The target is 128 MB–1 GB, so you want roughly <strong>8,192</strong> partitions, not 200</td><td>Set shuffle partitions from data size, or enable AQE and let it coalesce</td></tr>
+<tr><td><strong>199 tasks done, one running for an hour</strong></td><td>1B rows over 200 partitions averages 5M rows per task. One key holding 10% of the data puts <strong>100M rows — 20× the average</strong> — in a single task, and the job takes as long as that task</td><td>Salt the hot key (100 salts → 1M rows each), or use AQE skew join</td></tr>
+<tr><td><strong>A join dominates the runtime</strong></td><td>Shuffling 1 TB across the network, versus broadcasting a 10 MB dimension table to 200 executors — <strong>1.95 GB of total traffic</strong>, three orders of magnitude less</td><td>Broadcast the small side; raise the broadcast threshold if it is just above the default</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The default of 200 shuffle partitions is the single most common performance bug</strong>, because it is a fixed number applied to data of any size: harmless on 20 GB, fatal on 1 TB. And note why skew is worse than it looks — Spark's stage boundary is a barrier, so <em>every other executor sits idle</em> waiting for the straggler. You are not paying 20× on one task; you are paying for the whole cluster to wait.</div>
+
 <div class="box warn" style="margin-top:10px"><div class="bl">Common Spark performance pitfalls</div><p><strong>Data skew:</strong> one partition has 10× more data than others → one task takes 10× longer, blocking the job. Fix: salting keys, skew hints, or AQE skew join. <strong>Shuffle:</strong> groupBy + join operations require shuffling data across the network — the most expensive operation. Minimise shuffles; cache intermediate results if reused. <strong>UDFs:</strong> Python UDFs break Spark's JVM optimisations. Use built-in SQL functions (F.*) wherever possible.</p></div>
+<div class="card-body" style="margin-top:10px">On that last point, the reason is worth knowing rather than memorising: a Python UDF forces every row out of the JVM, through a serialisation boundary into a Python process, and back. Catalyst cannot see inside it, so predicate pushdown and whole-stage codegen both stop at the UDF. <strong>Pandas/Arrow UDFs move data in vectorised batches instead of row by row</strong> and recover most of the gap — but a built-in <code>F.*</code> expression stays in the JVM and remains the right default.</div>
 </div>
 
 <!-- dbt -->
@@ -132,6 +144,10 @@ from base</pre>
 </div>
 </div>
 
+<div class="card-body" style="margin-top:10px"><strong>Why incremental models are not an optimisation but a requirement.</strong> A daily customer snapshot table over 10M customers and three years of history is <strong>10.95 billion rows</strong>. Rebuilding it every night processes all of that to add one day; an incremental run processes <strong>10 million</strong> — about <strong>1,095× less work</strong>. The tell that a team has not made this jump is a nightly job whose runtime grows linearly with the age of the product.</div>
+<div class="card-body" style="margin-top:8px">The catch, and it is the part that bites: <strong>an incremental model is only correct if late-arriving data cannot change already-built partitions.</strong> A payment that settles three days after the transaction date silently invalidates a snapshot you already wrote. The standard answer is a bounded lookback — rebuild the trailing N days on every run rather than only the newest one — and a periodic full refresh to repair drift. Choose N from the actual lateness distribution of the source, not from a round number.</div>
+<div class="card-body" style="margin-top:8px">Two more things dbt gives ML teams that are easy to undervalue. <strong>Tests run on every build, so a broken data contract fails the pipeline rather than the model</strong> — and a `not_null` on a feature column is worth more than most monitoring. And <code>ref()</code> produces the lineage graph, which is what turns "this feature looks wrong" into "these four models consume it and here is where it came from".</div>
+
 <pre class="formula" style="margin-top:10px"># dbt tests in schema.yml — run automatically after every build
 models:
   - name: customer_payment_rate
@@ -153,6 +169,7 @@ models:
 
 <div class="card cc"><div class="card-title">Why Table Formats Matter for ML</div>
 <div class="card-body">Raw parquet files in S3 are immutable and stateless — you can't update a row, roll back, or read consistent snapshots. Delta Lake and Iceberg add ACID transactions, versioning, and time travel on top of parquet, solving critical ML data engineering problems.</div>
+<div class="card-body" style="margin-top:8px"><strong>The concrete failure that motivates all of this:</strong> a directory of parquet files has no commit point. A job halfway through writing 500 files has published 250 of them, and a training job reading that path gets a dataset that is not any version of the truth — not the old one, not the new one. Nothing errors. You train on it. A table format adds an atomic metadata pointer, so readers see the old snapshot until the new one is complete, which is the whole difference between a directory and a table.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <strong style="font-size:12px;color:var(--text)">Delta Lake (Databricks)</strong>
@@ -189,6 +206,7 @@ DeltaTable.forPath(spark, "s3://bucket/features/") \
   <li><strong>Row-level deletes:</strong> GDPR deletion (right to erasure) without rewriting entire partitions</li>
 </ul>
 <div class="box info" style="margin-top:8px"><div class="bl">Delta vs Iceberg</div><p>Delta Lake is the default if you're on Databricks or already use Spark heavily. Iceberg is preferred for multi-engine environments (Flink + Spark + Trino) or when hidden partitioning is important. Both are production-ready; the choice is often ecosystem fit rather than capability gap.</p></div>
+<div class="card-body" style="margin-top:8px"><strong>For ML specifically, time travel is the feature that pays for the migration.</strong> "Reproduce the exact training set from six months ago" turns from an archaeology project into one clause in a query — which is what makes a model debuggable at all. Two caveats: retention is finite, so a <code>VACUUM</code> that reclaims storage also destroys the versions you were relying on (set retention against your model audit window, not the default), and time travel versions the <em>table</em>, not your feature logic — pin the code version alongside it or you can reproduce the data and not the dataset.</div>
 </div>
 </div></div>
 
@@ -228,6 +246,7 @@ with DAG("ml_feature_pipeline",
     )
 
     spark_agg >> dbt_features >> load_feast</pre>
+<div class="card-body" style="margin-top:8px"><strong>Make every task idempotent.</strong> A rerun of yesterday must <em>replace</em> yesterday, not append to it — which means writing to a partition keyed by the logical date and overwriting that partition, never appending to a single growing table. Retries are automatic and backfills are routine, so a non-idempotent task does not fail loudly; it silently double-counts, and a duplicated event inflates every count feature computed from it.</div>
 </div>
 <div>
 <strong style="font-size:12px;color:var(--text)">Point-in-time correct joins — the critical concept</strong>
@@ -248,7 +267,10 @@ training_df = store.get_historical_features(
 # Feast joins features as of each row's event_timestamp
 # — no future leakage</pre>
 </div>
-</div></div>
+</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">worked — the join that leaks, in three rows</div><p>The code card at the end of this topic runs it. User 1 has credit scores of <strong>610 from January</strong>, 655 from April, and 700 from June; their label event is dated <strong>1 March</strong>. A <code>groupby(user).last()</code> join — the natural thing to write, and the most common form of this bug — attaches <strong>700</strong>, a June fact, to a March label. The as-of join with <code>direction='backward'</code> attaches <strong>610</strong>, the only value that existed on the day. The offline model trained on the first version knows the future; the live service, which can only read today's value at today's timestamp, does not. That is training–serving skew and target leakage arriving through the same line of code.</p></div>
+<div class="card-body" style="margin-top:10px">Two details that decide whether an as-of join is actually correct. Use the timestamp at which a fact <strong>became available to your systems</strong>, not the timestamp it describes — a credit score dated 1 March but ingested on 5 March was not knowable on the 3rd, and the gap between event time and ingest time is where leakage hides after you have fixed the obvious version. And define the boundary: if a feature is stamped at exactly the label instant, decide deliberately whether it is admissible, because <code>&lt;</code> and <code>&lt;=</code> differ by exactly the events you most want to exclude.</div>
+</div>
 
 <div class="card ca"><div class="card-title">Streaming Feature Pipelines — Kafka + Flink</div>
 <div class="card-body">For features that must be fresh within seconds — fraud detection velocity signals, real-time session features, live inventory counts. Streaming pipelines consume events as they arrive and maintain continuously updated aggregations.</div>
@@ -296,8 +318,11 @@ t_env.execute_sql("""
   <li><strong>Redis:</strong> online feature store — Flink writes computed features to Redis; model inference API reads from Redis in &lt;1ms</li>
   <li><strong>Lambda architecture:</strong> batch pipeline (daily) for accuracy on historical features; streaming pipeline (real-time) for freshness on velocity features — results merged at serving time</li>
 </ul>
+<div class="card-body" style="margin-top:8px"><strong>Stream only what freshness actually requires.</strong> A card-testing attack runs its course in minutes, so a velocity count that is 24 hours stale is worth nothing — that feature must stream. A 90-day average balance changes imperceptibly overnight and streaming it buys nothing for real cost. Sort features by how fast the signal decays, and let the slow majority stay in the cheap, easily-backfilled batch path.</div>
 </div>
-</div></div>
+</div>
+<div class="card-body" style="margin-top:10px">The concept that makes streaming features correct is the <strong>watermark</strong>, which is the pipeline's explicit statement about lateness: the <code>INTERVAL '5' SECOND</code> in the SQL above declares that events more than five seconds late will be dropped rather than waited for. That is a deliberate accuracy-for-latency trade, and the number belongs to the domain, not the framework. Note the consequence for ML — <strong>a windowed aggregate can be slightly different when recomputed later</strong>, because the stream saw a different set of events than the batch backfill does. If the same feature is produced by both paths, they will disagree at the margins, and reconciling them (or declaring one authoritative for training) is the real work in a lambda architecture.</div>
+</div>
 
 <!-- Data quality -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Data Quality &amp; Contracts</div>
@@ -315,6 +340,7 @@ t_env.execute_sql("""
 <tr><td>Future data leakage</td><td>Model learns from the future; perfect train, fails in prod</td><td>Timestamp ordering check; point-in-time joins</td></tr>
 <tr><td>Join fanout</td><td>Many-to-many join creates duplicate rows; inflates counts</td><td>Row count assertions; unique key after join</td></tr>
 </table>
+<div class="card-body" style="margin-top:8px"><strong>Join fanout deserves its own alarm.</strong> It is the only row here that inflates your metrics rather than degrading them: duplicated rows make counts larger, models more confident, and offline scores better. Assert the row count is unchanged after every join that should be many-to-one — one line, and it catches the class of bug that otherwise gets discovered by a suspicious improvement.</div>
 </div>
 <div>
 <pre class="formula">import great_expectations as gx
@@ -342,18 +368,27 @@ validator.expect_table_row_count_to_be_between(
 results = validator.validate()
 if not results.success:
     raise ValueError("Data quality check failed — abort training")</pre>
+<div class="card-body" style="margin-top:8px"><strong>The gate matters more than the expectations.</strong> A quality suite that logs a warning and lets the pipeline continue is a report nobody reads; the same suite raising and aborting the training run is a control. Fail the build, and make the failure page whoever owns the upstream table — data quality without an owner degrades to a dashboard.</div>
 </div>
-</div></div>
+</div>
+<div class="card-body" style="margin-top:10px">Distinguish the two kinds of check, because they need different responses. <strong>Contracts are absolute</strong> — a rate outside [0,1], a null in a required key, a missing column — and they should hard-fail immediately. <strong>Distribution checks are relative</strong>, and a PSI alarm may be a genuine population change rather than a bug, so it should page a human rather than block the pipeline. Wiring drift alerts to hard failures is how teams end up ignoring both.</div>
+</div>
 
 <!-- Common mistakes -->
-<div class="card cg"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Training-serving skew</strong> — computing features differently in the training pipeline (Spark SQL) vs the serving API (Python). The feature store enforces identical logic; without it, skew is almost inevitable at scale</li>
-  <li><strong>Target leakage via point-in-time errors</strong> — using the current value of a feature that was computed after the label event. Always verify temporal ordering; use feature store's point-in-time join API</li>
-  <li><strong>Using pandas for 100M+ rows</strong> — pandas loads everything into RAM; use Spark, DuckDB, or Polars for large-scale feature engineering. A Spark job that runs in 10 minutes processes what pandas would take 3 hours on (if it doesn't OOM first)</li>
-  <li><strong>Overwriting parquet partitions instead of merging</strong> — concurrent writes to the same partition without a table format (Delta/Iceberg) causes data corruption. Use MERGE INTO instead of overwrite for updates</li>
-  <li><strong>No data quality checks in training pipeline</strong> — a silent upstream schema change (column renamed, values rescaled) trains the model on garbage data. Always gate training on data quality validation</li>
-  <li><strong>Not versioning training datasets</strong> — if you can't reproduce the exact training dataset 6 months from now, you can't debug why the model behaved the way it did. Use Delta Lake time travel or DVC to version datasets</li>
+  <li><strong>Latest-value joins in training data.</strong> <code>groupby(user).last()</code> attaches a fact from after the label event. It is one line, it looks like normal pandas, and it is the most common leak in ML — use an as-of join with an explicit backward direction</li>
+  <li><strong>Joining on event time instead of availability time.</strong> A fact dated 1 March but ingested on the 5th was not knowable on the 3rd. Fixing the obvious leak and leaving this one is the usual second act</li>
+  <li><strong>Two implementations of one feature.</strong> Spark SQL for training, Python for serving. They diverge on the cases nobody wrote a test for — a left join giving NULL where the service gives 0.0 — and the model degrades silently. One definition, both paths</li>
+  <li><strong>Non-idempotent pipeline tasks.</strong> Retries and backfills are routine, so an append-based task double-counts on rerun and inflates every count feature downstream. Write to a date partition and overwrite it</li>
+  <li><strong>Overwriting a parquet directory instead of committing a table.</strong> There is no atomic point, so a reader mid-write gets a dataset that is not any version of the truth. Use Delta or Iceberg and MERGE</li>
+  <li><strong>Leaving <code>spark.sql.shuffle.partitions</code> at 200.</strong> Fine at 20 GB, 5.12 GB per partition at 1 TB. It is a fixed number applied to data of any size</li>
+  <li><strong>Ignoring skew because the average partition looks fine.</strong> One key with 10% of the rows is 20× the average task, and the whole cluster waits at the stage barrier</li>
+  <li><strong>Incremental models with no lookback for late data.</strong> A payment settling three days late silently invalidates a partition you already wrote. Rebuild a trailing window sized from the real lateness distribution</li>
+  <li><strong>Streaming features that did not need streaming.</strong> A 90-day average does not change overnight. Stream what decays fast; batch the rest, where backfilling is cheap</li>
+  <li><strong>Quality checks that warn instead of failing.</strong> If a validation cannot stop the training run, it is documentation</li>
+  <li><strong>VACUUM with default retention on a table you rely on for reproducibility.</strong> Reclaiming storage also deletes the versions your audit window assumes. And time travel versions the table, not your transformation code — pin both</li>
+  <li><strong>Using pandas for 100M+ rows.</strong> It loads everything into RAM. Spark, DuckDB or Polars — and DuckDB in particular now covers a lot of what used to require a cluster</li>
 </ul></div>
 
 <!-- Used at top companies -->
@@ -366,13 +401,13 @@ if not results.success:
   <li><strong>Stripe:</strong> dbt for feature engineering in BigQuery; custom feature store with point-in-time joins for fraud model training; Great Expectations runs on every pipeline run before model training is triggered</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What is training-serving skew?</strong> "Training-serving skew is when features are computed differently during training vs at inference time. For example: training uses a Spark job that computes 30-day payment rate with a left join, but the serving API uses a Python function with an inner join — customers with no payments in 30 days get NULL in training but 0.0 at serving. The model sees a completely different distribution in production. A feature store solves this by enforcing a single feature definition used in both contexts."</p>
-<p style="margin-top:8px"><strong>What is point-in-time correct joining?</strong> "When building training data, you must join features that were available at the exact moment of the prediction — not the current value. If I'm predicting loan default on applications filed in January, my features must be the values known in January, not today's values (which might reflect the outcome). Using future feature values is target leakage — models look perfect in training and fail in production. Feature stores implement time-travel joins to prevent this automatically."</p>
-<p style="margin-top:8px"><strong>Spark vs dbt for feature engineering?</strong> "dbt operates inside a SQL warehouse (BigQuery, Snowflake) — great for teams already there, incremental builds, and built-in testing. Spark is for data lake processing (S3/GCS), data too large for a warehouse, or pipelines requiring Python or complex windowed aggregations. In practice, they complement each other: Spark for heavy lifting on raw data, dbt for curated feature engineering inside the warehouse."</p>
-<p style="margin-top:8px"><strong>Why Delta Lake instead of plain parquet?</strong> "Plain parquet is immutable — you can't update rows, and concurrent writes corrupt data. Delta Lake adds ACID transactions (safe concurrent writes), time travel (reproduce any historical snapshot for debugging or reproducing training data), schema enforcement (upstream changes don't silently corrupt downstream), and DML operations (UPDATE, DELETE, MERGE). For ML specifically: time travel is critical for dataset reproducibility, and MERGE is essential for feature store upserts."</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Frame the whole area as a problem about time.</strong> "The two failures that kill production models — training–serving skew and point-in-time leakage — are the same bug: the offline job can see the future and the whole dataset, the online service sees one row at one instant. Feature stores, as-of joins and time-travelling table formats all exist to force the offline world to obey the online world's constraints."</p>
+<p style="margin-top:8px"><strong>Explain point-in-time correctness with the three-row example, not the definition.</strong> "If a user's credit score was 610 in January, 655 in April and 700 in June, and the label event is 1 March, then a latest-value join attaches 700 — a June fact on a March label. The as-of join attaches 610, the only value that existed. Then the detail that shows you have debugged this for real: <em>join on when the fact became available, not when it happened.</em> A score dated 1 March but ingested on the 5th still leaks."</p>
+<p style="margin-top:8px"><strong>Make training–serving skew concrete.</strong> "Training computes a 30-day payment rate in Spark with a left join, so customers with no payments get NULL. The serving API computes it in Python with an inner join and returns 0.0. The model sees a distribution it never trained on, nothing raises an exception, and the metric drifts. That is why a feature store's real value is a single definition used by both paths — not the Redis cache."</p>
+<p style="margin-top:8px"><strong>Have Spark numbers ready, because they separate people who have run jobs from people who have read about them.</strong> "The default 200 shuffle partitions puts 5.12 GB in each partition at 1 TB when you want 128 MB to 1 GB — that is most 'Spark is slow' tickets. Skew is the other: one key with 10% of a billion rows is 20× the average task, and because a stage is a barrier the whole cluster idles waiting for it. Salt the key or let AQE handle the skew join."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not present a seven-layer stack as the starting point — layers earn their place one incident at a time. Do not claim a feature store prevents leakage by itself; it prevents it only if you use its point-in-time API. Do not say "we validate the data" without saying whether the check can <em>stop the pipeline</em>, because a warning is documentation. And do not offer streaming as the default: stream what decays fast, batch the rest, and be ready to explain that the two paths will disagree at the window edges.</p>
 </div>
-
 
 <div class="anim-wrap"><div class="anim-title">Point-in-time correctness, in one picture</div>
 <svg viewBox="0 0 500 188" xmlns="http://www.w3.org/2000/svg">

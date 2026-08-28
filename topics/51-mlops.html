@@ -1,6 +1,6 @@
 <section class="section" id="sec-mlops">
 <div class="sec-title">Deployment &amp; Monitoring (MLOps)</div>
-<div class="sec-desc">The gap between a working notebook and a production ML system is enormous. MLOps is the engineering discipline that bridges it — covering containerisation, CI/CD, serving infrastructure, cost optimisation, and monitoring. Most ML projects fail here, not in the modelling.</div>
+<div class="sec-desc">A model becomes a service when four things exist: a <strong>pinned artifact</strong> you can identify and rebuild, a <strong>contract at the edge</strong> that rejects bad input loudly, a <strong>monitor</strong> that can wake someone up, and a <strong>rollback you have actually executed</strong>. Everything else in this topic is a variation on those four. The reason MLOps is harder than ordinary deployment is that a model is a function of data as well as code, so it can break while every test passes, every service stays green, and nothing in the logs changes — the failure mode is silence, and the discipline is about converting silence into signal.</div>
 
 <!-- PART 1 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Serving Patterns &amp; Infrastructure</div>
@@ -14,7 +14,9 @@
 <tr><td>Edge deployment</td><td>&lt;10ms</td><td>Mobile, IoT, latency-critical applications</td></tr>
 <tr><td>Serverless (Lambda)</td><td>Cold: &gt;1s; warm: ~50ms</td><td>Sporadic traffic, low fixed cost</td></tr>
 <tr><td>GPU serving (vLLM)</td><td>50–500ms</td><td>LLM inference at scale</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The question that picks the row is not "how fast can we be" but "is a human waiting, and what happens if we are late?"</strong> A checkout fraud decision must return before the payment times out, so the latency is a hard constraint and the model is chosen to fit it. A churn score consumed by tomorrow's email campaign has no such constraint, and building it as a real-time API is pure cost. <strong>Batch is the correct default</strong>; real-time serving is what you escalate to when a person or a transaction is blocked on the answer.</div>
+<div class="card-body" style="margin-top:8px">Serverless deserves its caveat: a cold start that loads a multi-hundred-megabyte model can take many seconds, so the "cold: &gt;1s" in that table is optimistic for anything but small models. It suits genuinely sporadic traffic — and traffic that is sporadic but latency-sensitive is the one combination it serves badly.</div></div>
 <div class="card cg"><div class="card-title">Containerisation with Docker</div>
 <div class="card-body">Container = reproducible, portable unit. Packages model + dependencies + runtime together. The standard unit of ML deployment.</div>
 <ul class="bul" style="margin-top:8px">
@@ -23,7 +25,8 @@
   <li><strong>CUDA base images:</strong> use nvidia/cuda:12.x-runtime for GPU serving; don't include cudnn unless needed</li>
   <li><strong>Model weight mounting:</strong> mount weights as a volume or pull from S3/GCS at startup — don't bake into image (large image → slow CI)</li>
   <li><strong>Health checks:</strong> /health endpoint critical for Kubernetes liveness probes</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>The layer order in that first bullet is the build-time optimisation that matters</strong>: Docker caches layers, so anything that changes often must come last. Dependencies change monthly and model weights change weekly, so weights after deps means a retrain rebuilds one small layer instead of reinstalling CUDA. And <strong>a container is only reproducible if the versions are pinned</strong> — <code>pip install -r requirements.txt</code> with unpinned ranges produces a different image next Tuesday, which is exactly the class of bug containers were adopted to eliminate. Pin a lockfile, and pin the base image by digest rather than by tag.</div></div>
 </div>
 
 <div class="card"><div class="card-title">Kubernetes for ML Serving</div>
@@ -84,7 +87,10 @@
   <li><strong>ConfigMaps / Secrets:</strong> inject model config and API keys without rebuilding images</li>
   <li><strong>Namespace separation:</strong> staging vs production namespaces prevent accidental cross-contamination</li>
 </ul></div>
-</div></div>
+</div>
+<div class="card-body" style="margin-top:10px"><strong>Two probes, two different jobs, and confusing them causes a specific outage.</strong> The <em>readiness</em> probe controls whether a Pod receives traffic; the <em>liveness</em> probe controls whether it gets killed and restarted. A model that takes 90 seconds to load its weights needs a readiness probe so traffic waits — and if the liveness probe's timeout is shorter than the load time, Kubernetes kills the Pod mid-load, restarts it, and the deployment never converges. Use a startup probe, or a liveness threshold generous enough to cover cold model loading.</div>
+<div class="card-body" style="margin-top:8px"><strong>Autoscaling on CPU is the wrong signal for GPU inference.</strong> A GPU-bound server can sit at 30% CPU while the GPU saturates and latency doubles, so the HPA never scales. Scale on a metric that tracks the actual bottleneck — requests per second, queue depth, or GPU utilisation via a custom metrics adapter. And remember that <strong>scaling out has a lead time</strong>: a new Pod must be scheduled, pull an image, and load weights, which can be minutes for a large model. Autoscaling absorbs gradual growth; it does not absorb a spike, and the answer to a known spike is pre-scaling.</div>
+</div>
 
 <!-- PART 2 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — CI/CD for ML</div>
@@ -144,7 +150,11 @@
   <li><strong>Model versioning:</strong> every training run tagged with git SHA, dataset hash, hyperparams</li>
   <li><strong>Rollback:</strong> re-promote previous model version in registry → redeploy — takes minutes</li>
   <li><strong>Smoke tests:</strong> integration tests on model endpoint (latency, output schema) before prod promotion</li>
-</ul></div></div>
+</ul></div>
+<div class="card-body" style="margin-top:10px"><strong>What makes this different from software CI is that the artifact is a function of data, so the same commit produces a different model tomorrow.</strong> That breaks the central assumption of ordinary CI — that green tests on a commit mean the build is good — and it is why the pipeline needs two gates a software pipeline does not have: a <em>data</em> gate before training, and a <em>metric</em> gate after it. Reproducibility therefore requires pinning three things, not one: the git SHA, the dataset version (a Delta version or snapshot hash), and the environment. Any of the three left floating and "why did last month's model behave differently" is unanswerable.</div>
+<div class="card-body" style="margin-top:8px"><strong>Design the evaluation gate carefully, because a naive one blocks every deployment.</strong> "Must beat the champion" on a noisy held-out set fails roughly half the time on a genuinely equal model — compare against a threshold that accounts for the metric's variance, and prefer a fixed, versioned evaluation set so that a moving benchmark is not confused with a moving model. Add non-negotiable checks that are not about the headline number: <strong>subgroup metrics must not regress</strong>, latency must stay inside budget, and the output schema must be unchanged. A model that lifts AUC by 0.002 while doubling P99 latency should fail the pipeline, and only an explicit gate will make it.</div>
+<div class="card-body" style="margin-top:8px">Finally, the <strong>retraining trigger</strong> in the diagram deserves a decision rather than a cron entry. Scheduled retraining is simple and retrains when nothing has changed; drift-triggered retraining is responsive and can chase noise into a retrain loop. The usual compromise is a schedule as a floor, drift as an interrupt, and the same evaluation gate on both paths so an automated retrain cannot ship a worse model unattended.</div>
+</div>
 
 <!-- PART 3 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-orange,#f5a623);margin:28px 0 12px;padding:0">Part 3 — Cost Optimisation</div>
@@ -157,7 +167,8 @@
 <tr><td>Gradient checkpointing</td><td>10× memory reduction</td><td>~30% slower (recomputes activations)</td></tr>
 <tr><td>Data parallelism</td><td>Linear scaling across GPUs</td><td>Requires gradient synchronisation overhead</td></tr>
 <tr><td>Early stopping</td><td>Saves 20–50% compute</td><td>Risk of stopping too early</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Spot is close to free money for training and wrong for serving</strong> — an interrupted training job resumes from a checkpoint, an interrupted inference Pod drops live requests. The rule that makes spot usable is that <em>checkpoint interval sets your worst-case loss</em>: checkpoint every 20 minutes and an eviction costs at most 20 minutes of compute, so the interval is chosen against the eviction rate, not by habit.</div></div>
 <div class="card cc"><div class="card-title">Serving Cost Optimisation</div>
 <table class="tbl"><tr><th>Technique</th><th>Savings</th><th>Notes</th></tr>
 <tr><td>Request batching</td><td>3–5× GPU throughput</td><td>Group requests; adds latency</td></tr>
@@ -165,7 +176,8 @@
 <tr><td>Spot nodes for batch</td><td>60–90% cheaper</td><td>Not for real-time serving</td></tr>
 <tr><td>Right-sizing</td><td>Often 30–50% waste</td><td>Profile actual GPU/CPU utilisation</td></tr>
 <tr><td>Model caching</td><td>Avoids redundant compute</td><td>Cache predictions for repeated inputs</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Batching trades the latency of the first request for the throughput of all of them</strong>, which is the right trade under load and the wrong one when idle — so the batching window must be a timeout as well as a size, or a quiet period leaves a lone request waiting for companions that never arrive. And do the capacity arithmetic before optimising anything: at <strong>8,000 QPS with a 40 ms service time you need 320 concurrent slots, and at a 70% utilisation target that is about 457 replicas.</strong> Halving the service time halves the fleet, which usually dwarfs any per-instance saving in the table above.</div></div>
 </div>
 
 <!-- PART 4 -->
@@ -193,6 +205,21 @@
 </ul></div>
 </div>
 
+<div class="card cp" style="margin-top:13px"><div class="card-title">Worked — the memory budget for a 70B model, and why the KV cache is the problem</div>
+<div class="card-body">Almost every LLM serving decision falls out of one arithmetic exercise. Take a 70B-parameter model on an 80 GB A100.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>What</th><th>Size</th><th>Consequence</th></tr>
+<tr><td>Weights, FP16 (2 bytes/param)</td><td><strong>140 GB</strong></td><td>Does not fit. Needs tensor parallelism across 2+ GPUs</td></tr>
+<tr><td>Weights, INT8</td><td>70 GB</td><td>Fits, with 10 GB left for everything else — too tight</td></tr>
+<tr><td>Weights, INT4 / AWQ</td><td><strong>35 GB</strong></td><td>Fits comfortably on one card</td></tr>
+<tr><td>KV cache per token (80 layers, 8 KV heads, head-dim 128, FP16)</td><td>0.33 MB</td><td>—</td></tr>
+<tr><td>KV cache, one 4,096-token sequence</td><td>1.34 GB</td><td>—</td></tr>
+<tr><td><strong>KV cache, 32 concurrent 4k sequences</strong></td><td><strong>43 GB</strong></td><td><strong>Larger than the quantised weights</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Read the last two rows together: <strong>35 GB of INT4 weights plus 43 GB of KV cache is 78 GB on an 80 GB card.</strong> The weights are the fixed cost and the KV cache is the variable one, so <em>concurrency</em> — not model size — is what actually exhausts the GPU. That single fact explains the whole design of vLLM. Classic serving pre-allocated a contiguous KV region per sequence sized for the maximum length, so a request that generated 200 tokens still reserved 4,096 tokens' worth; PagedAttention allocates fixed-size pages on demand instead, and the memory you stop wasting becomes extra concurrent sequences, which is where the throughput gain comes from.</div>
+<div class="card-body" style="margin-top:8px">It also explains <strong>grouped-query attention</strong>. With full multi-head attention at 64 KV heads the same model would need 2.62 MB per token — <strong>8× more</strong> — putting 32 concurrent 4k sequences at over 340 GB. GQA is not a minor efficiency tweak; it is what makes long-context serving affordable at all. And it explains why <strong>continuous batching matters more than bigger batches</strong>: sequences finish at different times, so a static batch holds memory hostage to its slowest member, while slotting new requests into freed pages keeps utilisation high.</div>
+</div>
+
 <div class="card"><div class="card-title">Latency Profiling</div>
 <table class="tbl"><tr><th>Latency Component</th><th>Typical Budget</th><th>Optimisation Target</th></tr>
 <tr><td>Network (client → LB → pod)</td><td>5–20ms</td><td>CDN edge, keep-alive connections</td></tr>
@@ -201,7 +228,15 @@
 <tr><td>Post-processing</td><td>1–10ms</td><td>Move to C++ if bottleneck</td></tr>
 <tr><td>Response serialisation</td><td>1–5ms</td><td>MessagePack over JSON for heavy payloads</td></tr>
 </table>
-<div class="box story" style="margin-top:8px"><div class="bl">📖 Profiling tip</div><p>Profile P99 latency, not P50. P50 hides tail latency spikes that users actually experience. For ML pipelines, the database / feature store lookup is often the bottleneck — not the model itself.</p></div></div>
+<div class="box story" style="margin-top:8px"><div class="bl">📖 Profiling tip</div><p>Profile P99 latency, not P50. P50 hides tail latency spikes that users actually experience. For ML pipelines, the database / feature store lookup is often the bottleneck — not the model itself.</p></div>
+<div class="card-body" style="margin-top:10px"><strong>Percentiles do not add, and this is the arithmetic that surprises people.</strong> If one request depends on several backend calls and each is slow 1% of the time, the chance that at least one is slow compounds:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Sequential calls per request</th><th>1</th><th>5</th><th>10</th><th>50</th><th>100</th></tr>
+<tr><td>P(at least one hits its own P99)</td><td>1.0%</td><td>4.9%</td><td><strong>9.6%</strong></td><td>39.5%</td><td>63.4%</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">So a service that fans out to <strong>ten dependencies each with a perfectly respectable 1-in-100 slow tail is slow on roughly one request in ten</strong> — its P90, not its P99, is set by its dependencies' P99. This is Dean and Barroso's "tail at scale", and it has two practical consequences for ML serving. <strong>Reducing the number of sequential hops beats optimising any one of them</strong> — batch the feature lookups into a single multi-get rather than a loop of gets, which is the single most common fix. And <strong>a fallback path is a latency feature, not just an availability feature</strong>: a hedged request or a timeout that returns a default feature value converts a long tail into a slightly worse prediction, which is almost always the better trade.</div>
+<div class="card-body" style="margin-top:8px">Two more habits worth keeping. <strong>Measure at the client</strong>, because server-side timers exclude queueing, connection setup and serialisation — the parts that actually degrade under load. And <strong>watch the utilisation cliff</strong>: queueing delay rises non-linearly as a server approaches saturation, so the same system that is comfortable at 70% utilisation is unusable at 90%, which is why the capacity arithmetic above targets 70% rather than 95%.</div>
+</div>
 
 <!-- PART 5 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 5 — Drift Detection &amp; Monitoring</div>
@@ -213,14 +248,29 @@
 <tr><td>Concept drift</td><td>P(y|X) — relationship changes</td><td>Monitor performance metrics over time</td></tr>
 <tr><td>Label drift</td><td>P(y) — outcome prevalence changes</td><td>Monitor positive rate; alert on deviation</td></tr>
 <tr><td>Prediction drift</td><td>P(ŷ) — model output distribution shifts</td><td>PSI on score distribution</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Label delay is what forces this hierarchy.</strong> Concept drift is the one that actually matters and it is only measurable once labels mature — if a default takes 90 days to confirm, performance monitoring is a 90-day-lagging indicator. Data and prediction drift need no labels and are available today, so they are the early warning; performance is the confirmation that arrives a quarter late. <strong>Prediction drift is the most useful single monitor</strong> for the money it costs: the score distribution aggregates every input feature, so a shift in it catches upstream breakage that a per-feature check might spread too thin to flag.</div></div>
 <div class="card ca"><div class="card-title">A/B &amp; Deployment Strategies</div>
 <ul class="bul">
   <li><strong>Shadow mode:</strong> new model runs alongside old, predictions logged but not acted on — zero business risk, no business metric feedback</li>
   <li><strong>Canary release:</strong> route 5–10% of traffic to new model; monitor; scale up if healthy</li>
   <li><strong>Champion-challenger:</strong> champion = current production; challenger = new model; compare on live traffic</li>
   <li><strong>Multi-armed bandit:</strong> dynamically allocate traffic to better variant; faster than fixed A/B but harder to interpret for statistical significance</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px">They answer different questions and belong in sequence. <strong>Shadow mode validates the plumbing</strong> — latency, schema, null rates, and whether the online features match the offline ones — and it cannot tell you anything about business impact, because nothing acts on the predictions. <strong>Canary validates the impact</strong> on a small blast radius. Run shadow first; a model that disagrees wildly with the champion in shadow has a feature bug, not an insight.</div>
+<div class="card-body" style="margin-top:8px">A caution on canaries: <strong>a 5% canary is usually underpowered for the business metric</strong> you care about. It is sized to bound damage, not to measure a small lift, so treat "no significant difference at 5%" as "nothing exploded" rather than as evidence the model is equivalent — and see the causal-inference topic for the sample size an actual comparison needs.</div></div>
+</div>
+
+<div class="card cc" style="margin-top:13px"><div class="card-title">Worked — a drift alarm that fires before any label arrives</div>
+<div class="card-body">The code card at the end runs a two-sample KS test between the training distribution of a feature and a live sample. Training draws utilisation from Beta(2, 5); the live traffic is Beta(2.6, 5) — a shift small enough to be invisible on a dashboard sparkline.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Quantity</th><th>Value</th><th>Reading</th></tr>
+<tr><td>Training mean utilisation</td><td>0.286</td><td>the distribution the model learned</td></tr>
+<tr><td>Live mean utilisation</td><td>0.349</td><td>a 6-point shift — plausible as a real population change</td></tr>
+<tr><td>KS statistic</td><td><strong>0.164</strong></td><td>max gap between the two CDFs</td></tr>
+<tr><td>p-value</td><td>&lt; 1e-6</td><td>alert fires</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The trap in that p-value is sample size.</strong> With 10,000 training rows against 3,000 live rows, KS will flag differences far too small to affect any prediction — and at production volumes it flags essentially everything, every day. That is how drift monitoring gets muted and then ignored. <strong>Alert on effect size, not significance:</strong> use the KS statistic itself, or PSI with its conventional bands (below 0.10 stable, 0.10–0.25 investigate, above 0.25 act), and set the threshold from what actually moves your metric. A drift alarm nobody acts on is worse than none, because it consumes the attention the real one will need.</div>
 </div>
 
 <div class="card"><div class="card-title">MLOps Stack — Tools by Layer</div>
@@ -232,7 +282,8 @@
 <tr><td>Model serving</td><td>vLLM, Triton, BentoML</td><td>SageMaker endpoints, Vertex Predict</td></tr>
 <tr><td>Monitoring</td><td>Evidently AI, Seldon Alibi</td><td>SageMaker Model Monitor</td></tr>
 <tr><td>Container orchestration</td><td>Kubernetes (k8s)</td><td>EKS, GKE, AKS</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Adopt these in the order the pain arrives, not top to bottom.</strong> Experiment tracking and a model registry pay for themselves on day one, because without them you cannot say which artifact is in production or what produced it. A feature store is the expensive one and is only worth it when features are genuinely shared across teams or when you need online serving — for a single team with one model it is infrastructure standing in for a convention. The honest failure mode of this table is a platform team building all seven layers for three models.</div></div>
 
 <div class="card"><div class="card-title">Feature Store — Why It Matters</div>
 <ul class="bul">
@@ -240,15 +291,24 @@
   <li><strong>Point-in-time correct joins:</strong> when training, join only features available AT the prediction time — prevents future leakage</li>
   <li><strong>Reuse across teams:</strong> "customer_30day_payment_rate" computed once, used by fraud, collections, and marketing models</li>
   <li><strong>Offline store</strong> (S3/DeltaLake) for training; <strong>online store</strong> (Redis) for &lt;5ms serving latency</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>The value is the single feature definition, not the Redis cache</strong> — and it only materialises if you use the point-in-time API for training data. A team that adopts a feature store and then builds its training set with a hand-written latest-value join has bought the infrastructure and kept the bug. See the data-engineering topic for the three-row example of exactly that join going wrong.</div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Training-serving skew</strong> — the most common MLOps failure. Features computed differently between the training pipeline (batch, pandas) and the inference API (real-time, SQL/Redis) cause silent degradation. The fix: a shared feature store (Feast, Tecton) guarantees identical feature logic at training and serving time</li>
-  <li><strong>"Deploy once, forget"</strong> — models decay silently. Concept drift (the real-world relationship changes), data drift (input distribution shifts), and label shift (outcome rate changes) all degrade performance without any code change. Production models need ongoing monitoring with automated alerts</li>
-  <li><strong>Using training metrics to evaluate production models</strong> — PR-AUC on the training set is not the same as PR-AUC in production. Monitor actual business outcomes (fraud rate caught, churn predictions vs actual churn) with delayed labels. Training metrics are proxies; business outcomes are the ground truth</li>
-  <li><strong>No model versioning or rollback plan</strong> — every model deployment must have a rollback path. Store the previous model artifact and traffic-routing config. Shadow deployments (run new model in parallel with no user impact) and canary releases (1% traffic) are standard before full rollout</li>
-  <li><strong>Ignoring data pipeline reliability</strong> — 80% of production ML incidents are data pipeline failures, not model failures. Feature pipelines must have SLAs, monitoring, and alerting — missing features should trigger fallback values, not NaN inputs that silently degrade the model</li>
+  <li><strong>Two implementations of one feature.</strong> Batch pandas for training, real-time SQL or Redis for serving. They diverge on the untested cases and the model degrades with no error anywhere. One definition, both paths</li>
+  <li><strong>Pinning the code and not the data.</strong> Reproducibility needs git SHA <em>and</em> dataset version <em>and</em> environment. Any one floating makes "why did last month's model differ" unanswerable</li>
+  <li><strong>Unpinned dependency ranges in the image.</strong> A container built from loose requirements is a different container next month — the exact problem containers were adopted to solve. Lockfile, and pin the base image by digest</li>
+  <li><strong>A liveness probe shorter than model load time.</strong> Kubernetes kills the Pod mid-load, restarts it, and the deployment never converges. Use a startup probe</li>
+  <li><strong>Autoscaling GPU inference on CPU utilisation.</strong> The GPU saturates at 30% CPU, the HPA never fires, latency doubles. Scale on QPS, queue depth or GPU metrics — and pre-scale for known spikes, since a new Pod needs minutes to load weights</li>
+  <li><strong>Assuming percentiles add.</strong> Ten dependencies at 1% slow each means about 10% of requests are slow. Cut hops — one multi-get instead of a loop — before optimising any single call</li>
+  <li><strong>Drift alerts wired to p-values.</strong> At production volumes every feature is significantly different every day. Alert on effect size — KS statistic or PSI bands — or the alarm gets muted</li>
+  <li><strong>Waiting for performance metrics to detect breakage.</strong> With a 90-day label delay that is a 90-day-lagging indicator. Prediction drift is available today and catches most upstream failures</li>
+  <li><strong>An evaluation gate that only checks the headline metric.</strong> A model that adds 0.002 AUC, doubles P99 and regresses a subgroup should fail. Gate on latency, schema and subgroup metrics too</li>
+  <li><strong>Reading a 5% canary as proof of equivalence.</strong> It bounds damage; it is not powered to measure a small lift</li>
+  <li><strong>Spot instances for real-time serving.</strong> Fine for training, where a checkpoint resumes; an evicted inference Pod drops live requests</li>
+  <li><strong>A rollback that has never been executed.</strong> Keep the previous version warm and switchable by config rather than redeploy, and rehearse it. An untested rollback is a plan, not a capability</li>
+  <li><strong>No fallback when a feature is missing.</strong> A null reaching the model produces a confident nonsense score. Decide the default per feature, and count how often it is used</li>
 </ul></div>
 
 <div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
@@ -259,10 +319,12 @@
   <li><strong>Netflix (Metaflow + Meson):</strong> Metaflow (open-sourced) orchestrates training pipelines with automatic versioning; Meson handles scheduling; every model training run is reproducible from pinned data snapshots and code versions</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "The most common MLOps failures: training-serving skew (features computed differently between training and inference — a feature store fixes this); no monitoring (model silently degrades for months); no rollback (a bad deployment can't be reverted quickly). My production checklist: Docker containers for reproducibility, MLflow for experiment tracking, feature store for training-serving consistency, PSI monitoring on feature distributions + business KPI dashboards, canary deploy at 1% traffic before full rollout, previous model artifact always on standby for hot rollback."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "MLOps is just deploying the model." — The hard part is the full closed loop: monitoring → drift detection → automated retraining trigger → CI/CD pipeline → evaluation gate → canary deploy → monitor again. Each step requires automation and SLAs.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you serve a 70B LLM in production at low latency?" — Tensor parallelism across 4–8 A100s (model sharded across GPUs); vLLM with PagedAttention for efficient KV cache management (no fragmentation waste); INT4/AWQ quantisation to cut memory 4×; speculative decoding with a 3B draft model to reduce autoregressive decode steps by 2–4×. Expect P50 latency 200–500ms at reasonable cost on 4×A100 for 70B.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Open with why ML deployment is not ordinary deployment.</strong> "A model is a function of data as well as code, so it can break while every test passes and every service is green — the failure mode is silence. That is why the pipeline needs two gates software CI does not have: a data gate before training and a metric gate after it, and why reproducibility means pinning three things — git SHA, dataset version, environment."</p>
+<p style="margin-top:8px"><strong>Name training–serving skew as the top failure and say what actually fixes it.</strong> "Training computes a feature in Spark with a left join so missing customers get NULL; the service recomputes it in Python with an inner join and returns 0.0. Nothing errors. The fix is a single feature definition used by both paths — and the feature store only delivers that if the training set is built with its point-in-time API, not a hand-written latest-value join."</p>
+<p style="margin-top:8px"><strong>Have the tail-at-scale number.</strong> "Percentiles do not add. Ten sequential dependencies each slow 1% of the time make about 10% of requests slow — the service's P90 is set by its dependencies' P99. So reduce hops before optimising any single call: one batched multi-get instead of a loop, and a timeout with a default feature value, which converts a long tail into a slightly worse prediction."</p>
+<p style="margin-top:8px"><strong>For the 70B serving follow-up, do the memory arithmetic out loud.</strong> "FP16 weights are 140 GB, so it does not fit on an 80 GB A100 — either tensor-parallel across two cards or quantise to INT4 at 35 GB. But the interesting part is the KV cache: with GQA it is about 0.33 MB per token, so 32 concurrent 4k sequences is 43 GB — <em>larger than the quantised weights</em>. Concurrency exhausts the GPU, not model size. That is what PagedAttention addresses: no per-sequence over-allocation, and the reclaimed memory becomes more concurrent sequences. Without GQA the same cache would be 8× bigger."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not say "MLOps is deploying the model" — the loop is monitor, detect drift, retrain, gate, canary, monitor. Do not propose real-time serving by default; batch is the correct default and real-time is an escalation when someone is blocked on the answer. Do not claim a feature store prevents leakage on its own. Do not alert on drift p-values at production volume. And do not describe a rollback you have not rehearsed — if it requires a redeploy and a code change, it is not a rollback.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>

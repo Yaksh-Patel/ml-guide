@@ -1,6 +1,6 @@
 <section class="section" id="sec-systemdesign">
 <div class="sec-title">ML System Design</div>
-<div class="sec-desc">Senior-level interview territory — design a fraud detection system, recommendation engine, real-time search ranking platform, or LLM inference pipeline. The framework: requirements → data → features → model → serving → monitoring. This topic covers three complete case studies.</div>
+<div class="sec-desc">The interview is not testing whether you can name architectures — it is testing whether you can <em>derive</em> them from constraints. Almost every design decision in this topic falls out of one number: the latency budget. Two-stage retrieval is not a best practice you memorise, it is what happens when you try to score 50 million items in 40 milliseconds and find you cannot. Get the requirements numeric in the first three minutes and the rest of the hour writes itself; skip that step and you are guessing at an architecture for a problem nobody has defined.</div>
 
 <!-- FRAMEWORK -->
 <div class="card"><div class="card-title">ML System Design Framework (Apply to Every Problem)</div>
@@ -13,7 +13,9 @@
   <li><strong>Training pipeline:</strong> offline training schedule, data versioning, experiment tracking</li>
   <li><strong>Serving infrastructure:</strong> latency budget per layer, scaling strategy, fallback logic</li>
   <li><strong>Monitoring &amp; iteration:</strong> metrics, drift detection, retraining triggers, A/B testing</li>
-</ol></div>
+</ol>
+<div class="card-body" style="margin-top:10px"><strong>Step 1 is worth a third of the interview and most candidates spend a minute on it.</strong> Ask until you have numbers: peak QPS, P99 budget in milliseconds, catalogue size, how labels arrive and how late, and what a wrong answer costs in each direction. Those five numbers determine the architecture, and stating them back is what lets you say "therefore" instead of "I would use" for the next forty minutes.</div>
+<div class="card-body" style="margin-top:8px">Two questions that reliably separate strong candidates. <strong>"How do labels arrive, and how late?"</strong> — a system whose ground truth matures in 90 days cannot be monitored on performance, and one whose labels come from its own displayed results has a feedback loop to break. And <strong>"what is the cost of each error direction?"</strong> — until you know that, there is no threshold, and a model without a threshold is not a system. Say out loud that you are optimising a business metric subject to a latency constraint, not maximising AUC.</div></div>
 
 <!-- CASE STUDY 1 -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:24px 0 12px;padding:0">Case Study 1 — Fraud Detection (Real-Time)</div>
@@ -38,7 +40,8 @@
 <tr><td>DB write (async)</td><td>async — off critical path</td></tr>
 <tr><td><strong>Total P50</strong></td><td><strong>~15ms</strong></td></tr>
 <tr><td><strong>Total P99</strong></td><td><strong>&lt;50ms</strong></td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Note the gap between 15 ms of work and a 50 ms budget — that headroom is the design, not slack.</strong> Percentiles do not add across dependencies, so a handful of calls that are each slow 1% of the time make the aggregate slow far more often than 1%. The headroom absorbs that. It is also why the DB write is off the critical path: anything that does not change the decision should not be allowed to delay it.</div></div>
 <div class="card ca"><div class="card-title">Class Imbalance Strategy</div>
 <ul class="bul">
   <li>Fraud rate is typically 0.1–1% — severe class imbalance</li>
@@ -46,7 +49,21 @@
   <li>Use <strong>scale_pos_weight</strong> in LightGBM (= negatives / positives)</li>
   <li>Evaluate with <strong>PR-AUC</strong> not ROC-AUC — ROC is misleading under heavy imbalance</li>
   <li>Business metric: cost matrix (false negative = fraud loss; false positive = customer friction)</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px">The reason ROC-AUC misleads here is the base rate, and it is worth having the arithmetic rather than the slogan — see the worked table below.</div></div>
+</div>
+
+<div class="card cr" style="margin-top:13px"><div class="card-title">Worked — why a "95% accurate" fraud model drowns the review queue</div>
+<div class="card-body">Take 100,000 transactions at a <strong>0.1% fraud rate</strong>: 100 fraudulent, 99,900 legitimate. Run a model with an excellent-sounding 80% recall and a 1% false-positive rate.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>False-positive rate</th><th>Fraud caught (TP)</th><th>False alarms (FP)</th><th>Precision</th><th>False alarms per catch</th></tr>
+<tr><td>1%</td><td>80</td><td><strong>999</strong></td><td><strong>7.4%</strong></td><td>12.5</td></tr>
+<tr><td>0.1%</td><td>80</td><td>100</td><td>44.5%</td><td>1.2</td></tr>
+<tr><td>0.01%</td><td>80</td><td>10</td><td>88.9%</td><td>0.1</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>At a 1% false-positive rate — which sounds unobjectionable — 13 out of every 14 flagged transactions are legitimate.</strong> The model is fine; the base rate is doing the damage, because 1% of 99,900 legitimate transactions dwarfs 80% of 100 fraudulent ones. This is why the domain evaluates on PR-AUC: ROC-AUC's x-axis is FPR, and the entire operating region you care about is squashed into its leftmost 1%, so two models with visibly different precision can share an ROC-AUC.</div>
+<div class="card-body" style="margin-top:8px">The design consequence is that <strong>the threshold is a capacity decision, not a statistical one.</strong> If the review team can process 200 cases a day, the threshold is set where the daily alert volume is 200 — and then the question becomes how much fraud you catch inside that budget. This is the moment to introduce a <strong>tiered response</strong> rather than a single cutoff: decline outright above a high score, step up to 3-D Secure or an OTP in the middle band, and allow below it. A middle tier converts the precision problem into a friction problem, which is far cheaper, and proposing it unprompted is a strong signal in an interview.</div>
+<div class="card-body" style="margin-top:8px">One more consequence of the delayed labels in the table above: <strong>a declined transaction never generates an outcome</strong>, so the training set only contains behaviour from transactions you allowed. That is the reject-inference problem from the credit-risk topic, arriving here through the fraud queue, and the practical mitigation is the same — let a small random sample through the rule, and use the resulting losses as the price of an unbiased sample.</div>
 </div>
 
 <!-- CASE STUDY 2 -->
@@ -92,7 +109,16 @@
 <line x1="245" y1="66" x2="268" y2="66" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#sarr)"/>
 <line x1="350" y1="66" x2="373" y2="66" stroke="#8e97b8" stroke-width="1.5" marker-end="url(#sarr)"/>
 <defs><marker id="sarr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#8e97b8"/></marker></defs>
-</svg></div></div>
+</svg></div>
+<div class="card-body" style="margin-top:10px"><strong>The funnel is forced by arithmetic, and being able to show that is the point.</strong> Suppose the ranker scores a candidate in 40 microseconds — fast for a gradient-boosted model on a hundred features.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>Items scored</th><th>Time</th><th>Verdict</th></tr>
+<tr><td>Rank the whole catalogue</td><td>50,000,000</td><td><strong>2,000 s</strong> (33 minutes)</td><td>impossible by four orders of magnitude</td></tr>
+<tr><td>Rank retrieved candidates</td><td>1,000</td><td><strong>40 ms</strong></td><td>fits the budget</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">So the architecture is not a preference. <strong>Stage one must be sub-linear</strong> — an ANN index over embeddings, an inverted index, or a heuristic — because anything that touches every item is already too slow. Stage two can afford to be expensive precisely because stage one made the candidate set small. Say this out loud early; the decomposition is most of what the question is testing.</div>
+<div class="box warn" style="margin-top:10px"><div class="bl">⚠️ the ceiling nobody mentions: retrieval caps the whole system</div><p>If stage-one recall@1000 is <strong>0.85</strong>, then 15% of the truly relevant items were never handed to the ranker — and no reranker, however good, can recover them. <strong>End-to-end recall is bounded above by stage-one recall</strong>, so a team grinding on reranker features while retrieval quietly drops a seventh of the relevant set is optimising the wrong stage. Measure recall@K of the candidate generator as a first-class metric, and tune K against it: raising K from 500 to 2,000 often buys more than any reranker change, at a cost you can read straight off the latency budget.</p></div>
+</div>
 
 <div class="g2">
 <div class="card cp"><div class="card-title">Retrieval Layer Details</div>
@@ -101,7 +127,8 @@
   <li><strong>Sparse retrieval (BM25):</strong> TF-IDF-based keyword matching; fast via inverted index; misses synonyms</li>
   <li><strong>Hybrid search:</strong> combine dense + sparse scores (RRF or learned weighting); outperforms either alone on most benchmarks</li>
   <li><strong>HNSW index:</strong> hierarchical navigable small world graph — sub-linear ANN search, build once, query in ~1ms</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>Hybrid wins because the two retrievers fail differently.</strong> Dense retrieval misses exact identifiers — a part number, a rare surname, an error code — because they are poorly represented in embedding space; BM25 nails those and misses paraphrase. Their errors are close to uncorrelated, which is exactly the condition under which combining helps, and it is also why reciprocal rank fusion works so well despite ignoring the scores' magnitudes: the two scoring scales are not comparable, so fusing on rank sidesteps calibrating them.</div></div>
 <div class="card cc"><div class="card-title">Ranking (LTR) Details</div>
 <ul class="bul">
   <li><strong>Learning-to-rank (LTR):</strong> given (query, doc) pairs, predict a relevance score</li>
@@ -110,7 +137,8 @@
   <li><strong>Features:</strong> BM25 score, semantic similarity, CTR, freshness, user affinity, PageRank, price</li>
   <li><strong>Label source:</strong> human relevance judgments + click-through data (clicks = implicit feedback, noisy but scalable)</li>
   <li><strong>Offline metric:</strong> NDCG@10; online metric: click-through rate, session engagement</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>Pointwise is the wrong loss for a ranking problem</strong> and it is the default people reach for. Squared error on a relevance label treats an error at rank 1 and rank 200 as equally bad, when only the top handful is ever seen. Pairwise and listwise losses put the gradient where the user looks — LambdaMART weights each pair swap by how much it would move NDCG, which is the cleanest expression of that idea and the reason it remained the production default for so long.</div></div>
 </div>
 
 <!-- CASE STUDY 3 -->
@@ -136,7 +164,9 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
 <ul class="bul" style="margin-top:6px">
   <li>Train with <strong>in-batch negatives:</strong> other items in the same batch serve as negatives — no explicit negative sampling needed</li>
   <li>Hard negatives (high-scoring but not interacted) significantly improve retrieval quality</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>The towers never touch until the dot product, and that constraint is the entire point.</strong> Because the item tower cannot see the query, every item embedding can be computed offline and loaded into an ANN index — which is what makes retrieval over 50M items possible at all. A cross-encoder that attends over the query and item jointly is strictly more accurate and cannot be precomputed, so it belongs in stage two on 1,000 candidates. Two-tower for retrieval, cross-encoder for reranking, and the reason is precomputability rather than accuracy.</div>
+<div class="card-body" style="margin-top:8px">One correction worth making to in-batch negatives: they are sampled by <em>popularity</em>, since popular items appear in more batches, so the model over-penalises them. Production systems apply a <strong>logQ correction</strong> — subtracting the log sampling probability from the logit — and skipping it is a real and commonly missed bug.</div></div>
 <div class="card cb"><div class="card-title">Data Flywheel</div>
 <div class="card-body">The core competitive advantage in recommendation systems is the feedback loop:</div>
 <ul class="bul" style="margin-top:8px">
@@ -144,7 +174,19 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
   <li>More interaction data → better model → better recommendations</li>
   <li>This compounds over time — the data flywheel is what makes Netflix/Spotify hard to replicate</li>
   <li><strong>Position bias:</strong> items shown higher get more clicks regardless of quality — must correct for this in training (inverse propensity weighting)</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>The flywheel and the bias are the same mechanism.</strong> The model chooses what is shown, what is shown determines what is clicked, and clicks become the next training set — so a model trained naively on its own logs learns to justify its past decisions. Nothing in the offline metrics reveals this, because the evaluation data has the same bias baked in.</div></div>
+</div>
+
+<div class="card ca" style="margin-top:13px"><div class="card-title">Worked — position bias, and what inverse propensity weighting actually does</div>
+<div class="card-body">Two items, both genuinely equally relevant. Item A was shown at position 1, item B at position 10.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Item</th><th>Position</th><th>Examination propensity</th><th>Observed CTR</th><th>Naive conclusion</th><th>IPW-corrected CTR</th></tr>
+<tr><td>A</td><td>1</td><td>1.00</td><td>0.300</td><td rowspan="2">A is <strong>6× better</strong> than B</td><td>0.300</td></tr>
+<tr><td>B</td><td>10</td><td>0.167</td><td>0.050</td><td><strong>0.300</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Dividing each observation by the probability that the user <em>examined</em> that slot recovers the truth: the two items are identical, and the entire 6× gap was the slot. Train on raw clicks and the model learns to keep item A at the top, which keeps producing the evidence that item A belongs at the top — a loop that offline NDCG will happily score as an improvement.</div>
+<div class="card-body" style="margin-top:8px">Three ways to break it, in increasing order of cost and reliability. <strong>Position as a feature</strong> — include the impression slot at training time and set it to a constant at serving time — is nearly free and works surprisingly well. <strong>IPW</strong> needs propensities, which come from a position model, and it has the usual weakness of importance weighting: the corrections at low-examination slots are large, so variance explodes and the weights need clipping. <strong>Randomisation</strong> — occasionally swapping slots or injecting a random item — is the only method that generates genuinely unbiased data, and like every clean fix in this atlas it costs something real, here a small amount of engagement, deliberately spent.</div>
 </div>
 
 <!-- CROSS-CUTTING CONCERNS -->
@@ -158,7 +200,8 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
   <li><strong>Approximate neighbours (FAISS):</strong> 100× faster than exact; tiny accuracy loss</li>
   <li><strong>Async enrichment:</strong> serve fast with base features; enrich asynchronously for human review queue</li>
   <li><strong>Feature precomputation:</strong> move expensive features offline to feature store</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>Precomputation is the one that changes the shape of the system rather than shaving a constant.</strong> Every other row trades a little accuracy for speed; moving a feature offline removes it from the request path entirely. The limit is freshness — anything precomputed is as stale as its last refresh — so the design question is per-feature: how fast does this signal decay? A 90-day average tolerates a nightly job; a velocity counter in a card-testing attack does not.</div></div>
 <div class="card ca"><div class="card-title">Scalability Patterns</div>
 <ul class="bul">
   <li><strong>Stateless serving:</strong> each prediction independent → horizontal scaling trivial</li>
@@ -166,16 +209,24 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
   <li><strong>GPU batching:</strong> accumulate requests; GPUs are highly efficient at batch operations</li>
   <li><strong>Redis for feature serving:</strong> database lookups often limit throughput more than model</li>
   <li><strong>Read replicas:</strong> scale read-heavy feature serving independently of write path</li>
-</ul></div>
+</ul>
+<div class="card-body" style="margin-top:10px"><strong>Do the capacity arithmetic in the interview, because it takes ten seconds and almost nobody does it.</strong> Concurrency is QPS × service time, so 8,000 QPS at 40 ms is 320 in-flight requests; at a 70% utilisation target that is roughly <strong>457 replicas</strong>. Target 70% rather than 95% because queueing delay rises non-linearly near saturation — the same fleet that is comfortable at 70% has an unusable tail at 90%. Notice too that halving the service time halves the fleet: latency work is capacity work.</div></div>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Jumping to model architecture without clarifying requirements</strong> — the correct model for fraud detection at &lt;50ms real-time is completely different from a nightly batch fraud scoring job. Always start with: latency requirements, throughput, label availability, acceptable false positive rate, and failure cost. These constraints determine everything</li>
-  <li><strong>Single-stage retrieval for large-scale ranking</strong> — scoring all items with a complex model at serving time is O(n) × model cost. Two-stage is the production standard: cheap approximate retrieval (ANN, heuristic rules) to get top-K candidates, then expensive reranking on those K items only</li>
-  <li><strong>Letting the feature store become the latency bottleneck</strong> — high-latency feature lookups (joining user history from a data warehouse at serving time) blow up P99 latency. High-cardinality features (user embedding, session stats) must be precomputed and served from Redis/Memcached at &lt;5ms, not computed on-demand</li>
-  <li><strong>Training on biased implicit feedback labels</strong> — clicks and purchases reflect both user preference AND item position/visibility (position bias). A model trained naively on clicks learns to favour already-prominent items in a feedback loop. Always debias labels: inverse propensity weighting for position bias; randomisation experiments to collect unbiased signal</li>
-  <li><strong>Ignoring cold-start in the design</strong> — new users have no history; new items have no engagement data. The system must degrade gracefully: rule-based fallbacks, content-based features (item metadata), or population-level priors. Cold-start is always asked in system design interviews; have an explicit strategy</li>
+  <li><strong>Designing before the numbers exist.</strong> Peak QPS, P99 budget, catalogue size, label delay, cost of each error direction. Without them you are picking an architecture for an undefined problem</li>
+  <li><strong>Single-stage scoring over the full catalogue.</strong> 50M items at 40µs each is 2,000 seconds. Retrieval must be sub-linear; ranking is affordable only because retrieval made the set small</li>
+  <li><strong>Tuning the reranker while retrieval leaks.</strong> End-to-end recall is capped by stage-one recall@K — at 0.85, a seventh of the relevant items never reach the ranker and no reranker recovers them</li>
+  <li><strong>Quoting ROC-AUC on a 0.1% base rate.</strong> The operating region is the leftmost 1% of the x-axis. Use PR-AUC, and quote precision at the alert volume the review team can actually process</li>
+  <li><strong>A threshold chosen statistically rather than from capacity.</strong> If reviewers handle 200 cases a day, that volume sets the cutoff — then ask how much fraud fits inside it. And consider a middle tier (step-up auth) instead of a binary decision</li>
+  <li><strong>Training on raw clicks.</strong> Position determines clicks as much as relevance — a 6× apparent gap can be entirely the slot. Position-as-a-feature, IPW with clipped weights, or randomisation</li>
+  <li><strong>In-batch negatives without the logQ correction.</strong> Popular items appear in more batches and get over-penalised</li>
+  <li><strong>A cross-encoder in the retrieval stage.</strong> It cannot be precomputed, which is the entire reason two-tower exists. Cross-encoders belong on the 1,000 candidates, not the 50 million</li>
+  <li><strong>Pointwise loss for a ranking problem.</strong> It treats an error at rank 1 and rank 200 alike, when only the top few are seen</li>
+  <li><strong>Feature lookups on the critical path.</strong> Joining user history from a warehouse at serving time destroys P99. Precompute to Redis, and batch the lookups into one multi-get rather than a loop</li>
+  <li><strong>No cold-start plan.</strong> It is asked every time. New users get popularity or onboarding preferences; new items get content features and a deliberate exploration budget, because without exposure they never earn interactions</li>
+  <li><strong>No fallback path.</strong> When the feature store times out, the system must degrade to a default or a simpler model — not return an error or score a null confidently</li>
 </ul></div>
 
 <div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
@@ -186,10 +237,13 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
   <li><strong>Stripe (fraud at auth time):</strong> XGBoost scoring in &lt;50ms at payment authorization; features from Redis feature store (velocity features precomputed on rolling windows), graph features (merchant-card-IP network), and request features computed inline — hard latency SLA enforced at API gateway</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For any ML system design I start with two questions: (1) what latency is required — real-time (&lt;100ms) forces pre-computed features, lightweight models, and ANN retrieval; batch (hours) allows expensive feature computation and complex models; (2) what does failure look like — a wrong fraud block costs customer trust; a missed fraud costs money. For ranking I default to two-stage: cheap ANN retrieval → expensive reranking. The biggest scaling trap: feature store DB lookups at serving time — move high-cardinality features offline into Redis."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'd train a neural network on user clicks." — Clicks have position bias (users click what's shown prominently regardless of preference). You need inverse propensity weighting or randomisation experiments to get unbiased labels. Naive click training creates a feedback loop.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you handle position bias in a recommendation system?" — Answer: (1) Inverse propensity weighting — weight each training example by 1/P(item shown at that position); items shown prominently get down-weighted. (2) Position-aware features — include the impression position as a feature at training time, then set it to a neutral value (e.g., position 1) at serving time; model learns to remove the bias. (3) Randomisation — occasionally inject random items at random positions; these clicks are unbiased ground truth for training.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Spend the first three minutes getting five numbers.</strong> "Peak QPS, P99 latency budget, catalogue size, how labels arrive and how late, and the cost of each error direction. Those determine the architecture — after that I can say 'therefore' instead of 'I would use'. And I'm optimising a business metric subject to a latency constraint, not maximising AUC."</p>
+<p style="margin-top:8px"><strong>Derive the two-stage funnel rather than naming it.</strong> "If the ranker takes 40 microseconds per candidate, scoring 50 million items is 2,000 seconds and scoring a thousand is 40 milliseconds. So stage one has to be sub-linear — ANN or an inverted index — and stage two can be expensive precisely because stage one made the set small. Then the part people skip: <em>end-to-end recall is capped by stage-one recall@K</em>. At recall@1000 of 0.85, a seventh of the relevant items never reach the ranker, so I'd measure that as a first-class metric before touching reranker features."</p>
+<p style="margin-top:8px"><strong>On fraud, lead with the base rate.</strong> "At a 0.1% fraud rate, 100,000 transactions contain 100 frauds. Catch 80% at a 1% false-positive rate and you generate 999 false alarms — precision 7.4%, about 13 false alarms per catch. The model is fine; the base rate is the problem, and it is why ROC-AUC misleads and PR-AUC doesn't. So the threshold comes from review capacity — 200 cases a day means the cutoff sits at 200 alerts — and I'd propose a middle tier with step-up authentication rather than a binary allow/decline."</p>
+<p style="margin-top:8px"><strong>Raise position bias before you are asked.</strong> "Clicks measure position as much as relevance. Two equally relevant items, one at slot 1 and one at slot 10 with an examination propensity of about 0.17, show CTRs of 0.30 and 0.05 — a 6× gap that is entirely the slot. Fixes in order of cost: position as a training feature held constant at serving, IPW with clipped weights, or randomisation, which is the only one that produces genuinely unbiased data and costs real engagement to get it."</p>
+<p style="margin-top:8px"><strong>Do the capacity arithmetic out loud.</strong> "8,000 QPS times a 40 ms service time is 320 concurrent requests; at 70% utilisation that's about 457 replicas. I target 70% rather than 95% because queueing delay rises non-linearly near saturation — and halving service time halves the fleet, so latency work is capacity work."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not open with a model architecture — requirements first, always. Do not put a cross-encoder in retrieval; it cannot be precomputed, which is why two-tower exists. Do not say "I'd train a neural net on clicks" without immediately naming the debiasing. Do not leave cold start to the end — it is asked every time, and the answer is different for new users and new items. And always state the fallback: what the system returns when the feature store times out, because a design with no degraded mode is not a production design.</p>
 </div>
 
 <div class="card cc"><div class="card-title">In code</div>
