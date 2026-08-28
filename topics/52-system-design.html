@@ -248,7 +248,15 @@ e_i &= g_\phi(i_\text{features}) \quad \text{[item tower — pre-computed offlin
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The answer skeleton for an ML system design round, written as the latency budget it has to fit inside — because that budget is what forces every architectural choice.</div>
-<pre class="language-python"><code class="language-python"># ---- Requirements first, always -------------------------------------------
+<div class="code-runner" id="runner-systemdesign" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-systemdesign')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-systemdesign')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input"># ---- Requirements first, always -------------------------------------------
 REQ = dict(qps_peak=8_000, p99_latency_ms=120, catalogue=50_000_000,
            freshness=&#x27;features &lt; 5 min old&#x27;, offline_metric=&#x27;recall@50&#x27;)
 
@@ -281,5 +289,7 @@ MONITOR = [&#x27;p99 latency&#x27;, &#x27;feature null rate&#x27;, &#x27;predict
 
 # ---- Capacity ------------------------------------------------------------
 print(f&quot;replicas needed ~ {REQ[&#x27;qps_peak&#x27;] * 0.04 / 0.7:.0f}&quot;
-      &quot;   (qps * service_seconds / target_utilisation)&quot;)</code></pre></div>
+      &quot;   (qps * service_seconds / target_utilisation)&quot;)</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

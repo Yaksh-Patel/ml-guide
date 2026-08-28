@@ -28,7 +28,8 @@ for name in names:
     if not ok: bad += 1
     print('  %-22s ok=%-5s bytes=%6d  svg=%d  tbl=%d  code=%d  cards=%d'
           % (name, ok, len(s), s.count('<svg'), s.count(TBL),
-             1 if 'language-python' in s else 0, s.count('<div class="card')))
+             1 if ('language-python' in s or 'class="code-runner' in s) else 0,
+             s.count('<div class="card')))
     if not ok:
         print('       unclosed:', c.st, ' extra:', c.ex, ' $$:', s.count('$$'))
 sys.exit(1 if bad else 0)

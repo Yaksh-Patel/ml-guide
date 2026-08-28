@@ -467,7 +467,9 @@ async function runCode(runnerId) {
   out.className = 'code-output';
 
   try {
-    const py = await loadPyodide_(msg => { btn.textContent = msg; });
+    const pkgs = (runner.dataset.packages ?? 'numpy')
+      .split(',').map(x => x.trim()).filter(Boolean);
+    const py = await loadPyodide_(msg => { btn.textContent = msg; }, pkgs);
     btn.textContent = 'Running…';
     py.runPython('import sys, io\nsys.stdout = io.StringIO()\nsys.stderr = sys.stdout');
     let err = null;

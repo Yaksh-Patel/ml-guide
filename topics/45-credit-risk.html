@@ -134,7 +134,15 @@
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Weight of evidence, information value and the PSI monitor — the three calculations a scorecard actually runs on, plus the constraint that makes a GBM defensible to a regulator.</div>
-<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+<div class="code-runner" id="runner-creditrisk" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-creditrisk')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-creditrisk')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np, pandas as pd
 
 rng = np.random.default_rng(0)
 df = pd.DataFrame({&#x27;score&#x27;: rng.normal(600, 80, 20_000).clip(300, 850)})
@@ -164,5 +172,7 @@ print(&quot;psi shifted  &quot;, round(psi(df.score, df.score + 40), 4))
 # &lt; 0.1 stable | 0.1-0.25 investigate | &gt; 0.25 rebuild
 
 # Monotonic constraints keep a GBM auditable: risk must not rise as score rises
-# xgb.XGBClassifier(monotone_constraints={&#x27;score&#x27;: -1})</code></pre></div>
+# xgb.XGBClassifier(monotone_constraints={&#x27;score&#x27;: -1})</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

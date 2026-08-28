@@ -78,6 +78,7 @@ if not names or names==['--all']:
     names=sorted(q.stem for q in pathlib.Path('topics').glob('*.html'))
 bad=0
 tot_box=0
+ids={}
 for n in names:
     s=pathlib.Path('topics/%s.html'%n).read_text()
     b=Bal(); b.feed(s)
@@ -98,6 +99,23 @@ for n in names:
             probs.append('box label malformed')
     d=Dollars(); d.feed(s)
     for h in d.hits: probs.append('prose $..$: %r'%h)
+    # code runners: a typo'd id silently breaks both buttons, and nothing else
+    # in the toolchain looks at them
+    for m in re.finditer(r'<div class="code-runner"[^>]*id="([^"]+)"[^>]*>', s):
+        rid = m.group(1)
+        blk = s[m.start():s.find('</textarea>', m.start())]
+        if ids.get(rid): probs.append('duplicate runner id %r' % rid)
+        ids[rid] = True
+        for need, what in ((f"resetCode('{rid}')", 'reset button'),
+                           (f"runCode('{rid}')", 'run button'),
+                           ('<textarea class="code-input">', 'code-input textarea')):
+            if need not in blk: probs.append('runner %r: missing %s' % (rid, what))
+        tail = s[m.start():s.find('</div>', s.find('</textarea>', m.start()))]
+        if '<pre class="code-output">' not in tail:
+            probs.append('runner %r: missing code-output' % rid)
+    for m in re.finditer(r'\bid="(runner-[^"]+)"', s):
+        if m.group(1) not in ids:
+            probs.append('runner id %r not on a .code-runner div' % m.group(1))
     if s.count('$$')%2: probs.append('odd $$')
     if probs:
         bad+=1; print('FAIL %-24s'%n); [print('    -',p) for p in probs]

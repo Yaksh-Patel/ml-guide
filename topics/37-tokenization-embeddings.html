@@ -138,7 +138,15 @@ Nearest neighbors of "cat" \approx_{dog,kitten,feline,pet}
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">BPE merges learned from a tiny corpus, so the algorithm is visible rather than described — then the three properties of embeddings that interviews actually test.</div>
-<pre class="language-python"><code class="language-python">import re
+<div class="code-runner" id="runner-tokenization" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-tokenization')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-tokenization')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import re
 from collections import Counter
 
 # Byte-pair encoding: start from characters, repeatedly merge the most
@@ -168,5 +176,7 @@ print(list(vocab)[:4])
 # 2. analogies work because differences are roughly linear in the space
 # 3. a static embedding gives one vector per token; BERT gives one per context
 import numpy as np
-cos = lambda a, b: a @ b / (np.linalg.norm(a) * np.linalg.norm(b))</code></pre></div>
+cos = lambda a, b: a @ b / (np.linalg.norm(a) * np.linalg.norm(b))</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

@@ -109,7 +109,15 @@
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The Bayes computation everyone gets wrong in interviews, done numerically — then verified by simulation, which is the fastest way to check any probability claim.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-prob" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-prob')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-prob')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 # Rare-disease trap: 1% prevalence, 99% sensitivity, 99% specificity
 prior, sens, spec = 0.01, 0.99, 0.99
@@ -127,5 +135,7 @@ print(f&quot;empirical        = {sick[positive].mean():.3f}&quot;)
 # Law of total expectation, the same idea for continuous variables
 mu = np.where(sick, 8.0, 2.0)
 x = rng.normal(mu, 1.0)
-print(f&quot;E[x] = {x.mean():.3f}  vs  {prior*8 + (1-prior)*2:.3f}&quot;)</code></pre></div>
+print(f&quot;E[x] = {x.mean():.3f}  vs  {prior*8 + (1-prior)*2:.3f}&quot;)</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

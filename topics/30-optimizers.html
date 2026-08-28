@@ -145,7 +145,15 @@
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">SGD, momentum, RMSProp and Adam implemented on the same loop, so the differences are three lines rather than three paragraphs.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-optim" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-optim')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-optim')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 # Ill-conditioned quadratic: steep in one direction, flat in the other.
 # This is where plain SGD zig-zags and momentum earns its keep.
@@ -178,5 +186,7 @@ def adam(w, g, s, t, lr, b1=.9, b2=.999, eps=1e-8):
     return w - lr * m_hat / (np.sqrt(v_hat) + eps)
 
 for f in (sgd, momentum, rmsprop, adam):
-    print(f&quot;{f.__name__:9} final loss {run(f):.6f}&quot;)</code></pre></div>
+    print(f&quot;{f.__name__:9} final loss {run(f):.6f}&quot;)</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

@@ -119,7 +119,15 @@
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">A decision procedure rather than a table: what to reach for first given the shape of the data, and the honest note that a tuned GBM wins most tabular problems.</div>
-<pre class="language-python"><code class="language-python">def pick_model(n_rows, n_features, data_type, needs_explanation=False,
+<div class="code-runner" id="runner-compare" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-compare')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-compare')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">def pick_model(n_rows, n_features, data_type, needs_explanation=False,
                latency_ms=None, labels=&#x27;plenty&#x27;):
     &quot;&quot;&quot;A defensible starting point. Not a law -- but say this out loud in an
     interview and you will be right far more often than a hunch.&quot;&quot;&quot;
@@ -152,5 +160,7 @@ for c in cases:
 
 # Two rules that survive every fashion cycle:
 #   1. a baseline you can ship beats a model you cannot explain to your manager
-#   2. more/better features beat a better model, until they don&#x27;t -- measure</code></pre></div>
+#   2. more/better features beat a better model, until they don&#x27;t -- measure</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

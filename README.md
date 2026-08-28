@@ -67,8 +67,7 @@ current one, and hovering a sidebar item warms it too.
 
 **Everything heavy is lazy.** The previous version loaded KaTeX, four Prism scripts,
 CodeMirror *and Pyodide* on every single page view — Pyodide being a multi-megabyte WASM
-runtime that then installed numpy and scikit-learn through micropip. Only 2 of 55 topics
-have a code runner, and only 4 use syntax highlighting. Now:
+runtime that then installed numpy and scikit-learn through micropip. Now:
 
 | Dependency | Loaded when |
 |---|---|
@@ -76,6 +75,10 @@ have a code runner, and only 4 use syntax highlighting. Now:
 | Prism | a topic containing `language-*` code is opened |
 | CodeMirror | a topic containing `.code-runner` is opened |
 | Pyodide | you press **Run** — never before |
+
+Python packages are loaded on demand too, from the runner's `data-packages` attribute
+(default `numpy`). Every run used to install **scikit-learn via micropip** — by far the
+slowest step — even though no runner imported it.
 
 `assets/js/lazy.js` caches each loader in a promise, so nothing loads twice.
 
@@ -125,7 +128,7 @@ JetBrains Mono for metadata only.
 | `.tag` + `.tb .tg .ta .tr .tp .tc` | inline pills |
 | `.cgrid` `.ch` `.cg-cc` `.ctp .ctn .cfp .cfn` | confusion-matrix grid |
 | `.anim-wrap` `.anim-title` | wrapper for an inline SVG diagram |
-| `.code-runner` | interactive Python block |
+| `.code-runner` | interactive Python block; `data-packages="numpy,pandas"` declares what Pyodide must load |
 
 Every topic carries a diagram and a worked code example. The diagrams share one
 visual language (L-shaped axes, mono micro-labels, the same six semantic hues),
@@ -193,6 +196,7 @@ go red is worse than no check.
 | `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
 | `tools/kxinline.mjs` | same for inline `$…$`, per text node — the display check misses these |
 | `tools/svgkit.py` | shared SVG vocabulary for diagrams |
+| `tools/run_runners.py` | executes the code inside every `.code-runner` and fails if any errors |
 | `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, then asserts 13 invariants — sidebar/home/map counts against the manifest, the app globals, pager and TOC, and that **every** topic in `topics.js` resolves to a file with a matching `id="sec-<id>"` |
 
 The `.mjs` tools need jsdom and katex, which are not vendored:
@@ -214,6 +218,20 @@ can reproduce, so extract a topic's `language-python` block and execute it in a
 throwaway venv. This repeatedly caught numbers that no validator would see — a
 printed vector computed a different way from the prose, a sample-size table using a
 different formula than its own code card.
+
+### Interactive runners
+
+21 topics carry a live editor rather than a static block: every example whose imports stay
+within numpy and the standard library. Adding more is a `data-packages` change — Pyodide
+ships scipy, pandas and scikit-learn as native wheels, so `data-packages="pandas"` on the
+runner is all a pandas example needs.
+
+`tools/run_runners.py` executes all of them in CI. That check exists because a runner
+promises "press Run and it works" and nothing else in the toolchain ever opens one — which
+is how `01-linear-algebra` shipped an assertion that had never been executed, comparing a
+covariance spectrum against the SVD of **uncentred** data. It runs under CPython + numpy
+rather than Pyodide, so it is a tight proxy, not a guarantee; keep runners to numpy and the
+stdlib and it stays tight.
 
 ### Traps that cost real time
 

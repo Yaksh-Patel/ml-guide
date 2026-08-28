@@ -340,7 +340,15 @@ response = client.messages.create(
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">The agent loop with the two controls that keep it from running away: a step budget and a tool allow-list. Tool schemas plus a terminal condition is most of what an agent is.</div>
-<pre class="language-python"><code class="language-python">import json
+<div class="code-runner" id="runner-agents" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-agents')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-agents')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import json
 
 TOOLS = {
     &#x27;search&#x27;:   {&#x27;desc&#x27;: &#x27;Search the docs&#x27;, &#x27;args&#x27;: {&#x27;query&#x27;: &#x27;str&#x27;}},
@@ -376,5 +384,7 @@ def agent(task, llm, max_steps=6):
     return &#x27;step budget exhausted&#x27;, scratch
 
 # Failure modes to design against: loops, hallucinated tool names, and
-# unbounded cost. Log every step -- an agent you cannot replay is undebuggable.</code></pre></div>
+# unbounded cost. Log every step -- an agent you cannot replay is undebuggable.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

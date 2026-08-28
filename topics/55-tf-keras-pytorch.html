@@ -262,7 +262,15 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Two of the four bugs are framework-independent arithmetic, so they can be reproduced without a GPU or a training run — which is also the clearest way to see why they are silent.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-frameworks" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-frameworks')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-frameworks')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 # ---- 1. WHY zero_grad() EXISTS ------------------------------------------
 # PyTorch ADDS each backward() into .grad rather than replacing it (that is
@@ -295,5 +303,7 @@ for z in (16.0, 17.0, 30.0):
 #                 prediction depends on the other rows in the batch, and is
 #                 meaningless at batch size 1.
 # torch.no_grad(): a memory fix, not a correctness one -- otherwise validation
-#                 retains activations for a backward pass that never happens.</code></pre></div>
+#                 retains activations for a backward pass that never happens.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

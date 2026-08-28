@@ -389,7 +389,15 @@ R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k}
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Message passing written as one matrix multiply, which is all a GCN layer is — then the failure mode that decides your depth: over-smoothing.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-gnns" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-gnns')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-gnns')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 # Tiny undirected graph: 5 nodes
 A = np.array([[0,1,1,0,0],
@@ -420,5 +428,7 @@ for layer in range(1, 9):
     if layer in (1, 2, 4, 8):
         print(f&quot;  depth {layer}: node spread {np.linalg.norm(H - H.mean(0), axis=1).mean():.5f}&quot;)
 # 2-3 layers is usually the sweet spot. GraphSAGE samples neighbours rather than
-# using all of them, which is what makes billion-edge graphs tractable.</code></pre></div>
+# using all of them, which is what makes billion-edge graphs tractable.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

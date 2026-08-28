@@ -231,7 +231,15 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Decoding controls — the settings that change output quality far more than model choice — and the RLHF objective written out so the KL term is not a mystery.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-llm" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-llm')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-llm')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 def softmax(x):
     x = x - x.max(); e = np.exp(x); return e / e.sum()
@@ -259,5 +267,7 @@ def rlhf_objective(reward, logp_policy, logp_ref, beta=0.1):
 
 print(&quot;with leash   &quot;, round(rlhf_objective(2.0, -1.2, -1.3), 3))
 print(&quot;policy drifted&quot;, round(rlhf_objective(2.4, -0.2, -3.0), 3))   # reward up, penalised
-# DPO removes the reward model entirely and optimises preferences directly.</code></pre></div>
+# DPO removes the reward model entirely and optimises preferences directly.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

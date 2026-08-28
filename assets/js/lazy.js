@@ -107,25 +107,42 @@ export function loadCodeMirror() {
 }
 
 /* ---- Pyodide ------------------------------------------------------- */
-/* Reports progress so a multi-megabyte download isn't a frozen button. */
-export function loadPyodide_(onStatus = () => {}) {
+/* Reports progress so a multi-megabyte download isn't a frozen button.
+   Packages are loaded ON DEMAND, from the runner's data-packages attribute.
+   This used to install scikit-learn on every run — several seconds, via
+   micropip — even though no runner imported it. Most runners need only numpy. */
+const pyPackages = new Set();
+
+function bootPyodide(onStatus) {
   return once('pyodide', async () => {
     onStatus('Loading Python runtime…');
     await loadScript(`https://cdn.jsdelivr.net/pyodide/${PYODIDE_VER}/full/pyodide.js`);
 
     onStatus('Starting interpreter…');
-    const py = await window.loadPyodide({
+    return window.loadPyodide({
       indexURL: `https://cdn.jsdelivr.net/pyodide/${PYODIDE_VER}/full/`,
     });
-
-    onStatus('Loading numpy…');
-    await py.loadPackage(['numpy', 'micropip']);
-
-    onStatus('Loading scikit-learn…');
-    await py.runPythonAsync('import micropip\nawait micropip.install(["scikit-learn"])');
-
-    return py;
   });
+}
+
+export async function loadPyodide_(onStatus = () => {}, packages = ['numpy']) {
+  const py = await bootPyodide(onStatus);
+
+  const missing = packages.filter(p => p && !pyPackages.has(p));
+  if (missing.length) {
+    onStatus(`Loading ${missing.join(', ')}…`);
+    try {
+      // Pyodide ships numpy, scipy, pandas and scikit-learn as native wheels
+      await py.loadPackage(missing);
+    } catch {
+      // anything not in the distribution falls back to micropip
+      await py.loadPackage(['micropip']);
+      await py.runPythonAsync(
+        `import micropip\nawait micropip.install(${JSON.stringify(missing)})`);
+    }
+    missing.forEach(p => pyPackages.add(p));
+  }
+  return py;
 }
 
 /* ---- Prefetch ------------------------------------------------------ */

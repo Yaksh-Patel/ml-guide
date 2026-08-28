@@ -120,7 +120,15 @@ W \sim Uniform(-\sqrt{6/n_{in}}, \sqrt{6/n_{in}})
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Initialisation decided in one line, verified by measuring activation variance layer by layer. If the variance collapses or explodes across depth, nothing else you do will help.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-weightinit" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-weightinit')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-weightinit')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 rng = np.random.default_rng(0)
 x = rng.normal(size=(1000, 128))
@@ -149,5 +157,7 @@ print(&quot;Xavier + tanh     &quot;, propagate(lambda n: np.sqrt(1/n), tanh)[:6
 
 # Rule: He for ReLU family, Xavier for tanh/sigmoid, zeros for biases only.
 # Never initialise weights to zero -- every unit computes the same thing and
-# receives the same gradient, so the layer never breaks symmetry.</code></pre></div>
+# receives the same gradient, so the layer never breaks symmetry.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

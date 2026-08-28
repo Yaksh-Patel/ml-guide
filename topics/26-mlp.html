@@ -162,7 +162,15 @@
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">A two-layer network built with nothing but NumPy — forward pass, loss, manual backward pass, update. Every framework is this with more bookkeeping.</div>
-<pre class="language-python"><code class="language-python">import numpy as np
+<div class="code-runner" id="runner-nn_basics" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-nn_basics')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-nn_basics')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np
 
 rng = np.random.default_rng(0)
 X = rng.normal(size=(500, 4))
@@ -193,5 +201,7 @@ for epoch in range(2001):
         p_ -= lr * g
 
     if epoch % 500 == 0:
-        print(f&quot;epoch {epoch:4d}  loss {loss:.4f}  acc {((p&gt;.5)==y).mean():.3f}&quot;)</code></pre></div>
+        print(f&quot;epoch {epoch:4d}  loss {loss:.4f}  acc {((p&gt;.5)==y).mean():.3f}&quot;)</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>

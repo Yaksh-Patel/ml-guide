@@ -39,6 +39,14 @@ jobs:
       - name: Assets — nothing lost against the cdf20c9 baseline
         run: python3 tools/assets.py cdf20c9 --all
 
+      # The interactive runners promise "press Run and it works". Executing them
+      # is what caught a never-run assert in 01-linear-algebra comparing a
+      # covariance spectrum against the SVD of uncentred data.
+      - name: Runners — every interactive code block executes
+        run: |
+          python3 -m pip install --quiet numpy
+          python3 tools/run_runners.py
+
       # ---- rendering -------------------------------------------------------
       # jsdom and katex are not vendored; install them outside the repo so the
       # working tree stays clean (a package.json at the repo root breaks the

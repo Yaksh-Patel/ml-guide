@@ -319,7 +319,15 @@ print("DPD:", demographic_parity_difference(
 
 <div class="card cc"><div class="card-title">In code</div>
 <div class="card-body">Fairness metrics computed side by side — the honest presentation, because with unequal base rates they provably cannot all hold at once.</div>
-<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd
+<div class="code-runner" id="runner-responsibleai" data-packages="numpy">
+    <div class="code-runner-header">
+      <span>🐍 Python · numpy</span>
+      <div class="runner-btns">
+        <button class="reset-btn" onclick="resetCode('runner-responsibleai')">↺ Reset</button>
+        <button class="run-btn" onclick="runCode('runner-responsibleai')">▶ Run</button>
+      </div>
+    </div>
+    <textarea class="code-input">import numpy as np, pandas as pd
 
 rng = np.random.default_rng(0)
 n = 20_000
@@ -345,5 +353,7 @@ print(&quot;\ndemographic parity gap&quot;, round(abs(t.selection_rate.diff().il
 print(&quot;equal opportunity gap &quot;, round(abs(t.tpr.diff().iloc[-1]), 3))
 # IMPOSSIBILITY RESULT: with unequal base rates you cannot equalise selection
 # rate, TPR and PPV simultaneously. Pick the one your domain can defend, say so
-# explicitly, and report the others anyway.</code></pre></div>
+# explicitly, and report the others anyway.</textarea>
+    <pre class="code-output">Click ▶ Run to execute…</pre>
+  </div></div>
 </section>
