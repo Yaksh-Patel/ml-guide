@@ -18,3 +18,4 @@ for (const f of fs.readdirSync(root+'/topics').filter(x=>x.endsWith('.html')).so
   }
 }
 console.log(`\n${n} inline formulas: ${bad} hard failures, ${warn} strict warnings`);
+if (bad || warn) { console.log('FAIL: every inline $...$ must compile under strict:\'error\'.'); process.exit(1); }

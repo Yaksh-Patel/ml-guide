@@ -7,4 +7,5 @@ for (const f of fs.readdirSync(root+'/topics').filter(x=>x.endsWith('.html'))) {
     try { katex.renderToString(m.slice(2,-2),{displayMode:true,throwOnError:true,strict:'error'}); }
     catch(e){ if(/Unrecognized Unicode|LaTeX-incompatible/.test(e.message)){warn++; console.log(`STRICT ${f}: ${e.message.slice(0,90)}\n   ${m.slice(0,90)}`);} else {bad++; console.log(`FAIL ${f}: ${e.message}`);} } }
 }
-console.log(`\n${n} display formulas across all 56 topics: ${bad} hard failures, ${warn} strict-mode warnings`);
+console.log(`\n${n} display formulas: ${bad} hard failures, ${warn} strict-mode warnings`);
+if (bad || warn) { console.log('FAIL: every $$ block must compile under strict:\'error\'.'); process.exit(1); }

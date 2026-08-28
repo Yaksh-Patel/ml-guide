@@ -170,6 +170,19 @@ invariants, the tooling, and the traps that cost real time to find.
 - `{{` and `{%` are fine now that `.nojekyll` exists, but keep them inside
   `<pre>`/`<textarea>` — there is a dbt snippet in `50-data-engineering`.
 
+### CI
+
+`.github/workflows/validate.yml` runs every check below on push and on pull request.
+**Each tool exits non-zero on failure**, and that was verified the only way it can be —
+by deliberately introducing each class of break and confirming the build goes red:
+an unclosed `<div>`, a malformed `.bl` label, a deleted diagram, a `→` inside
+`\text{}`, a bad inline formula, and a renamed section id. Before this existed all six
+of those passed silently, because four of the tools printed their findings and still
+exited 0.
+
+If you add a tool, give it an exit code and prove it fails. A green check that cannot
+go red is worse than no check.
+
 ### Tools
 
 | Path | Does |
@@ -180,17 +193,21 @@ invariants, the tooling, and the traps that cost real time to find.
 | `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
 | `tools/kxinline.mjs` | same for inline `$…$`, per text node — the display check misses these |
 | `tools/svgkit.py` | shared SVG vocabulary for diagrams |
-| `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, checks pager/TOC/progress |
+| `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, then asserts 13 invariants — sidebar/home/map counts against the manifest, the app globals, pager and TOC, and that **every** topic in `topics.js` resolves to a file with a matching `id="sec-<id>"` |
 
 The `.mjs` tools need jsdom and katex, which are not vendored:
 
 ```bash
 mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom katex --silent
 cp <repo>/tools/{smoke,kxstrict,kxinline}.mjs .
-node smoke.mjs <repo>      # expect: 55 sidebar items, 55 home cards, "errors: none"
+node smoke.mjs <repo>      # expect: 13/13 checks passed
 node kxstrict.mjs <repo>   # 152 display formulas: 0 failures, 0 strict warnings
 node kxinline.mjs <repo>   # 174 inline formulas: 0 failures, 0 strict warnings
 ```
+
+Install those deps **outside** the repo, as above. A `package.json` at the repo root
+breaks module resolution for `tools/*.mjs`; `.gitignore` covers it, but the simplest
+fix is not to create one there.
 
 Also **run the code cards**. Every worked number in the prose should be one a reader
 can reproduce, so extract a topic's `language-python` block and execute it in a

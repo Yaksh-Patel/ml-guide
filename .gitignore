@@ -1,0 +1,8 @@
+# Node deps are never vendored. Install jsdom/katex OUTSIDE the repo (see
+# README "Maintaining the content") -- a package.json at the repo root breaks
+# module resolution for tools/*.mjs.
+node_modules/
+package.json
+package-lock.json
+
+.DS_Store

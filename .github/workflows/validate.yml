@@ -1,0 +1,62 @@
+name: validate
+
+# The content of this repo is 56 hand-written HTML fragments. Nothing here is
+# compiled, so nothing catches a broken one except these checks. Each tool exits
+# non-zero on failure -- verified by deliberately introducing each class of break.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # assets.py compares every topic against the pre-revamp baseline with
+          # `git show cdf20c9:...`, so the full history has to be present.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ---- structure -------------------------------------------------------
+      - name: Structure — div/section balance, paired $$, one section per file
+        run: python3 tools/check_topics.py --all
+
+      - name: Markup — full tag balance, .bl labels, boxes, $ in prose
+        run: python3 tools/audit_markup.py --all
+
+      # The important one: guards against a rewrite silently dropping a diagram,
+      # table or interactive widget. Any count going down fails the build.
+      - name: Assets — nothing lost against the cdf20c9 baseline
+        run: python3 tools/assets.py cdf20c9 --all
+
+      # ---- rendering -------------------------------------------------------
+      # jsdom and katex are not vendored; install them outside the repo so the
+      # working tree stays clean (a package.json at the repo root breaks the
+      # module resolution these tools rely on).
+      - name: Install jsdom + katex
+        run: |
+          mkdir -p /tmp/nodecheck && cd /tmp/nodecheck
+          npm init -y >/dev/null
+          npm install --silent --no-audit --no-fund jsdom katex
+          cp "$GITHUB_WORKSPACE"/tools/smoke.mjs .
+          cp "$GITHUB_WORKSPACE"/tools/kxstrict.mjs .
+          cp "$GITHUB_WORKSPACE"/tools/kxinline.mjs .
+
+      - name: KaTeX — every $$ block compiles under strict:'error'
+        run: cd /tmp/nodecheck && node kxstrict.mjs "$GITHUB_WORKSPACE"
+
+      - name: KaTeX — every inline $…$ compiles under strict:'error'
+        run: cd /tmp/nodecheck && node kxinline.mjs "$GITHUB_WORKSPACE"
+
+      - name: Smoke — boot the app, render home, navigate, check the manifest
+        run: cd /tmp/nodecheck && node smoke.mjs "$GITHUB_WORKSPACE"

@@ -74,12 +74,22 @@ if __name__ == '__main__':
     if args == ['--all']:
         args = sorted(q.stem for q in pathlib.Path('topics').glob('*.html'))
     print('%-24s %-46s %s' % ('topic', 'before (' + base[:7] + ')', 'after'))
+    n_lost = 0
     for name in args:
         p = 'topics/%s.html' % name
         old = subprocess.run(['git', 'show', '%s:%s' % (base, p)],
                              capture_output=True, text=True).stdout
+        if not old:
+            print('%-24s (not in %s -- new topic, nothing to compare)' % (name, base[:7]))
+            continue
         new = pathlib.Path(p).read_text()
         co, cn = counts(old), counts(new)
         lost = {k: (co[k], cn[k]) for k in co if cn[k] < co[k]}
         flag = ('   LOST ' + str(lost)) if lost else ''
+        if lost:
+            n_lost += 1
         print('%-24s %-46s %s%s' % (name, fmt(co), fmt(cn), flag))
+    if n_lost:
+        print('\nFAIL: %d topic(s) lost an asset against %s.' % (n_lost, base[:7]))
+        print('A count going down is a lost diagram/table/widget, not a simplification.')
+    sys.exit(1 if n_lost else 0)

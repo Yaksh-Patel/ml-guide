@@ -78,6 +78,14 @@ console.log('  toc entries    :', q('#toc a[data-toc]'));
 console.log('  read btn       :', txt('#tb-read-btn'), '/ hidden =', d.querySelector('#tb-read-btn')?.hidden);
 console.log('  hash           :', window.location.hash);
 
+// snapshot NOW -- navigating away below deactivates this section
+const snap = {
+  attentionActive: d.querySelector('#sec-attention')?.classList.contains('active'),
+  homeInactive:    !d.querySelector('#sec-home')?.classList.contains('active'),
+  pagerLinks:      q('#sec-attention .pager-link'),
+  tocEntries:      q('#toc a[data-toc]'),
+};
+
 // the previously-unreachable topic
 await window.nav('bipartite');
 await new Promise(r => setTimeout(r, 400));
@@ -85,3 +93,42 @@ console.log('\nafter nav("bipartite"):  loaded =', d.querySelector('#sec-biparti
             '| title =', JSON.stringify(txt('#tb-title')));
 
 console.log('\nerrors:', errors.length ? errors : 'none');
+
+// ---- assertions: this is what makes the smoke test a gate, not a report ----
+const checks = [];
+const check = (name, cond, got) => checks.push({ name, ok: !!cond, got });
+
+check('sidebar items === manifest total', q('.sb-item') === TOTAL, q('.sb-item'));
+check('home cards === manifest total',    q('.ht')      === TOTAL, q('.ht'));
+check('topic-map nodes === manifest total', q('.tmap-node') === TOTAL, q('.tmap-node'));
+check('sidebar groups === manifest groups', q('.sb-grp') === GROUPS.length, q('.sb-grp'));
+check('home section rendered', d.querySelector('#sec-home'));
+check('app globals present',
+  ['nav','runCode','resetCode','resetProgress','updateProgressUI']
+    .every(k => typeof window[k] === 'function'));
+check('nav("attention") loaded + active', snap.attentionActive, snap.attentionActive);
+check('home deactivated after nav', snap.homeInactive, snap.homeInactive);
+check('pager rendered', snap.pagerLinks === 2, snap.pagerLinks);
+check('toc populated', snap.tocEntries > 0, snap.tocEntries);
+check('nav("bipartite") loaded', d.querySelector('#sec-bipartite'));
+check('no console/jsdom errors', errors.length === 0, errors.length);
+
+// every topic in the manifest must have a file whose section id matches it --
+// the invariant the router depends on, checked for all of them, not just two
+const manifestProblems = [];
+for (const t of TOPICS) {
+  const f = path.join(ROOT, t.file);
+  if (!fs.existsSync(f)) { manifestProblems.push(`${t.id}: missing ${t.file}`); continue; }
+  const src = fs.readFileSync(f, 'utf8');
+  if (!new RegExp(`id="sec-${t.id}"`).test(src))
+    manifestProblems.push(`${t.id}: ${t.file} has no id="sec-${t.id}"`);
+}
+check('every manifest topic resolves to a matching section id',
+      manifestProblems.length === 0, manifestProblems.slice(0, 5));
+
+console.log('\n---- checks ----');
+for (const c of checks)
+  console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name}${c.ok ? '' : '   got: ' + JSON.stringify(c.got)}`);
+const failed = checks.filter(c => !c.ok).length;
+console.log(`\n${checks.length - failed}/${checks.length} checks passed`);
+process.exit(failed ? 1 : 0);
