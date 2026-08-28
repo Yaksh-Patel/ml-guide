@@ -23,9 +23,9 @@ for all 55 topics**. The remaining work is the prose itself.
 | Code example | done — all 55 topics |
 | Diagram | done — all 55 topics |
 | Markup validity | done — all 56 fragments balanced, `$$` paired |
-| **Prose quality** | **C1–C16 done (45 topics), C17–C20 remaining (10 topics)** |
+| **Prose quality** | **C1–C17 done (47 topics), C18–C20 remaining (8 topics)** |
 
-### Prose progress: 45 / 55
+### Prose progress: 47 / 55
 
 - [x] C1  01 linear-algebra · 02 probability · 03 statistics · 04 calculus
 - [x] C2  05 ml-paradigms · 06 bias-variance · 07 cross-validation
@@ -43,7 +43,7 @@ for all 55 topics**. The remaining work is the prose itself.
 - [x] C14 40 rag · 41 vector-databases
 - [x] C15 42 agentic-ai · 43 multimodal
 - [x] C16 44 time-series · 45 credit-risk
-- [ ] C17 46 gnns · 47 bipartite-graphs
+- [x] C17 46 gnns · 47 bipartite-graphs
 - [ ] C18 48 causal-inference · 49 responsible-ai
 - [ ] C19 50 data-engineering · 51 mlops · 52 system-design
 - [ ] C20 53 python-sql-dsa · 54 model-cheatsheet · 55 tf-keras-pytorch
@@ -201,15 +201,23 @@ correct baseline. **Any count going down is a lost asset, not a simplification.*
 | `tools/assets.py` | asset accounting vs a baseline commit; `blocks()`, `codecard()` |
 | `tools/svgkit.py` | shared SVG vocabulary for diagrams (axes, plot, box, arrow, node, bar) |
 | `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, checks pager/TOC/progress |
+| `tools/audit_markup.py` | the section-8 gotchas in one pass: full tag balance, `.bl` labels, depth-matched boxes, `$` in prose |
+| `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
+| `tools/kxinline.mjs` | same, for inline `$…$` **per text node** — the display check does not cover these |
 
-The smoke test needs jsdom, which is not vendored:
+The `.mjs` tools need jsdom and katex, which are not vendored:
 
 ```bash
-mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom --silent
-cp ~/Documents/Personal/Claude_Projects/ml-guide-main/tools/smoke.mjs .
+mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom katex --silent
+cp ~/Documents/Personal/Claude_Projects/ml-guide-main/tools/{smoke,kxstrict,kxinline}.mjs .
 node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
 # expect: 55 sidebar items, 55 home cards, pager links, "errors: none"
 ```
+
+**Also run the code cards.** Every worked number in the prose should be one the
+reader can reproduce, so extract the topic's `language-python` block and execute
+it in a throwaway venv (`python3 -m venv venv && venv/bin/pip install numpy`).
+This caught a wrong printed vector in a C17 comment that no validator would see.
 
 ---
 
@@ -246,10 +254,13 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
   tag-balance pass over all 56 topics currently reports 0 imbalances; re-run one
   after any hand-written table or inline markup:
 
-  ```python
-  # HTMLParser walking every tag, skipping void/SVG elements and raw-text blocks
-  # (pre/script/textarea/style). See the C15 commit for the ~20-line version.
+  ```bash
+  python3 tools/audit_markup.py          # all 56; or name topics
   ```
+
+  That script is now vendored (it was ad-hoc in C15) and also covers the two
+  bullets below — malformed `.bl` labels and `$` in prose — so it is one command,
+  not three. Run it alongside `check_topics.py`, never instead of it.
 
 - **Boxes carry `style` attributes too, and `check_topics.py` cannot see a
   malformed label.** `<div class="box story" style="...">` does not match a
@@ -258,20 +269,25 @@ node smoke.mjs ~/Documents/Personal/Claude_Projects/ml-guide-main
   tag, the divs still *balance*, so `check_topics.py` reports ok. Two rules that
   follow: find boxes with `<div class="box X"[^>]*>` and depth-match, and after
   any box edit assert that every `.bl` label closes immediately and contains no
-  `<p>`. That check now runs repo-wide (155 boxes, 0 malformed).
+  `<p>`. That check now runs repo-wide (162 boxes, 0 malformed).
 
 - **Unsupported Unicode inside `\text{}`.** KaTeX's *text* mode rejects maths
   symbols: `×`, `→`, `←`, `÷`, `≤`, `≥` and friends all warn (and would fail under
   `strict:'error'`). Em dashes and en dashes are fine. Fixed in `39-llms-rlhf`,
   `43-multimodal` and `52-system-design` by closing the text group and emitting
-  `\times` / `\rightarrow` in maths mode. **All 149 display formulas across all
+  `\times` / `\rightarrow` in maths mode. **All 151 display and 157 inline formulas across all
   56 topics now compile under `strict:'error'`** — re-run that check rather than
   the default, because the default only warns:
 
   ```bash
-  # in /tmp/domtest with katex installed
-  node kxstrict.mjs <repo>   # 0 hard failures, 0 strict warnings
+  # in /tmp/domtest (see §6) with katex installed
+  cp <repo>/tools/kx*.mjs .
+  node kxstrict.mjs <repo>   # 151 display formulas: 0 failures, 0 strict warnings
+  node kxinline.mjs <repo>   # 157 inline formulas: 0 failures, 0 strict warnings
   ```
+
+  Inline `$…$` needs its own pass — `kxstrict.mjs` only matches `$$` blocks, and a
+  revamp that explains its symbols in prose adds inline maths fast (83 → 157 in C17).
 
 - **Dollar amounts in prose rendering as maths.** KaTeX matches `$…$` inside a
   *single text node*, so two `$` in one sentence ("costs $5 … costs $500") render

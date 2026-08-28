@@ -1,15 +1,16 @@
 <section class="section" id="sec-gnns">
 <div class="sec-title">Graph Neural Networks</div>
-<div class="sec-desc">Graphs are the natural structure for social networks, molecules, knowledge bases, fraud rings, and recommendation systems — any domain where relationships between entities matter as much as the entities themselves. GNNs learn representations by iteratively aggregating information from a node's neighbourhood, encoding both node features and graph structure into embeddings used for node classification, link prediction, and graph classification.</div>
+<div class="sec-desc">Every model up to this point assumed your rows were independent. A social network, a molecule, a payments graph and a user–item log all break that assumption in the same way: most of what you want to know about a node is written in its neighbours, not in its own feature vector. A GNN is the machinery for reading that — each node repeatedly rewrites its own representation from its neighbours', so structure stops being metadata and becomes a feature. Without it you are hand-engineering degree counts and triangle counts, and throwing away everything about <em>who</em> those neighbours are.</div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Graphs Require Special Models</div>
-<ul class="bul">
-  <li>Standard ML assumes i.i.d. samples — graph nodes are <em>not</em> independent; they depend on their neighbours</li>
-  <li>Graphs have <strong>no fixed input size</strong> — a node can have 1 or 10,000 neighbours; standard neural nets can't handle variable-size inputs directly</li>
-  <li>Graphs are <strong>permutation invariant</strong> — relabelling nodes shouldn't change the output</li>
-  <li>Graph structure itself is informative — a node connected to many high-degree nodes (hubs) is different from one connected to isolated nodes, even if features are identical</li>
-</ul></div>
+<div class="card cb"><div class="card-title">Why you cannot just flatten a graph into a table</div>
+<div class="card-body">Pull one row out of a dataframe and you can still score it. Pull one node out of a fraud graph and you have deleted the evidence. That difference is the whole subject, and it has three specific consequences.</div>
+<ul class="bul" style="margin-top:8px">
+  <li><strong>Samples are not independent.</strong> A node's label is correlated with its neighbours' labels — that is not noise to be removed, it is the signal. Every i.i.d. guarantee you rely on for train/test splitting quietly stops applying</li>
+  <li><strong>There is no fixed input width.</strong> One node has 1 neighbour, another has 10,000. An MLP needs a fixed-length vector; a neighbourhood is a <em>set</em> of unknown size</li>
+  <li><strong>Node ordering is arbitrary.</strong> Feed a row of the adjacency matrix to an MLP and the prediction depends on how you happened to number the nodes. Relabel and the answer changes — which means the model has learned the numbering, not the graph</li>
+</ul>
+<div class="card-body" style="margin-top:10px">Those last two are why the aggregation step is always a <strong>set function</strong> — sum, mean, max — and never a sequence function. A set function accepts any number of inputs and gives the same answer under any order, which is exactly permutation invariance. Keep that in mind when you reach GraphSAGE's LSTM aggregator below: it is the one option in the whole family that is <em>not</em> permutation invariant, and that is why it is a footnote rather than a default.</div></div>
 
 <div class="card cg"><div class="card-title">Graph Terminology</div>
 <table class="tbl">
@@ -20,14 +21,15 @@
 <tr><td><strong>Adjacency matrix</strong></td><td>$A \in \{0,1\}^{n \times n}$; $A_{ij}=1$ if edge exists</td><td>Sparse for large graphs</td></tr>
 <tr><td><strong>Degree</strong></td><td>Number of edges connected to a node</td><td>$d_v = \sum_j A_{vj}$</td></tr>
 <tr><td><strong>Homophily</strong></td><td>Connected nodes tend to be similar</td><td>Friends share interests; fraud rings cluster</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Homophily is the assumption, not a description.</strong> Averaging over a neighbourhood is a smoothing operation, so it helps exactly when neighbours share your label and hurts when they do not. On a heterophilic graph — say a transaction network where fraudsters deliberately transact with clean accounts — a plain GCN can score <em>below</em> an MLP on the raw node features, because averaging is actively destroying the discriminative signal. Measure the edge homophily ratio (the fraction of edges joining same-label nodes) before you assume a GNN is the right tool.</div></div>
 </div>
 
 <!-- Message passing -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — The Message Passing Framework</div>
 
-<div class="card ca"><div class="card-title">Message Passing Neural Networks (MPNN) — The Unified Framework</div>
-<div class="card-body">Almost every GNN is a special case of message passing. Each layer has two steps: <strong>aggregate</strong> messages from neighbours, then <strong>update</strong> the node's own representation.</div>
+<div class="card ca"><div class="card-title">Message passing: one framework, and every GNN is a choice inside it</div>
+<div class="card-body">The mental model is a rumour spreading through a room. Everyone starts knowing only their own facts. In each round you listen to the people you are standing next to, summarise what you heard, and revise what you believe. After one round you know your neighbours' facts; after three you know things that started three handshakes away — but you also sound increasingly like everyone else in the room. Both halves of that sentence matter, and the second one is what limits depth.</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Layer } k \text{ — aggregate neighbour messages:} \\
 \mathbf{m}_v^{(k)} &= \text{AGGREGATE}^{(k)}\!\left(\left\{\mathbf{h}_u^{(k-1)} : u \in \mathcal{N}(v)\right\}\right) \\
@@ -36,19 +38,38 @@
 \text{Final embedding after } K \text{ layers:} \\
 \mathbf{z}_v &= \mathbf{h}_v^{(K)} \quad \text{(encodes } K\text{-hop neighbourhood)}
 \end{aligned}$$</div>
-<div class="box info" style="margin-top:10px"><div class="bl">Key intuition</div><p>After 1 layer, each node sees its immediate neighbours. After 2 layers, it sees neighbours-of-neighbours. After K layers, it sees its K-hop neighbourhood. Deeper = larger receptive field — but also more expensive and prone to <strong>over-smoothing</strong> (all nodes converge to the same representation).</p></div>
+<div class="card-body" style="margin-top:8px">Naming the pieces, because everything later is a substitution into these three lines. $\mathbf{h}_v^{(k)}$ is node $v$'s vector after $k$ rounds, initialised to its raw features $\mathbf{x}_v$. $\mathcal{N}(v)$ is $v$'s neighbour set. <strong>AGGREGATE</strong> collapses a variable-size set of neighbour vectors into one vector and must be order-invariant — this is where GCN, GraphSAGE, GAT and GIN differ, and it is the only place they differ. <strong>UPDATE</strong> combines that summary with the node's own previous state, and is where the learnable weights live. $\mathbf{z}_v$ is the embedding you actually feed to a classifier.</div>
+<div class="card-body" style="margin-top:10px">The one number to internalise is what $K$ costs. $K$ is not a capacity dial like width — it is a <em>radius</em>, and the number of nodes inside a radius grows geometrically. On a graph with average degree 25:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Layers $K$</th><th>Nodes in the receptive field of one target</th><th>Share of a 1M-node graph</th></tr>
+<tr><td>1</td><td>25</td><td>0.003%</td></tr>
+<tr><td>2</td><td>650</td><td>0.07%</td></tr>
+<tr><td>3</td><td>16,275</td><td><strong>1.6%</strong></td></tr>
+<tr><td>4</td><td>406,900</td><td><strong>40.7%</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">At four layers, computing the embedding of <em>one</em> node touches nearly half the graph. That single table explains two things at once: why mini-batching a GNN is hard in a way that mini-batching a CNN is not, and why the practical answer to "how deep should my GNN be" is almost always two or three.</div>
+<div class="box info" style="margin-top:10px"><div class="bl">Key intuition</div><p>Depth in a GNN buys reach, not abstraction. A deeper CNN sees more abstract features of the same patch; a deeper GNN sees a bigger patch. So if the signal you need is genuinely 5 hops away, adding layers is the wrong fix — it drowns the local signal in the global average before it ever arrives. Add a virtual node, precompute a long-range feature, or rewire the graph instead.</p></div>
 </div>
 
 <!-- GCN -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Key GNN Architectures</div>
 
-<div class="card cp"><div class="card-title">GCN — Graph Convolutional Network (Kipf &amp; Welling, 2017)</div>
-<div class="card-body">The simplest and most widely cited GNN. Aggregation = normalised sum of neighbour features; no learnable aggregation weights.</div>
+<div class="card cp"><div class="card-title">GCN — and what the two −½ exponents are actually for</div>
+<div class="card-body">The most-cited GNN, and the simplest useful one: aggregation is a normalised sum of neighbour features with no learnable aggregation weights at all. The whole layer is one sparse matrix multiply.</div>
 <div class="formula math-formula">$$\begin{aligned}
 \mathbf{H}^{(k)} &= \sigma\!\left(\tilde{D}^{-\frac{1}{2}}\tilde{A}\tilde{D}^{-\frac{1}{2}}\,\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}\right) \\
 \tilde{A} &= A + I \quad \text{(add self-loops so node aggregates itself)} \\
 \tilde{D}_{ii} &= \sum_j \tilde{A}_{ij} \quad \text{(degree matrix for normalisation)}
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Two design decisions are hiding in that first line, and both have a reason worth knowing.</div>
+<div class="card-body" style="margin-top:8px"><strong>The self-loop.</strong> Without $+I$, a node's new state is built purely from its neighbours and its own features are discarded at every layer. Two layers in, a node's embedding would say nothing about the node. $\tilde{A} = A + I$ puts the node in its own neighbourhood so UPDATE and AGGREGATE fuse into one multiply.</div>
+<div class="card-body" style="margin-top:8px"><strong>The symmetric normalisation.</strong> The coefficient on the edge $v \leftarrow u$ works out to $1/\sqrt{\tilde{d}_v \tilde{d}_u}$ — it is scaled down by <em>both</em> endpoints' degrees. Put numbers through it. Take a node $v$ with 3 neighbours ($\tilde{d}_v = 4$): two ordinary nodes of degree 3, and one hub of degree 999.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Message from</th><th>Symmetric $1/\sqrt{\tilde{d}_v\tilde{d}_u}$</th><th>Row-normalised (mean) $1/\tilde{d}_v$</th></tr>
+<tr><td>ordinary peer, degree 3</td><td><strong>0.250</strong></td><td>0.250</td></tr>
+<tr><td>hub, degree 999</td><td><strong>0.016</strong></td><td>0.250</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The hub is discounted by a factor of <strong>15.8</strong> under symmetric normalisation and not at all under mean aggregation. That is the argument for the two exponents in one line: <strong>a neighbour's message is worth less when that neighbour talks to everyone.</strong> A node connected to a thousand things says almost nothing specific about you, and the symmetric form encodes precisely that. Drop it on a graph with a heavy-tailed degree distribution — which is every real social or e-commerce graph — and the symptom is embeddings collapsing by popularity: everything within one hop of a hub looks the same, and the model's top predictions become the globally popular items regardless of the query node.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <pre class="formula">import torch
@@ -77,22 +98,22 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 <div>
 <strong style="font-size:12px;color:var(--text)">Properties &amp; limitations</strong>
 <ul class="bul" style="margin-top:6px">
-  <li>Symmetric normalisation ($\tilde{D}^{-1/2}\tilde{A}\tilde{D}^{-1/2}$) prevents high-degree nodes from dominating</li>
-  <li>Transductive only — must see all nodes during training (no new nodes at inference)</li>
-  <li>Treats all neighbours equally — no attention mechanism</li>
-  <li>Over-smoothing at depth &gt;3–4 layers — all nodes converge to similar representations</li>
-  <li>Directed graphs require asymmetric normalisation ($\tilde{D}^{-1}\tilde{A}$)</li>
+  <li><strong>Transductive.</strong> The propagation matrix $\tilde{D}^{-1/2}\tilde{A}\tilde{D}^{-1/2}$ is built from the training graph, so a node that did not exist then has no row in it. New user at inference means recompute — see GraphSAGE</li>
+  <li><strong>No learnable aggregation.</strong> Neighbour weights are fixed by degree, not learned from features. Cheap, hard to overfit, and blind to the fact that some neighbours matter more</li>
+  <li><strong>Over-smooths past 3–4 layers</strong> — averaging is a low-pass filter, and stacking low-pass filters converges to a constant</li>
+  <li><strong>Assumes undirected.</strong> Directed graphs need the asymmetric $\tilde{D}^{-1}\tilde{A}$, which loses the discount-the-hub property above; be deliberate about it</li>
 </ul>
 </div>
 </div></div>
 
-<div class="card cc"><div class="card-title">GraphSAGE — Inductive Graph Learning (Hamilton et al., 2017)</div>
-<div class="card-body">Fixes GCN's inductive limitation by learning a general <em>aggregation function</em> rather than memorising fixed embeddings. Can generalise to unseen nodes and graphs — critical for production systems where new users/items arrive continuously.</div>
+<div class="card cc"><div class="card-title">GraphSAGE — a lookup table becomes a recipe</div>
+<div class="card-body">The distinction that matters here is not "bigger" or "better", it is <strong>transductive versus inductive</strong>. A transductive model learns embeddings <em>for the nodes it saw</em>; an inductive one learns an <em>aggregation function</em> that can be pointed at any neighbourhood, including one that appeared this morning. One useful test: could you score a node that did not exist when the model was fitted, without retraining? GCN cannot. GraphSAGE can, because what it stores is the recipe, not the dish.</div>
 <div class="formula math-formula">$$\begin{aligned}
 \mathbf{h}_{\mathcal{N}(v)}^{(k)} &= \text{AGGREGATE}_k\!\left(\left\{\mathbf{h}_u^{(k-1)},\ \forall u \in \mathcal{N}(v)\right\}\right) \\
 \mathbf{h}_v^{(k)} &= \sigma\!\left(\mathbf{W}^{(k)} \cdot \text{CONCAT}\!\left(\mathbf{h}_v^{(k-1)},\ \mathbf{h}_{\mathcal{N}(v)}^{(k)}\right)\right) \\
 \mathbf{h}_v^{(k)} &\leftarrow \mathbf{h}_v^{(k)} / \left\|\mathbf{h}_v^{(k)}\right\|_2
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Note the <strong>CONCAT</strong> rather than a self-loop: the node's own state is kept in a separate slot and given its own columns of $\mathbf{W}$, so the model can learn to weight "me" differently from "my neighbourhood" instead of averaging the two together. The final $L_2$ normalisation keeps embedding norms comparable across nodes of wildly different degree, which is what makes dot-product retrieval over them behave.</div>
 <table class="tbl" style="margin-top:10px">
 <tr><th>Aggregator</th><th>Formula</th><th>Properties</th></tr>
 <tr><td><strong>Mean</strong></td><td>$\frac{1}{|\mathcal{N}(v)|}\sum_{u \in \mathcal{N}(v)} \mathbf{h}_u$</td><td>Permutation invariant; efficient; most common</td></tr>
@@ -100,22 +121,25 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 <tr><td><strong>LSTM</strong></td><td>Apply LSTM on random permutation of neighbours</td><td>More expressive; not permutation invariant — problematic</td></tr>
 <tr><td><strong>Sum</strong></td><td>$\sum_{u \in \mathcal{N}(v)} \mathbf{h}_u$</td><td>Degree-aware — nodes with more neighbours get larger aggregations</td></tr>
 </table>
-<div class="box tip" style="margin-top:8px"><div class="bl">Neighbourhood sampling</div><p>For nodes with thousands of neighbours (hubs), full neighbourhood aggregation is infeasible. GraphSAGE samples a fixed-size neighbourhood at each layer (e.g. 25 at layer 1, 10 at layer 2). This makes mini-batch training practical on million-node graphs.</p></div>
+<div class="box info" style="margin-top:10px"><div class="bl">worked — why sum is strictly more expressive than mean</div><p>Node $v$ has two neighbours, both with feature vector $[1,0]$. Node $w$ has one neighbour with feature vector $[1,0]$. Mean returns $[1,0]$ for both, so <strong>no downstream layer can ever tell $v$ from $w$</strong> — the multiplicity was destroyed at aggregation time. Sum returns $[2,0]$ and $[1,0]$ and keeps it. Counting neighbour types is exactly what the Weisfeiler–Lehman graph isomorphism test does, which is why sum-plus-MLP (GIN) is provably the most expressive message-passing scheme and mean and max are strictly weaker. The practical symptom: a mean-aggregating GNN cannot distinguish a molecule with two identical substituents from one with a single one, and it will sit at a puzzling accuracy ceiling on graph classification while its loss keeps falling.</p></div>
+<div class="box tip" style="margin-top:8px"><div class="bl">Neighbourhood sampling — the number that makes mini-batching possible</div><p>Exhaustive 2-hop aggregation on an average-degree-25 graph touches 650 nodes per target, and a single hub of degree 100,000 inside the radius makes the batch unbounded. GraphSAGE instead samples a <strong>fixed fan-out per layer</strong> — 25 at layer 1, 10 at layer 2 — so a target costs at most $25 + 25{\times}10 = 275$ nodes, <em>whatever the graph looks like</em>. Bounded, predictable batches are what turned GNNs from a benchmark technique into something you can run on a billion-edge graph. The cost is variance: each epoch sees a different neighbourhood, which acts as regularisation during training but means you should aggregate over several samples (or use the full neighbourhood) at inference time if you want stable scores.</p></div>
 </div>
 
-<div class="card"><div class="card-title">GAT — Graph Attention Network (Veličković et al., 2018)</div>
-<div class="card-body">Replaces uniform/normalised aggregation with <strong>learned attention weights</strong> — different neighbours contribute differently based on feature similarity.</div>
+<div class="card"><div class="card-title">GAT — let the model decide which neighbours matter</div>
+<div class="card-body">GCN weights a neighbour by its degree; that is a structural prior, fixed before training and blind to features. GAT replaces it with <strong>learned attention</strong>: the coefficient on each edge is computed from the two endpoints' representations, so the model can decide that this neighbour is informative and that one is noise.</div>
 <div class="formula math-formula">$$\begin{aligned}
 e_{vu} &= \text{LeakyReLU}\!\left(\mathbf{a}^T\!\left[\mathbf{W}\mathbf{h}_v \,\|\, \mathbf{W}\mathbf{h}_u\right]\right) \quad \text{(attention score)} \\
 \alpha_{vu} &= \text{softmax}_u(e_{vu}) = \frac{\exp(e_{vu})}{\sum_{k \in \mathcal{N}(v)} \exp(e_{vk})} \\
 \mathbf{h}_v^{(k)} &= \sigma\!\left(\sum_{u \in \mathcal{N}(v)} \alpha_{vu} \cdot \mathbf{W}\mathbf{h}_u\right)
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Read it as three steps. Project both endpoints with a shared $\mathbf{W}$, concatenate them and dot with a learned vector $\mathbf{a}$ to get a raw score $e_{vu}$; the LeakyReLU is there so negative scores are not flattened to zero before the softmax. Then <strong>softmax over $v$'s neighbours only</strong> — that local normalisation is what replaces the degree normalisation, and it is why the coefficients are comparable across nodes of very different degree. Finally aggregate with those weights. Same shape as transformer attention, restricted to the graph's edges instead of all pairs; a transformer is a GAT on a fully connected graph.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <ul class="bul">
-  <li><strong>Multi-head attention:</strong> run K independent attention heads, concatenate or average results — same intuition as transformer multi-head attention</li>
-  <li>Attention weights are interpretable — which neighbours does the model weight most?</li>
-  <li>Stronger than GCN on heterophilic graphs (where dissimilar nodes connect)</li>
+  <li><strong>Where it earns its keep: heterophily.</strong> Because $\alpha_{vu}$ is learned from features, GAT can push weight <em>away</em> from dissimilar neighbours instead of dutifully averaging them in. That is the case where GCN can lose to a plain MLP</li>
+  <li><strong>Multi-head attention</strong> — run $K$ independent heads and concatenate (hidden layers) or average (output layer). Same reasoning as in transformers: one head collapses onto a single notion of relevance, several hedge</li>
+  <li><strong>What it costs.</strong> Attention is computed per edge, so memory scales with $|E|$ and is multiplied by the head count. On a dense graph GAT is dramatically heavier than GCN for a modest accuracy gain — check that the gain exists on your graph before paying for it</li>
+  <li><strong>Interpretability, with a caveat.</strong> The weights show which neighbours the model leaned on, which is genuinely useful for triage. They are not a causal explanation, and attention over correlated neighbours is unstable — treat them as a hint, not evidence</li>
 </ul>
 </div>
 <div>
@@ -146,7 +170,8 @@ class GAT(torch.nn.Module):
 <tr><td><strong>GIN</strong></td><td>Sum + MLP</td><td>Yes</td><td>No</td><td>Graph classification; maximally expressive (≡ WL test)</td></tr>
 <tr><td><strong>LightGCN</strong></td><td>Normalised sum (no features)</td><td>No</td><td>No</td><td>Recommendation; collaborative filtering on user-item graph</td></tr>
 <tr><td><strong>HGT</strong></td><td>Type-aware attention</td><td>Yes</td><td>Yes (per type)</td><td>Heterogeneous graphs (multiple node/edge types)</td></tr>
-</table></div>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Pick by constraint, not by recency.</strong> Do new nodes arrive at inference? That eliminates GCN and LightGCN and you are choosing among GraphSAGE, GAT and HGT. Is the label a property of the whole graph rather than a node? Sum aggregation, so GIN. Do edges carry types that mean different things — "shares a device" is not "sent money to" — and you are on a heterogeneous graph, where collapsing types into one adjacency matrix throws away most of the signal and HGT-style per-type parameters earn their complexity. And run the two baselines that keep winning: an MLP on node features alone, and gradient boosting on hand-engineered neighbourhood aggregates. If the GNN does not beat both, the graph was not carrying the signal you assumed.</div></div>
 
 <!-- Tasks -->
 <div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — GNN Tasks &amp; Applications</div>
@@ -154,30 +179,30 @@ class GAT(torch.nn.Module):
 <div class="g3">
 <div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">Node Classification</div>
 <ul class="bul">
-  <li>Predict a label for each node using node features + graph structure</li>
-  <li><strong>Examples:</strong> classify users as fraudsters/legitimate; predict paper topic in citation network; classify proteins by function</li>
-  <li>Loss: cross-entropy on labelled nodes; gradients flow through the whole graph</li>
-  <li>Semi-supervised: train on small set of labelled nodes, predict on all unlabelled nodes</li>
+  <li>Predict a label per node from node features <em>and</em> position in the graph</li>
+  <li><strong>Examples:</strong> flag accounts as fraudulent; predict a paper's topic in a citation network; classify proteins by function</li>
+  <li>Usually semi-supervised: a few thousand labelled nodes, cross-entropy on those, gradients flowing back through the whole neighbourhood</li>
+  <li><strong>The split is not a row split.</strong> Held-out nodes are still in the graph, so their features leak into training embeddings through message passing. That is accepted in transductive benchmarks and is a bug in a production evaluation — split by time or by component</li>
 </ul></div>
 <div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">Link Prediction</div>
 <ul class="bul">
-  <li>Predict whether an edge exists between two nodes (or will exist in the future)</li>
-  <li><strong>Examples:</strong> friend recommendation, product recommendation, drug-target interaction, knowledge graph completion</li>
-  <li>Score: $\hat{A}_{uv} = \sigma(\mathbf{z}_u^T \mathbf{z}_v)$ — dot product of learned embeddings</li>
-  <li>Trained with negative sampling: sample random non-edges as negatives</li>
+  <li>Score whether an edge exists — or will exist next month</li>
+  <li><strong>Examples:</strong> friend and product recommendation, drug–target interaction, knowledge-graph completion</li>
+  <li>Score $\hat{A}_{uv} = \sigma(\mathbf{z}_u^T \mathbf{z}_v)$, trained against sampled non-edges</li>
+  <li><strong>Negatives decide everything.</strong> 1M users by 100k items is $10^{11}$ candidate pairs against maybe $10^7$ observed ones — 1 pair in 10,000. A uniformly random negative is one the model already scores near zero, so it contributes almost no gradient. AUC against random negatives looks superb while recall@10 in production is poor; mine hard negatives — plausible, popular, non-interacted</li>
 </ul></div>
 <div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">Graph Classification</div>
 <ul class="bul">
-  <li>Predict a single label for an entire graph</li>
-  <li><strong>Examples:</strong> molecule property prediction (toxic/non-toxic), protein function, program bug detection</li>
-  <li>Requires <strong>readout / pooling:</strong> aggregate all node embeddings into a single graph embedding (sum, mean, hierarchical pooling)</li>
-  <li>GIN is theoretically the most expressive architecture for this task</li>
+  <li>One label for an entire graph</li>
+  <li><strong>Examples:</strong> molecule toxicity, protein function, bug detection over a program's AST</li>
+  <li>Needs a <strong>readout</strong>: collapse all node embeddings into one graph vector (sum, mean, or hierarchical pooling)</li>
+  <li><strong>Sum readout for counting, mean for proportion.</strong> Mean readout makes a 20-atom and a 200-atom molecule with the same composition identical; if size matters to the label, mean has already thrown it away. This is the task where GIN's expressiveness argument actually shows up in the metrics</li>
 </ul></div>
 </div>
 
 <!-- Fraud detection -->
-<div class="card ca"><div class="card-title">GNNs for Fraud Detection — A Worked Example</div>
-<div class="card-body">Fraud rings are hard to detect with tabular features alone. But fraudsters share devices, IP addresses, phone numbers, and bank accounts — forming distinctive subgraph patterns that GNNs can learn.</div>
+<div class="card ca"><div class="card-title">GNNs for fraud detection — with the number that makes the case</div>
+<div class="card-body">Fraud is the cleanest illustration of why structure beats features, because the fraudster is actively optimising their own features to look normal and cannot as easily hide who they are connected to. They share devices, IP ranges, phone numbers and payout accounts, because that is what makes the operation economic.</div>
 <div class="g2" style="margin-top:10px">
 <div>
 <strong style="font-size:12px;color:var(--text)">Graph construction</strong>
@@ -189,15 +214,17 @@ class GAT(torch.nn.Module):
 </ul>
 </div>
 <div>
-<strong style="font-size:12px;color:var(--text)">Why GNN outperforms tabular model</strong>
+<strong style="font-size:12px;color:var(--text)">Worked — a clean account with dirty neighbours</strong>
 <ul class="bul" style="margin-top:6px">
-  <li>Individual fraudulent transaction may look legitimate in isolation (features OK)</li>
-  <li>But the account is connected to 5 other accounts that all received chargebacks — structural signal</li>
-  <li>GNN propagates this neighbourhood signal: node embedding encodes "this account is connected to fraud"</li>
-  <li>Result: 15–30% recall lift over XGBoost on fraud rings (Alibaba, Amazon fraud research)</li>
+  <li>Portfolio chargeback rate: <strong>0.2%</strong>. Account A's own features are unremarkable — normal amount, normal velocity, plausible location. A tabular model scores it low, correctly, given what it can see</li>
+  <li>A shares a device fingerprint with 8 other accounts. <strong>5 of the 8 have charged back</strong> — a local rate of 62.5%, or <strong>312× the portfolio base rate</strong></li>
+  <li>That ratio is the entire lift. One message-passing layer computes it as a by-product of aggregation; a tabular model only sees it if an engineer thought to build that exact feature</li>
+  <li>And the second layer sees what a hand-built count cannot: "connected to accounts that are themselves connected to fraud" — the ring one step beyond the ones already caught</li>
+  <li>Reported effect in industry write-ups (Alibaba, Amazon): <strong>15–30% recall lift</strong> over tuned gradient boosting on ring-structured fraud, at a fixed false-positive budget</li>
 </ul>
 </div>
 </div>
+<div class="box warn" style="margin-top:10px"><div class="bl">⚠️ the two failure modes to design against</div><p><strong>Label leakage through edges.</strong> If a node's features include its neighbours' labels and those neighbours are in your training set, the model learns to read the answer off the graph and your validation score is fiction. Propagate <em>features</em>, never labels — or mask neighbour labels for nodes in the same split. <strong>And adversarial drift.</strong> Once device-sharing is being penalised, the operation stops sharing devices, and your best feature decays on a timescale of weeks rather than years. Monitor edge-type importance over time and expect the graph schema to need revisiting, not just the weights retrained.</p></div>
 <pre class="formula" style="margin-top:10px">from torch_geometric.nn import SAGEConv
 import torch.nn as nn
 
@@ -219,7 +246,8 @@ class FraudGNN(nn.Module):
 </div>
 
 <!-- Recommender systems -->
-<div class="card cp"><div class="card-title">GNNs for Recommender Systems — LightGCN &amp; PinSage</div>
+<div class="card cp"><div class="card-title">GNNs for recommendation — LightGCN &amp; PinSage</div>
+<div class="card-body">Recommendation is where GNNs are most widely deployed, and the surprise is which direction the winning design went: LightGCN got there by <em>deleting</em> parts of a GCN.</div>
 <div class="g2">
 <div>
 <strong style="font-size:12px;color:var(--text)">LightGCN (He et al., 2020)</strong>
@@ -229,31 +257,32 @@ class FraudGNN(nn.Module):
 \hat{y}_{ui} &= {\mathbf{e}_u^*}^T \mathbf{e}_i^* \quad \text{(predicted score)}
 \end{aligned}$$</div>
 <ul class="bul" style="margin-top:6px">
-  <li>Strips GCN to the essentials — no feature transformation, no activation functions</li>
-  <li>State-of-the-art on collaborative filtering; outperforms MF, NGCF on most benchmarks</li>
-  <li>Trained with BPR loss: $\mathcal{L} = -\sum \ln\sigma(\hat{y}_{ui} - \hat{y}_{uj})$ (observed item scored higher than unobserved)</li>
+  <li><strong>No $\mathbf{W}$, no $\sigma$.</strong> The reason is specific: in pure collaborative filtering the only input is a learned ID embedding, so a feature transform has no raw features to transform — it adds parameters that can only re-mix dimensions the embedding is already free to arrange. Removing it removes overfitting capacity and an optimisation obstacle at once</li>
+  <li><strong>The layer average is the over-smoothing fix, built in.</strong> $\mathbf{e}^{(0)}$ is the un-smoothed identity and $\mathbf{e}^{(3)}$ is heavily smoothed; averaging across $k$ keeps both, which is jumping-knowledge by another name and is why LightGCN tolerates 3–4 propagation steps where a plain GCN would not</li>
+  <li>Trained with BPR: $\mathcal{L} = -\sum \ln\sigma(\hat{y}_{ui} - \hat{y}_{uj})$ — a <em>ranking</em> loss on pairs, because you are ordering a slate, not estimating a rating</li>
 </ul>
 </div>
 <div>
 <strong style="font-size:12px;color:var(--text)">PinSage (Ying et al., Pinterest 2018)</strong>
 <ul class="bul" style="margin-top:6px">
-  <li>GraphSAGE on Pinterest's pin-board bipartite graph (3B nodes, 18B edges)</li>
-  <li>Importance-based neighbourhood sampling using random walks — sample neighbours proportionally to visit frequency, not uniformly</li>
-  <li>Curriculum training: hard negatives (semantically similar but non-interacted) added later in training</li>
-  <li>Deployed for "Related Pins" — one of the highest-impact recommendation improvements at Pinterest</li>
+  <li>GraphSAGE on Pinterest's pin–board bipartite graph: 3B nodes, 18B edges. Inductive by necessity — pins are created continuously and a transductive model would be stale on arrival</li>
+  <li><strong>Random-walk importance sampling</strong> rather than uniform neighbour sampling: run short walks from the target and keep the most-visited nodes. Uniform sampling on a graph with hubs mostly returns hubs; visit counts return the neighbours that are actually specific to this pin</li>
+  <li><strong>Curriculum on negatives:</strong> easy random negatives first, then progressively harder ones — semantically similar pins the user did not engage with. Start with hard negatives and the model has no coarse signal to learn from; never introduce them and it never learns fine distinctions</li>
+  <li>Shipped as "Related Pins", one of the largest measured recommendation gains at Pinterest and still the reference point for industrial-scale GNNs</li>
 </ul>
 </div>
 </div></div>
 
 <!-- Bipartite preserved -->
-<div class="card"><div class="card-title">Bipartite Graphs — Foundation of Collaborative Filtering</div>
-<div class="card-body">The user-item interaction graph is a bipartite graph: nodes split into users U and items V, edges only connect U↔V. All collaborative filtering methods — matrix factorisation, LightGCN, PinSage — operate on this structure.</div>
+<div class="card"><div class="card-title">The bipartite special case</div>
+<div class="card-body">A user–item interaction graph is <strong>bipartite</strong>: nodes split into users $U$ and items $V$, and every edge crosses between them. That single structural fact changes how propagation behaves — a user's neighbours are items, so odd layers carry item information into users and even layers carry user information back. Two hops is the smallest step that compares a user to <em>other users</em>, which is collaborative filtering rediscovered as a graph operation.</div>
 <div class="formula math-formula">$$\begin{aligned}
 G &= (U \cup V,\ E), \quad E \subseteq U \times V \\
 R[u,v] &= \text{interaction strength (rating, click, purchase)} \\
 R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k},\ \mathbf{Q} \in \mathbb{R}^{|V|\times k} \\
 \hat{R}[u,v] &= \mathbf{p}_u^T \mathbf{q}_v \quad \text{(matrix factorisation prediction)}
 \end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Read the third line as the punchline: <strong>matrix factorisation is a zero-layer GNN.</strong> It fits one embedding per node with no propagation, so a user's vector is informed only by items they touched directly. LightGCN keeps the same scoring function and adds propagation, which is why it beats MF most clearly on sparse users — a user with three interactions has almost nothing for MF to fit, and two hops of propagation borrows structure from the users who touched those same three items.</div>
 <table class="tbl" style="margin-top:10px">
 <tr><th>Problem</th><th>Bipartite Formulation</th><th>Algorithm</th></tr>
 <tr><td>Recommendation</td><td>User–item interactions</td><td>Matrix factorisation, LightGCN, PinSage</td></tr>
@@ -263,35 +292,45 @@ R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k}
 </table></div>
 
 <!-- Training at scale -->
-<div class="card cc"><div class="card-title">Training GNNs at Scale — Key Challenges</div>
+<div class="card cc"><div class="card-title">The two things that actually break at scale</div>
 <div class="g2">
 <div>
-<strong style="font-size:12px;color:var(--text)">The neighbour explosion problem</strong>
+<strong style="font-size:12px;color:var(--text)">Neighbour explosion</strong>
 <ul class="bul" style="margin-top:6px">
-  <li>Full-batch GNN on a million-node graph requires the entire graph in GPU memory — infeasible</li>
-  <li>Mini-batch training: sample target nodes → expand to K-hop neighbourhoods → exponential blow-up</li>
-  <li><strong>Solutions:</strong> neighbourhood sampling (GraphSAGE), cluster-GCN (partition graph into clusters, train on subgraphs), GraphSAINT (importance-based subgraph sampling)</li>
+  <li>A CNN mini-batch is 32 independent images. A GNN mini-batch of 32 nodes drags in their whole $K$-hop neighbourhoods — 650 nodes each at degree 25 and 2 layers, 16,275 each at 3 layers, and unbounded the moment a hub is in range. <strong>Batch size no longer controls memory; the graph does</strong></li>
+  <li><strong>Fixed fan-out sampling</strong> (GraphSAGE) caps it per layer, trading variance for a bounded batch</li>
+  <li><strong>Cluster-GCN</strong> partitions the graph and trains on whole subgraphs, so most edges stay inside the batch — cheap and biased, since cut edges are simply absent</li>
+  <li><strong>GraphSAINT</strong> samples subgraphs by importance and reweights to correct that bias, which is the more principled version of the same trick</li>
+  <li>Full-batch is fine and simplest below roughly a few hundred thousand nodes. Reach for sampling when you must, not by default</li>
 </ul>
 </div>
 <div>
-<strong style="font-size:12px;color:var(--text)">Over-smoothing</strong>
+<strong style="font-size:12px;color:var(--text)">Worked — watching over-smoothing happen</strong>
 <ul class="bul" style="margin-top:6px">
-  <li>With many GNN layers, all node embeddings converge to the same value — model loses discriminative power</li>
-  <li>Fix: use 2–3 layers (sweet spot for most tasks); residual connections (jumping knowledge networks); PairNorm regularisation; DropEdge (randomly drop edges during training)</li>
-  <li>In practice: 2-layer GNNs often match or outperform deeper ones</li>
+  <li>Repeated normalised averaging with no weights at all, on the 5-node graph in the code card, measuring mean distance of a node embedding from the centroid:</li>
+  <li>depth 0: <strong>0.894</strong> · depth 1: <strong>0.367</strong> · depth 2: <strong>0.275</strong> · depth 4: <strong>0.177</strong> · depth 8: <strong>0.082</strong></li>
+  <li>One layer already removes 59% of the spread; by eight layers <strong>91% of what distinguished the nodes is gone</strong>. Averaging is a low-pass filter and stacking low-pass filters converges to a constant — so the collapse is arithmetic, not a training failure, and no learning rate rescues it</li>
+  <li><strong>The symptom in a real run:</strong> training loss falls smoothly while train <em>and</em> validation accuracy both flatten near the majority-class rate, and a 2-D projection of the embeddings is one blob instead of clusters. That combination — loss improving, both accuracies stuck — is the over-smoothing signature, and it is easy to misread as underfitting and "fix" by adding layers</li>
+  <li><strong>Fixes:</strong> 2–3 layers; residual or jumping-knowledge connections so early, unsmoothed representations survive to the output; PairNorm; DropEdge</li>
+  <li><strong>Do not confuse it with over-squashing.</strong> Over-smoothing is representations converging. Over-squashing is an exponentially growing receptive field being forced through a fixed-width vector, so a signal 5 hops away cannot get through a bottleneck edge even in principle. Depth causes the first and is required by the second — different problems, opposite fixes (rewiring or a virtual node, not fewer layers)</li>
 </ul>
 </div>
 </div></div>
 
 <!-- Common mistakes -->
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Using GCN for inductive tasks</strong> — GCN is transductive (requires all nodes during training). For new users/items arriving at inference, use GraphSAGE or GAT</li>
-  <li><strong>Too many layers</strong> — over-smoothing sets in fast. Start with 2 layers; only add more if validation performance improves</li>
-  <li><strong>Ignoring negative sampling strategy</strong> — for link prediction, random negative sampling is easy but inefficient. Hard negatives (plausible but non-existent edges) are critical for good embeddings</li>
-  <li><strong>Treating the graph as fixed</strong> — in production, graphs evolve: new nodes, new edges, deleted edges. Design the pipeline for incremental updates; GraphSAGE handles this well</li>
-  <li><strong>Not accounting for class imbalance on node labels</strong> — fraud, spam, and churn are rare events. Use weighted cross-entropy or focal loss; oversample fraudulent subgraphs</li>
-  <li><strong>Leaking future edges into training</strong> — for link prediction on temporal graphs, always use edges before a cutoff for training; future edges for test. Temporal data leakage is a common bug</li>
+  <li><strong>Never checking whether the graph carries signal.</strong> Run the two baselines first — an MLP on node features, and boosting on hand-built neighbourhood aggregates. If homophily is low, message passing is averaging away the discriminative signal, and the symptom is a GNN that loses to the MLP on the same features</li>
+  <li><strong>Adding layers because accuracy plateaued.</strong> The plateau is usually over-smoothing, and depth is the cause rather than the cure. Depth buys radius, not abstraction</li>
+  <li><strong>Splitting nodes at random and calling it held out.</strong> Test nodes remain in the graph, so their features reach training embeddings through message passing. Split by time, or by connected component, before you trust the number</li>
+  <li><strong>Leaking future edges.</strong> On a temporal graph, an edge that exists in the training adjacency but was created after the prediction time is a leak — and it is invisible, because nothing about the tensor looks wrong. Build the adjacency as-at the cutoff</li>
+  <li><strong>Neighbour labels as features.</strong> The fastest way to a 0.99 validation AUC and a useless model. Propagate features, not labels</li>
+  <li><strong>Using GCN where nodes arrive at inference.</strong> Its propagation matrix is built from the training graph. New user, no row, no embedding. GraphSAGE or GAT</li>
+  <li><strong>Uniform negative sampling for link prediction.</strong> With 1 real edge per 10,000 candidate pairs, random negatives are already scored near zero and carry no gradient. Metrics look excellent, ranking is poor</li>
+  <li><strong>Mean readout when size is the label.</strong> Mean pooling makes a 20-atom and a 200-atom molecule of identical composition indistinguishable. Sum if count matters</li>
+  <li><strong>Collapsing edge types into one adjacency.</strong> "Shares a device" and "sent money to" mean opposite things about risk. Averaging them together discards most of the signal the graph was built for</li>
+  <li><strong>Ignoring class imbalance on node labels.</strong> Fraud, spam and churn are rare, and the neighbourhood aggregation does not fix that. Weighted cross-entropy or focal loss, and sample positive subgraphs rather than isolated positive nodes</li>
+  <li><strong>Assuming the graph is static.</strong> Production graphs gain nodes hourly and lose edges to deletion policies. Design the pipeline for incremental neighbourhood updates on day one; retrofitting it is a rewrite</li>
 </ul></div>
 
 <!-- Used at top companies -->
@@ -305,13 +344,13 @@ R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k}
   <li><strong>Drug discovery (Relay Therapeutics, Schrödinger):</strong> GNNs on molecular graphs for property prediction (toxicity, solubility, binding affinity) and de-novo drug design</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What is a GNN?</strong> "A GNN learns node embeddings by iteratively aggregating information from a node's neighbourhood — after K layers, each node's embedding encodes its K-hop neighbourhood structure. The core operation is message passing: each node receives messages from its neighbours, aggregates them, and updates its own representation. Different GNNs differ in how they aggregate (uniform sum in GCN, attention-weighted in GAT, sampled in GraphSAGE)."</p>
-<p style="margin-top:8px"><strong>GCN vs GraphSAGE?</strong> "GCN is transductive — it learns embeddings for a fixed graph and can't generalise to unseen nodes. GraphSAGE is inductive — it learns a general aggregation function that can be applied to any node's neighbourhood, including new nodes added after training. For production where new users/items arrive constantly, GraphSAGE is the right choice."</p>
-<p style="margin-top:8px"><strong>Why GNNs for fraud detection?</strong> "Individual fraudulent transactions often look legitimate in isolation. But fraud rings share devices, IPs, and accounts — forming distinctive subgraph patterns. A GNN propagates signals across the graph: if an account connects to five others that received chargebacks, that structural signal gets encoded into the account's embedding even if its own features look clean. This catches coordinated fraud that tabular models miss entirely."</p>
-<p style="margin-top:8px"><strong>What is over-smoothing?</strong> "With many GNN layers, each node aggregates from an increasingly large neighbourhood — eventually every node sees the whole graph and all embeddings converge to the same value. The fix: use 2–3 layers (not 10), add residual connections, or use jumping knowledge networks that combine representations from all layers."</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Define it through the constraint, not the mechanism.</strong> "Standard models assume independent rows; on a graph the signal about a node lives in its neighbours. A GNN handles that by message passing — each layer has every node aggregate its neighbours' current vectors and update its own, so after $K$ layers an embedding encodes the $K$-hop neighbourhood. Because a neighbourhood is a set of unknown size, the aggregation has to be order-invariant, and every architecture in the family is a different choice of that aggregation: degree-normalised sum in GCN, sampled mean in GraphSAGE, learned attention in GAT, plain sum plus an MLP in GIN."</p>
+<p style="margin-top:8px"><strong>GCN vs GraphSAGE — say the word "inductive" and then justify it.</strong> "GCN's propagation matrix is built from the training graph, so a node that did not exist then has no row and no embedding: transductive. GraphSAGE learns the aggregation function instead of the embeddings, so it can be pointed at any neighbourhood, including a user who signed up this morning. It also samples a fixed fan-out per layer, which is what makes mini-batching tractable — 25 then 10 caps a target at 275 nodes no matter how large the graph or how big a hub it touches."</p>
+<p style="margin-top:8px"><strong>Have the fraud number ready, because it is the whole argument.</strong> "A fraudulent transaction usually looks fine in isolation — the fraudster is optimising exactly the features you can see. But if the portfolio chargeback rate is 0.2% and this account shares a device with 8 others of which 5 charged back, the local rate is 62.5%, over 300 times base. Message passing computes that as a by-product, and the second layer sees the ring one step further out. Then add the caveat unprompted: propagate features and never neighbour labels, or you leak the answer through the graph."</p>
+<p style="margin-top:8px"><strong>On over-smoothing, be quantitative and name the symptom.</strong> "Every layer averages a node with its neighbours, and stacking averaging operators converges to a constant — on a small graph the spread of embeddings falls to about 41% of its original value after one layer and 9% after eight. The symptom is loss still falling while train and validation accuracy both flatten and the embeddings project to a single blob. Fix by staying at 2–3 layers or adding jumping-knowledge connections. And distinguish it from over-squashing: that is long-range information failing to fit through a bottleneck edge, which depth does not cause and fewer layers do not fix."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not present a GNN as strictly better than tabular models — the honest framing is that it wins when homophily is high and structure is informative, and loses to an MLP when it is not. Do not describe depth as capacity; on a graph it is radius, and four layers on an average-degree-25 graph touches 40% of a million nodes. Do not say "we used attention so it is interpretable". And if you are asked why not just featurise the graph — degree, triangle count, neighbour averages — do not dismiss it: that baseline is strong, frequently competitive, and the real answer is that a GNN aggregates <em>learned</em> representations, so layer two can use "connected to things that are themselves connected to fraud", which no fixed feature list contains.</p>
 </div>
-
 
 <div class="anim-wrap"><div class="anim-title">Message passing, and the reason GNNs stay shallow</div>
 <svg viewBox="0 0 500 202" xmlns="http://www.w3.org/2000/svg">

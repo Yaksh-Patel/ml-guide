@@ -1,15 +1,15 @@
 <section class="section" id="sec-bipartite">
 <div class="sec-title">Bipartite Graphs in ML</div>
-<div class="sec-desc">A fundamental graph structure where nodes split into two disjoint sets with edges only between sets — the natural model for recommendations, matching, and collaborative filtering.</div>
+<div class="sec-desc">Two kinds of thing, and edges only ever between the kinds — users and items, workers and shifts, pins and boards, patients and drugs. That sounds like a triviality about graph colouring, and it is the reason recommendation has the algorithms it has. With no user–user edges, "similar users" is not something you can look up; it has to be <em>inferred through the items they share</em>, which is a two-hop walk, which is collaborative filtering. The same missing-edge structure is also what makes matching and assignment exactly solvable in polynomial time here while the general-graph versions need far heavier machinery.</div>
 
-<div class="card"><div class="card-title">What Is a Bipartite Graph?</div>
-<div class="card-body">A graph G = (U ∪ V, E) where U and V are disjoint node sets, and every edge connects a node in U to a node in V. No edges within U or within V.</div>
+<div class="card cb"><div class="card-title">The definition, and the equivalence you will be asked to justify</div>
+<div class="card-body">A graph $G = (U \cup V, E)$ is bipartite when the nodes split into two disjoint sets and every edge has one endpoint in each. No edge inside $U$, none inside $V$. Three statements are equivalent, and the interview question is usually "why":</div>
 <div class="formula math-formula">$$\begin{aligned}
-G = (U, V, E) \\
-U = {users},  V = {items/movies/products} \\
-E = {(u,v) | user u interacted with item v} \\
-Bipartite iff: no odd-length cycles (can 2-color the graph)
-\end{aligned}$$</div></div>
+G = (U \cup V,\ E), \quad &U \cap V = \varnothing, \quad E \subseteq U \times V \\[2pt]
+\text{bipartite} \iff &\text{2-colourable} \iff \text{no odd-length cycle}
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px"><strong>The proof is one sentence.</strong> Walk around any cycle, alternating colours as you go. You must arrive back at the node you started from, and after an <em>odd</em> number of steps you arrive holding the opposite colour to the one you left with — a contradiction. So an odd cycle makes 2-colouring impossible, and the converse holds because BFS from any node assigns colours by parity of distance and only fails when it meets an edge joining two nodes at the same parity.</div>
+<div class="card-body" style="margin-top:8px">Check it on the smallest cases: a <strong>triangle is not bipartite</strong> (3-cycle), a <strong>square is</strong> (colour the diagonals), and <strong>every tree is</strong>, trivially, because it has no cycles at all. The useful part is that odd cycles are the <em>only</em> obstruction — there is no second, subtler failure mode to check for. That is why the test is a single BFS in $O(V + E)$ rather than anything cleverer, and why so many hard graph problems become tractable the moment you can certify bipartiteness.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Bipartite graph: users ↔ items — edges = interactions (ratings, purchases, clicks)</div>
 <svg viewBox="0 0 500 210" xmlns="http://www.w3.org/2000/svg">
@@ -59,29 +59,81 @@ Bipartite iff: no odd-length cycles (can 2-color the graph)
 <text x="248" y="116" fill="#f06767" font-size="9" font-family="DM Sans" text-anchor="middle">? (predict this)</text>
 </svg></div>
 
-<div class="card"><div class="card-title">Bipartite Graph → Adjacency / Rating Matrix</div>
+<div class="card cg"><div class="card-title">The rating matrix, and the sparsity number that shapes every design decision</div>
+<div class="card-body">Because there are no within-set edges, the full $(|U|+|V|)^2$ adjacency matrix is mostly structural zeros — it has the block form below, and all the information sits in the off-diagonal block $R$. That block, the <strong>biadjacency</strong> or rating matrix, is the object you actually store and factorise.</div>
 <div class="formula math-formula">$$\begin{aligned}
-R[u,v] &= \text{rating user } u \text{ gave item } v \;(0 \text{ if no interaction}) \\
-&\text{sparse matrix, shape: } |U| \times |V| \\
-R &\approx U \cdot V^T \quad U \in \mathbb{R}^{|U|\times k},\; V \in \mathbb{R}^{|V|\times k} \\
-\hat{R}[u,v] &= U[u,:]\cdot V[v,:]^T \\
-\text{Minimize: } & \sum_{(u,v)\in\text{observed}} (R[u,v] - U[u,:]\cdot V[v,:]^T)^2 + \lambda\|U\|^2 + \lambda\|V\|^2
-\end{aligned}$$</div></div>
+A &= \begin{bmatrix} 0 & R \\ R^T & 0 \end{bmatrix}, \qquad R \in \mathbb{R}^{|U| \times |V|} \\[3pt]
+R[u,v] &= \text{interaction strength (rating, click, purchase)} \\
+R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k},\ \mathbf{Q} \in \mathbb{R}^{|V|\times k} \\
+\hat{R}[u,v] &= \mathbf{p}_u^T\mathbf{q}_v \\
+\min_{\mathbf{P},\mathbf{Q}} &\sum_{(u,v)\,\in\,\text{observed}} \left(R[u,v] - \mathbf{p}_u^T\mathbf{q}_v\right)^2 + \lambda\|\mathbf{P}\|^2 + \lambda\|\mathbf{Q}\|^2
+\end{aligned}$$</div>
+<div class="card-body" style="margin-top:8px">Now the number. Real interaction matrices are not "sparse" in the way a term–document matrix is sparse; they are almost entirely empty:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Dataset</th><th>$|U| \times |V|$</th><th>Cells</th><th>Observed</th><th>Density</th></tr>
+<tr><td>Netflix Prize</td><td>480,189 × 17,770</td><td>8.53 billion</td><td>100,480,507</td><td><strong>1.18%</strong></td></tr>
+<tr><td>MovieLens-25M</td><td>162,541 × 59,047</td><td>9.60 billion</td><td>25,000,095</td><td><strong>0.26%</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two consequences follow directly from those percentages, and both are things people get wrong.</div>
+<div class="card-body" style="margin-top:8px"><strong>You cannot use SVD, whatever the papers call it.</strong> The singular value decomposition is defined on a <em>complete</em> matrix. To apply it here you would first have to fill 99.7% of the cells, and the only defensible filler — zero, or the mean — is a claim about data you do not have. Zero-filling says "not watched" means "rated 0", which is a strong and false statement, and it drags every embedding toward the unpopular. So the recsys objective is written the way it is in the last line above: the sum runs <em>only over observed entries</em>, which makes it a non-convex regularised regression solved by ALS or SGD, not a decomposition. "Matrix factorisation" is the accurate name and "SVD" is the historical misnomer — knowing the difference is a reliable signal in an interview.</div>
+<div class="card-body" style="margin-top:8px"><strong>And the missingness is not random.</strong> Users rate what they chose to watch, so an unobserved cell means "not seen" and "not offered" and "would never pick" all at once. Optimising squared error over observed cells therefore answers the question <em>"can you predict a rating this user was already going to give?"</em> — which is not the question a recommender is deployed to answer. That gap between the training objective and the product objective is the single biggest source of offline-online mismatch in recommendation, and it is why ranking losses over sampled negatives (BPR, sampled softmax) largely displaced rating prediction after the Netflix Prize.</div></div>
+
+<div class="card ca"><div class="card-title">Two hops is collaborative filtering — worked</div>
+<div class="card-body">Squaring the block adjacency is where the structure pays off. Multiply it out and the blocks separate:</div>
+<div class="formula math-formula">$$A^2 = \begin{bmatrix} 0 & R \\ R^T & 0 \end{bmatrix}^{\!2} = \begin{bmatrix} RR^T & 0 \\ 0 & R^TR \end{bmatrix}$$</div>
+<div class="card-body" style="margin-top:8px">$(RR^T)_{uu'}$ counts the items users $u$ and $u'$ both touched; $(R^TR)_{vv'}$ counts the users that items $v$ and $v'$ share. <strong>User-based and item-based collaborative filtering are the same operator read from the two ends of the graph</strong> — that is the whole relationship between them, and it falls out of the block structure rather than being a separate idea.</div>
+<div class="card-body" style="margin-top:8px">Note also the <strong>parity</strong>: odd powers of $A$ move you across the divide (user to item), even powers keep you on your own side (user to user). So depth in a bipartite GNN is not a smooth dial — the <em>odd</em> layers are the ones that produce a score, and two hops is the minimum that lets a user learn anything from another user. This is why LightGCN's layer count behaves the way it does.</div>
+<div class="box info" style="margin-top:10px"><div class="bl">worked — path counting on the graph above, and why it recommends the wrong item</div><p>Take the three users and four items from the diagram: $u_1$ touched $\{v_1,v_2\}$, $u_2$ touched $\{v_1,v_3,v_4\}$, $u_3$ touched $\{v_2,v_4\}$. Item degrees are $v_1{:}2$, $v_2{:}2$, $v_3{:}1$, $v_4{:}2$. Counting length-3 paths from $u_1$ — user to item to user to item, the shortest walk that can reach an item $u_1$ has not touched — gives $(RR^TR)_{u_1} = [3,\,3,\,1,\,2]$. Of the two items $u_1$ has not seen, <strong>$v_3$ scores 1 and $v_4$ scores 2, so raw path counting recommends $v_4$.</strong> And it is doing so for a bad reason: $v_4$ has two paths because it has degree 2, not because it suits $u_1$. Apply the symmetric $1/\sqrt{d_u d_v}$ weighting that GCN and LightGCN use on each edge of the path and the scores become $v_3 = 0.118$ against $v_4 = 0.208$ — the popular item's advantage shrinks from <strong>2.00× to 1.77×</strong> but it still wins. That is the honest lesson: degree normalisation <em>dampens</em> popularity bias, it does not remove it, which is exactly why production recommenders also debias at the negative-sampling and re-ranking stages rather than trusting the propagation to be fair.</p></div>
+</div>
 
 <div class="g2">
-<div class="card ca"><div class="card-title">Collaborative Filtering via Bipartite Graph</div>
-<ul class="bul"><li><strong>User-based CF:</strong> find similar users (similar rows in R), recommend what they liked</li><li><strong>Item-based CF:</strong> find similar items (similar columns in R), recommend similar to what user liked</li><li><strong>Matrix factorization (SVD):</strong> latent factors capture hidden user preferences and item characteristics</li><li><strong>Cold start problem:</strong> new user or item has no edges in bipartite graph → can't recommend</li></ul></div>
-<div class="card cp"><div class="card-title">Graph Neural Networks on Bipartite Graphs</div>
-<ul class="bul"><li><strong>LightGCN:</strong> propagate embeddings along bipartite edges — user embedding influenced by connected items, item embedding influenced by connected users</li><li><strong>PinSage:</strong> Pinterest's GNN on bipartite pin-board graph — samples neighborhoods, aggregates features</li><li><strong>Bipartite matching:</strong> assignment problem — maximum matching (e.g., Hopcroft-Karp algorithm) for allocation, ridesharing, job assignment</li></ul></div>
+<div class="card ca"><div class="card-title">Collaborative filtering, and where each variant breaks</div>
+<ul class="bul">
+<li><strong>User-based CF</strong> — find rows of $R$ similar to yours, recommend what they liked. Breaks on scale: similarity is over $|U|^2$ pairs, and user tastes drift, so the neighbourhood has to be recomputed constantly</li>
+<li><strong>Item-based CF</strong> — find similar columns instead. Amazon's classic choice, and the reason is operational rather than statistical: items are fewer and far more stable than users, so the item–item matrix can be computed nightly and served from a cache</li>
+<li><strong>Similarity is not cosine by default.</strong> Raw co-occurrence counts rank by popularity; cosine divides it out; Jaccard ignores strength entirely. The choice is a decision about how much popularity you want in the answer, not a detail</li>
+<li><strong>Matrix factorisation</strong> — fit $k$ latent factors per node so the dot product reproduces the observed entries. Latent dimensions are not interpretable and do not need to be; what they buy is generalisation to cells with no neighbours in common</li>
+<li><strong>The baseline you must run:</strong> recommend the globally most popular items. It is brutally strong on every sparse dataset, and a model that does not clearly beat it has learned popularity and nothing else</li>
+</ul></div>
+<div class="card cp"><div class="card-title">GNNs on bipartite graphs</div>
+<ul class="bul">
+<li><strong>Matrix factorisation is a zero-layer GNN.</strong> One embedding per node, no propagation — a user's vector is informed only by items they touched directly. Seeing MF this way is what makes the rest of the family make sense</li>
+<li><strong>LightGCN</strong> adds propagation and keeps the dot-product score. It gains most on <em>sparse</em> users: with three interactions there is almost nothing for MF to fit, and two hops borrows structure from everyone else who touched those same three items</li>
+<li><strong>NGCF</strong> came first and kept GCN's feature transform and nonlinearity; LightGCN's result was that removing both <em>improves</em> accuracy, because with ID embeddings as the only input there are no raw features for a transform to transform</li>
+<li><strong>PinSage</strong> is GraphSAGE on Pinterest's pin–board bipartite graph, and it is inductive by necessity — pins are created continuously, so a transductive model is stale on arrival</li>
+<li><strong>Do not project to a unipartite graph to reuse a standard GNN.</strong> Forming $RR^T$ densifies: a single item of degree 100,000 contributes $\binom{100000}{2} \approx 5.0$ billion user–user edges by itself. Message passing on the bipartite graph directly gets the same two-hop information at a fraction of the memory</li>
+</ul></div>
 </div>
-<div class="card"><div class="card-title">Algorithmic Uses (DSA Context)</div>
-<table class="tbl"><tr><th>Problem</th><th>Bipartite Formulation</th><th>Algorithm</th></tr>
+
+<div class="card cr"><div class="card-title">Cold start is a degree-zero problem, not a model weakness</div>
+<div class="card-body">Stated as a graph fact it stops being mysterious: <strong>a new user is a node with no edges, so a propagation-based method has nothing to propagate.</strong> LightGCN will return that node's randomly-initialised embedding, because zero neighbours means the aggregation sum is empty. The model is not performing badly — it has received no input.</div>
+<div class="card-body" style="margin-top:8px">The degree-1 case is nearly as stark and more instructive. Fitting a $k$-dimensional user vector from a single observed rating is $k$ unknowns constrained by one equation, so the regulariser picks the answer, and $\lambda\|\mathbf{p}_u\|^2$ pulls it toward zero — which means the prediction collapses to the item bias term. <strong>That is why a one-interaction user gets popularity recommendations out of any regularised MF</strong>, and why it looks like a bug and is actually the objective working as written.</div>
+<div class="card-body" style="margin-top:10px">Three fixes, and it matters that they buy different things:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Fix</th><th>What it changes</th><th>What it costs</th></tr>
+<tr><td><strong>Content features on nodes</strong></td><td>An embedding computable from attributes instead of edges — the reason inductive models (PinSage, GraphSAGE) can score a node created this morning</td><td>Needs features that actually predict taste; item metadata usually does, user demographics usually does not</td></tr>
+<tr><td><strong>Extra edge types</strong></td><td>User–demographic, item–category, session–item. The graph stops being bipartite and becomes heterogeneous, and the new node has degree greater than zero on day one</td><td>Schema and modelling complexity; type-aware aggregation to keep "shares a category" from being averaged with "purchased"</td></tr>
+<tr><td><strong>Explicit exploration</strong></td><td>Bandits or forced-exposure slots that deliberately show uncertain items to generate the first edges</td><td>Measurable short-term engagement loss — the only honest fix, and the only one that creates information rather than borrowing it</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Note the symmetry worth stating in an interview: <strong>item cold start is usually the harder problem in practice</strong>, because a new user can be onboarded with a few forced choices while a new item competes for exposure against a catalogue that already has feedback — and without exposure it never gets edges, which is a feedback loop rather than a data gap.</div></div>
+
+<div class="card cb"><div class="card-title">Matching: the part of this topic that is a DSA question</div>
+<div class="card-body">The second reason bipartiteness matters is that it makes matching easy, and "easy" here has a precise cause. In a bipartite graph the matching linear program has <em>integral</em> optimal solutions — you can relax the 0/1 constraint, solve the LP, and the answer comes back as whole edges. General graphs do not have that property; odd cycles are exactly what break it, which is why Edmonds needed the blossom algorithm for general matching while bipartite matching falls out of repeated augmenting-path search.</div>
+<div class="card-body" style="margin-top:8px">Two results are worth being able to state:</div>
+<ul class="bul" style="margin-top:8px">
+<li><strong>König's theorem</strong> — in a bipartite graph, the size of a maximum matching equals the size of a minimum vertex cover. This is LP duality made concrete, and it gives you a <em>certificate</em>: a cover of size $m$ proves no matching larger than $m$ exists, so you can verify an answer without re-running the algorithm</li>
+<li><strong>Hall's theorem</strong> — a matching saturating every node of $U$ exists if and only if every subset $S \subseteq U$ satisfies $|\mathcal{N}(S)| \geq |S|$. Useful in the contrapositive: when a perfect assignment is impossible, Hall points at the specific over-subscribed subset, which is the actionable answer ("these 4 shifts are only reachable by 3 people")</li>
+</ul>
+<div class="box info" style="margin-top:10px"><div class="bl">worked — matching the graph above</div><p>With $u_1{:}\{v_1,v_2\}$, $u_2{:}\{v_1,v_3,v_4\}$, $u_3{:}\{v_2,v_4\}$, a maximum matching has size <strong>3</strong> — for instance $u_1{-}v_1$, $u_3{-}v_2$, $u_2{-}v_3$ — which saturates $U$, so this is as good as it can get with only three users. König then says a minimum vertex cover also has size 3, and $\{u_1, u_2, u_3\}$ is one, which certifies the matching is maximum. Hall's condition holds throughout: every single user has at least one neighbour, every pair covers at least two items, and all three together reach all four. Change one edge — delete $u_2{-}v_3$ and $u_2{-}v_4$ so $u_2$ only reaches $v_1$ — and $\{u_1, u_2\}$ reaches only $\{v_1, v_2\}$, still fine, but $u_1$ and $u_2$ now compete for a two-item pool that $u_3$ also draws on; Hall is what tells you exactly where the contention is.</p></div>
+<div class="card-body" style="margin-top:10px"><strong>One trap:</strong> bipartiteness makes <em>cardinality</em> matching easy, and weighted matching is a different problem with a different algorithm — that is the assignment problem, solved by the Hungarian method in $O(n^3)$, not by Hopcroft–Karp. And a genuinely useful contrast for interviews: <strong>kidney exchange is not bipartite</strong>, because donors and recipients come in paired units that swap with other pairs, so it needs general-graph matching. Reach for the bipartite toolkit only once you have checked that the two sides really are two sides.</div>
+<table class="tbl" style="margin-top:10px"><tr><th>Problem</th><th>Bipartite Formulation</th><th>Algorithm</th></tr>
 <tr><td>Maximum matching</td><td>Match workers to jobs — one job per worker</td><td>Hopcroft-Karp: O(E√V)</td></tr>
 <tr><td>Vertex cover</td><td>Minimum set covering all edges</td><td>König's theorem: MVC = max matching size</td></tr>
 <tr><td>Assignment problem</td><td>Minimize total cost of matching</td><td>Hungarian algorithm: O(n³)</td></tr>
 <tr><td>Is graph bipartite?</td><td>Can we 2-color the graph?</td><td>BFS/DFS coloring: O(V+E)</td></tr>
 <tr><td>Recommendation</td><td>User-item interaction matrix</td><td>Matrix factorization, GNN</td></tr></table>
-<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-python"><code class="language-python"># Check if graph is bipartite (BFS 2-coloring)
+<div class="card-body" style="margin-top:10px">The 2-colouring test below has one detail that is the actual interview point: <strong>the outer loop over every start node.</strong> A disconnected graph can have a bipartite component and a non-bipartite one, so colouring from a single source silently returns <code>True</code> on a graph containing a triangle it never visited.</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python"># Check if graph is bipartite (BFS 2-coloring)
 from collections import deque
 def is_bipartite(graph, n):
     color = [-1] * n
@@ -98,5 +150,76 @@ def is_bipartite(graph, n):
                 elif color[v] == color[u]:
                     return False   # odd cycle → not bipartite
     return True</code></pre></div></div>
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div><p>"In recommender systems, the bipartite user-item graph IS the data. Matrix factorization decomposes it into user and item latent embeddings — the dot product of a user's embedding and item's embedding predicts the rating. Modern GNN-based recommenders (LightGCN, NGCF) message-pass along this bipartite graph: a user's embedding is updated by the embeddings of items they interacted with, and vice versa — iteratively enriching representations. The cold-start problem is a graph problem: a new node has no edges, so its embedding is uninitialized."</p></div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
+<ul class="bul">
+<li><strong>Splitting interactions at random.</strong> A random split lets a user's later ratings shape their own embedding and then scores the model on earlier ones. Split by time, or hold out each user's most recent interaction — the leaked version reports an offline lift that vanishes in the A/B test</li>
+<li><strong>Zero-filling and calling it SVD.</strong> Zero is a rating, and "not seen" is not a rating. Sum the loss over observed entries only</li>
+<li><strong>Evaluating rating error instead of ranking.</strong> RMSE over observed cells measures prediction on items the user already chose. Recall@k and NDCG@k over the whole catalogue measure the thing you ship</li>
+<li><strong>No popularity baseline.</strong> Without it you cannot tell personalisation from popularity, and on a 0.3%-dense matrix popularity is a high bar</li>
+<li><strong>Projecting to unipartite before modelling.</strong> One degree-100,000 item generates about 5 billion user–user edges on its own. Keep the graph bipartite and let message passing do the two hops</li>
+<li><strong>2-colouring from a single source.</strong> Loop over all components, or you will certify a graph bipartite because you never reached the odd cycle</li>
+<li><strong>Assuming Hopcroft–Karp handles weights.</strong> Cardinality and cost are different problems; weighted matching is Hungarian</li>
+<li><strong>Assuming your graph is bipartite because it has two node types.</strong> If any user–user or item–item edge exists — a social follow, a "bought together" link — it is not bipartite, the parity argument stops holding, and code that relies on 2-colouring will be quietly wrong rather than loudly broken</li>
+<li><strong>Ignoring degree normalisation, then blaming the model for popularity bias.</strong> Raw path counts rank by degree almost by construction, as the worked example above shows — and normalising dampens it rather than fixing it, so plan for explicit debiasing</li>
+</ul></div>
+
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<ul class="bul">
+  <li><strong>Pinterest:</strong> the pin–board bipartite graph is the substrate for PinSage — 3B nodes and 18B edges, with random-walk importance sampling instead of uniform neighbour sampling because uniform sampling on a hub-heavy graph mostly returns hubs</li>
+  <li><strong>Amazon:</strong> item-based collaborative filtering on the customer–product graph, chosen over user-based for an operational reason — the item–item similarity matrix is smaller and far more stable, so it can be precomputed and cached</li>
+  <li><strong>Netflix:</strong> the Prize dataset is the canonical 1.18%-dense user–movie bipartite graph; the winning ensembles were factorisation models over observed entries, and the production system afterwards moved to ranking objectives because rating prediction was answering the wrong question</li>
+  <li><strong>Uber / Lyft:</strong> driver–rider assignment is bipartite matching under a time budget, solved as a weighted assignment problem per dispatch window rather than greedily per request — the global optimum over a batch beats first-come matching by enough to justify making riders wait a few seconds</li>
+  <li><strong>Google / Meta ads:</strong> impression–advertiser allocation as online bipartite matching, where one side arrives over time and decisions are irrevocable — the setting that motivated the whole online-matching literature and its competitive-ratio guarantees</li>
+</ul></div>
+
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Lead with the consequence, not the definition.</strong> "Bipartite means edges only ever cross between two disjoint node sets, and the thing that follows is that similarity within a set is not stored anywhere — you have to infer it through shared neighbours. Squaring the adjacency matrix makes that exact: $A^2$ has $RR^T$ in one block and $R^TR$ in the other, so user-based and item-based collaborative filtering are literally the same operator applied at the two ends of the graph."</p>
+<p style="margin-top:8px"><strong>Have the sparsity number and its consequence.</strong> "Netflix was 480k users by 17.8k movies — 8.5 billion cells with 100 million ratings, so 1.18% dense; MovieLens-25M is 0.26%. That is why it cannot be SVD: SVD needs a complete matrix, and the only way to complete this one is to assert values you do not have. Zero-filling says 'not watched' means 'rated zero'. So the objective sums squared error over observed entries only, which makes it a non-convex regularised regression solved with ALS or SGD — matrix factorisation, not a decomposition."</p>
+<p style="margin-top:8px"><strong>Frame cold start as degree zero.</strong> "A new node has no edges, so there is nothing to propagate and LightGCN returns its random initialisation. At degree one it is $k$ unknowns from one equation, so the regulariser decides and the prediction collapses to the item bias — which is exactly why one-interaction users get popularity recommendations. The fixes buy different things: content features let an inductive model compute an embedding from attributes rather than edges, extra edge types give the node non-zero degree on arrival, and exploration is the only one that creates genuinely new information, at a measurable cost in engagement."</p>
+<p style="margin-top:8px"><strong>For the algorithms round, say why bipartite is easy.</strong> "Odd cycles are the only obstruction to 2-colouring — walk a cycle alternating colours and you come back with the wrong one if the length is odd — so the test is one BFS over <em>every</em> component in $O(V+E)$. And matching is easy because the bipartite matching LP has integral optima, which general graphs lack; that is the reason general matching needed the blossom algorithm. Quote König for the certificate: max matching equals min vertex cover, so a cover proves your matching is maximum. And keep the distinction straight — Hopcroft–Karp in $O(E\sqrt{V})$ is unweighted, Hungarian in $O(n^3)$ is the weighted assignment problem."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not call matrix factorisation "SVD" without immediately noting why it is not. Do not offer RMSE as the recommender metric — the deployed question is ranking, so recall@k and NDCG@k, and the offline/online gap comes from missing-not-at-random data. Do not claim degree normalisation solves popularity bias; on the worked example above it takes the popular item's edge from 2.00× to 1.77× and it still wins. And do not assume two node types imply bipartite: one social follow edge between users breaks the parity argument, and everything built on 2-colouring becomes quietly wrong instead of visibly broken.</p>
+</div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The two claims worth checking by hand: that squaring the block adjacency separates into the user–user and item–item co-occurrence matrices, and that raw path counting recommends the popular item — with degree normalisation only narrowing the gap.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+# Bipartite graph from the diagram: 3 users, 4 items
+R = np.array([[1, 1, 0, 0],      # u1 touched v1, v2
+              [1, 0, 1, 1],      # u2 touched v1, v3, v4
+              [0, 1, 0, 1]], float)   # u3 touched v2, v4
+du, dv = R.sum(1), R.sum(0)      # degrees: [2 3 2] and [2 2 1 2]
+
+# Full adjacency is block off-diagonal - all the information is in R.
+n_u, n_v = R.shape
+A = np.block([[np.zeros((n_u, n_u)), R],
+              [R.T, np.zeros((n_v, n_v))]])
+
+# A^2 separates: user-user co-occurrence and item-item co-occurrence.
+A2 = A @ A
+assert np.allclose(A2[:n_u, :n_u], R @ R.T)      # user-user
+assert np.allclose(A2[n_u:, n_u:], R.T @ R)      # item-item
+assert np.allclose(A2[:n_u, n_u:], 0)            # odd/even parity: no cross terms
+print(&quot;user-user co-counts\n&quot;, (R @ R.T).astype(int))
+
+# 3 hops (user -&gt; item -&gt; user -&gt; item) is the shortest walk that reaches a
+# NEW item, and its count is the raw collaborative-filtering score.
+raw = R @ R.T @ R
+unseen = R[0] == 0
+print(&quot;raw 3-hop scores from u1:&quot;, raw[0])            # [3 3 1 2]
+print(&quot;  unseen items:&quot;, [(f&quot;v{j+1}&quot;, raw[0, j]) for j in np.where(unseen)[0]])
+
+# Same walk with GCN/LightGCN symmetric edge weights 1/sqrt(d_u * d_v).
+W = R / np.sqrt(np.outer(du, dv))
+norm = W @ W.T @ W
+print(&quot;normalised:&quot;, np.round(norm[0], 5))     # [0.33333 0.375 0.11785 0.20833]
+# Only the unseen columns are a recommendation; v1/v2 are inflated by the
+# degenerate walk u1 -&gt; v -&gt; u1 -&gt; v, which the raw counts include too.
+
+v3, v4 = 2, 3
+print(f&quot;raw  v4/v3 = {raw[0, v4] / raw[0, v3]:.2f}&quot;)     # 2.00
+print(f&quot;norm v4/v3 = {norm[0, v4] / norm[0, v3]:.3f}&quot;)   # 1.768
+# v4 wins both ways because it has degree 2 and v3 has degree 1 - not because
+# it suits u1. Normalisation DAMPENS popularity bias, it does not remove it.</code></pre></div>
 </section>
