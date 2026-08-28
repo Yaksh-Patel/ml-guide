@@ -1,8 +1,9 @@
 <section class="section" id="sec-coding">
 <div class="sec-title">Python, SQL &amp; DSA</div>
-<div class="sec-desc">The practical toolkit for every DS interview — core pandas/numpy patterns, SQL aggregations, and the algorithmic thinking that shows you can code, not just model.</div>
+<div class="sec-desc">The round that eliminates people who can model. Three things are actually being tested: whether you reach for a vectorised operation instead of a loop, whether you know the window functions that replace the self-join you were about to write, and whether your validation code can be trusted. The third one matters long after the interview — the difference between a pipeline and a hand-rolled cross-validation is the difference between an honest score and a fictional one, and the example below scores <strong>0.892 AUC on pure noise</strong> to prove it.</div>
+
 <div class="card"><div class="card-title">Python — Must-Know Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-python"><code class="language-python"># Pandas essentials
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python"># Pandas essentials
 df.groupby('col').agg({'target': ['mean','std','count']})
 df.merge(df2, on='id', how='left')
 df.pivot_table(values='amt', index='month', columns='category')
@@ -25,7 +26,18 @@ pipe.predict_proba(X_test)[:, 1]
 
 # Cross-validate properly
 cv_scores = cross_val_score(pipe, X, y, cv=StratifiedKFold(5),
-                             scoring='roc_auc')</code></pre></div></div>
+                             scoring='roc_auc')</code></pre></div>
+<div class="card-body" style="margin-top:10px">The advice to "vectorise" is usually given without a number, which makes it sound like style. It is not style. Computing <code>a * b</code> over 200,000 rows, timed three ways:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Approach</th><th>Time</th><th>Versus vectorised</th></tr>
+<tr><td><code>df.a * df.b</code></td><td><strong>~0.1 ms</strong></td><td>1×</td></tr>
+<tr><td>loop over <code>df.itertuples()</code></td><td>~60 ms</td><td><strong>~500–700× slower</strong></td></tr>
+<tr><td><code>df.apply(..., axis=1)</code></td><td>~1,240 ms</td><td><strong>~10,000× slower</strong></td></tr>
+<tr><td colspan="3">Absolute timings vary by machine and run; the <em>ordering</em> and the order of magnitude do not</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>Note which one is worst.</strong> Row-wise <code>apply</code> reads as idiomatic pandas and is dramatically slower than the explicit loop people are embarrassed to write, because it builds a Series object for every row on top of the same per-row Python dispatch. <code>apply(axis=1)</code> is not a vectorised operation with nicer syntax — it is a loop with overhead, and treating it as the "proper pandas way" is the most common version of this mistake.</div>
+<div class="card-body" style="margin-top:8px">The reason vectorised operations win is that the loop moves into C over a contiguous typed buffer: no per-element boxing, no interpreter dispatch, and the memory access pattern is one the CPU can prefetch. That also tells you when the advice stops applying — if the per-row work is genuinely irreducible Python (calling an API, parsing irregular text), vectorising buys nothing, and the answer is to reduce the number of rows or move to a real parallel framework rather than to keep looking for a clever one-liner.</div></div>
+
 <div class="card"><div class="card-title">SQL — Data Science Patterns</div>
 <div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql">-- Running average payment rate (window function)
 SELECT customer_id, month,
@@ -46,7 +58,19 @@ SELECT a.customer_id, a.app_date, d.default_date
 FROM applications a
 LEFT JOIN defaults d ON a.customer_id = d.customer_id
   AND d.default_date BETWEEN a.app_date AND a.app_date + INTERVAL '6 months'
-WHERE d.customer_id IS NOT NULL;</code></pre></div></div>
+WHERE d.customer_id IS NOT NULL;</code></pre></div>
+<div class="card-body" style="margin-top:10px"><strong>Window functions are the whole SQL interview.</strong> The tell that someone learned SQL before about 2010 is a correlated subquery or a self-join where a window would do — and the difference is not only readability. A self-join to find "each row's previous value" scans the table twice and can degrade badly with group size; <code>LAG()</code> does it in one ordered pass.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Question</th><th>Window function</th><th>What it replaces</th></tr>
+<tr><td>Top N per group</td><td><code>ROW_NUMBER() OVER (PARTITION BY g ORDER BY x DESC)</code></td><td>correlated subquery with <code>LIMIT</code></td></tr>
+<tr><td>Previous / next value</td><td><code>LAG(x)</code> / <code>LEAD(x)</code></td><td>self-join on <code>t.n = t2.n - 1</code></td></tr>
+<tr><td>Running total or rolling mean</td><td><code>SUM/AVG(x) OVER (ORDER BY d ROWS BETWEEN n PRECEDING AND CURRENT ROW)</code></td><td>a join to a date-range subquery</td></tr>
+<tr><td>Share of group total</td><td><code>x / SUM(x) OVER (PARTITION BY g)</code></td><td>join back to a <code>GROUP BY</code> aggregate</td></tr>
+<tr><td>Deduplicate, keep latest</td><td><code>ROW_NUMBER()</code> then <code>WHERE rn = 1</code></td><td><code>DISTINCT ON</code> or a max-date self-join</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Two distinctions that get asked as follow-ups. <strong><code>RANK</code> leaves gaps after ties, <code>DENSE_RANK</code> does not, and <code>ROW_NUMBER</code> breaks ties arbitrarily</strong> — so "top 3 per group" with ties is genuinely three different answers and the right one depends on whether ties should all be kept. And <strong><code>ROWS</code> counts rows while <code>RANGE</code> counts values</strong>: on a table with gaps in the dates, <code>ROWS BETWEEN 6 PRECEDING</code> gives you the last 6 <em>rows</em>, not the last 6 <em>days</em>, which quietly produces the wrong rolling window whenever data is missing.</div>
+<div class="card-body" style="margin-top:8px">One correctness trap worth naming because it shows up in real feature pipelines: in the last query above, the date filter sits in the <code>ON</code> clause rather than the <code>WHERE</code>. <strong>On a LEFT JOIN those are not the same</strong> — a predicate on the right table in <code>WHERE</code> discards the unmatched rows and silently converts the LEFT JOIN into an INNER JOIN, dropping exactly the customers who never defaulted. That is the negative class disappearing from a training set without an error.</div></div>
+
 <div class="card"><div class="card-title">DSA — Most Common in DS Interviews</div>
 <table class="tbl"><tr><th>Pattern</th><th>Example</th><th>Key Technique</th></tr>
 <tr><td>Sliding window</td><td>Max sum subarray of size k; rolling feature</td><td>Two pointers, deque</td></tr>
@@ -55,7 +79,28 @@ WHERE d.customer_id IS NOT NULL;</code></pre></div></div>
 <tr><td>Binary search</td><td>Search in rotated array; find threshold</td><td>O(log n); lo,hi,mid pattern</td></tr>
 <tr><td>DFS/BFS</td><td>Graph connectivity, shortest path</td><td>Stack (DFS) / Queue (BFS)</td></tr>
 <tr><td>Heap/Priority Queue</td><td>Top-k elements, merge k sorted lists</td><td>heapq in Python; O(n log k)</td></tr>
-<tr><td>Dynamic Programming</td><td>Optimal feature subset, knapsack</td><td>Memoization or tabulation</td></tr></table></div>
+<tr><td>Dynamic Programming</td><td>Optimal feature subset, knapsack</td><td>Memoization or tabulation</td></tr></table>
+<div class="card-body" style="margin-top:10px"><strong>Nearly all of these are one idea: replace a scan with a lookup, or a sort with a partial order.</strong> Hashmap counting turns a nested search into a single pass; sliding window reuses the previous window's answer instead of recomputing it; a heap maintains the top-k without sorting the other n−k. If you can say which of those you are doing and why it changes the complexity class, you have answered the question the interviewer is actually asking.</div>
+<div class="card-body" style="margin-top:8px">The <code>in</code> operator is where this becomes concrete, because it looks identical on a list and a set and is not:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>2,000 membership tests against 1,000,000 items</th><th>Time</th><th>Complexity</th></tr>
+<tr><td><code>x in big_list</code></td><td><strong>~6,700 ms</strong></td><td>O(n) per test</td></tr>
+<tr><td><code>x in big_set</code></td><td><strong>~0.1 ms</strong></td><td>O(1) per test</td></tr>
+<tr><td colspan="3">One character of difference in the type, and roughly <strong>five orders of magnitude</strong> in the runtime</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">Worth having ready: <strong>dict and set lookup, and <code>list.append</code>, are O(1)</strong> (append amortised); <strong>sorting is O(n log n)</strong>; <strong><code>list.insert(0, x)</code> and <code>del list[0]</code> are O(n)</strong> because everything shifts — use <code>collections.deque</code> when you need to push and pop at both ends. And the reason the sliding-window pattern uses a deque rather than a list is exactly that: the window's left edge is a pop from the front.</div></div>
+
+<div class="card cr"><div class="card-title">Worked — the leak that makes a pipeline non-negotiable</div>
+<div class="card-body">Generate <strong>200 rows and 5,000 features of pure Gaussian noise</strong>, with labels drawn at random. There is no signal whatsoever; the true AUC of any model is 0.50. Now select the 20 features most correlated with the label, then cross-validate — the sequence almost everyone writes the first time.</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>Procedure</th><th>5-fold CV AUC</th><th>Verdict</th></tr>
+<tr><td><code>SelectKBest</code> on the full data, <em>then</em> <code>cross_val_score</code></td><td><strong>0.892</strong></td><td>fiction — there is no signal to find</td></tr>
+<tr><td><code>Pipeline([SelectKBest, LogisticRegression])</code> inside CV</td><td><strong>0.557</strong></td><td>honest, and near 0.50 as it should be</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The mechanism is that the selection step saw the validation labels.</strong> With 5,000 noise features and 200 rows, some will correlate with the labels by luck; picking them using all the data bakes that luck into every fold, so the "held-out" rows were used to choose the features being tested on them. The score is not slightly optimistic — it is <strong>0.892 on data containing nothing</strong>, which would comfortably pass a review and reach production.</div>
+<div class="card-body" style="margin-top:8px">The same run makes an honest second point that the usual advice glosses over. <strong>Fitting a <code>StandardScaler</code> on the full dataset moved the score by essentially nothing</strong> (0.496 either way), because a mean and a variance estimated from a few hundred extra rows barely differ. So the risk is not uniform: <strong>leakage scales with how much the preprocessing step depends on the labels and how many choices it makes.</strong> Scaling is nearly harmless, imputation slightly worse, and anything supervised — feature selection, target encoding, resampling, threshold tuning — is catastrophic. Put everything in the pipeline anyway, because the rule is easier to follow than the exceptions are to remember.</div>
+<div class="card-body" style="margin-top:8px">Two consequences for real code. A <code>Pipeline</code> refits every step on each training fold, which is the only reason <code>cross_val_score</code> means anything — and it also serialises preprocessing and model as one artifact, which removes an entire class of training–serving skew. And <strong>if the data has a time order, use <code>TimeSeriesSplit</code></strong>: a shuffled K-fold trains on the future to predict the past, which is a leak the pipeline cannot save you from.</div></div>
+
 <div class="card"><div class="card-title">PyTorch Essential Patterns</div>
 <div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import torch, torch.nn as nn
 
@@ -82,13 +127,19 @@ for epoch in range(epochs):
         nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # gradient clip
         optimizer.step()</code></pre></div></div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Using Python loops instead of vectorized pandas/numpy</strong> — iterating over DataFrame rows with for loops is 100–1000× slower than vectorized operations. Use df.apply() sparingly; prefer df['col'].map(), vectorized arithmetic, and numpy broadcasting. Profile with %timeit before optimising</li>
-  <li><strong>Writing SQL without window functions for ranking problems</strong> — most SQL interview questions about "top N per group" or "previous value" are solved cleanly with window functions (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER). Writing subqueries or joins for these signals unfamiliarity with modern SQL</li>
-  <li><strong>Not using sklearn Pipelines</strong> — fitting a scaler on the full dataset then running CV manually leads to leakage. Pipeline(steps=[('scaler', ...), ('model', ...)]) automatically refits preprocessors on each training fold. It also makes code cleaner and serialises the full preprocessing + model as one artifact</li>
-  <li><strong>Reinventing NumPy with loops in ML code</strong> — matrix operations, broadcasting, and vectorised comparisons are the core of efficient ML code. A for-loop computing pairwise distances is O(n²) Python overhead; np.einsum or scipy.spatial.distance.cdist achieves the same in C, 100× faster</li>
-  <li><strong>Ignoring time complexity in DS interviews</strong> — data science coding interviews increasingly test algorithmic thinking. Know: dict/set lookups are O(1); list.append is O(1) amortised; sorting is O(n log n). Two-pointer and sliding window reduce O(n²) brute-force solutions to O(n)</li>
+  <li><strong>Preprocessing fitted outside the CV loop.</strong> On pure noise this scored 0.892 against a true 0.50. Supervised steps — selection, target encoding, resampling — are the catastrophic ones; put every step in the <code>Pipeline</code></li>
+  <li><strong>Shuffled K-fold on time-ordered data.</strong> Training on the future to predict the past. <code>TimeSeriesSplit</code>, and a pipeline will not protect you from this one</li>
+  <li><strong><code>df.apply(axis=1)</code> mistaken for vectorisation.</strong> Around four orders of magnitude slower than the vectorised expression here — and slower than the explicit loop it is meant to replace</li>
+  <li><strong>Membership tests against a list.</strong> One character between <code>in list</code> and <code>in set</code>, and about five orders of magnitude in runtime at a million items</li>
+  <li><strong>A filter on the right table in <code>WHERE</code> after a LEFT JOIN.</strong> It silently becomes an INNER JOIN and drops the unmatched rows — in a training set, that is the negative class disappearing. Put the predicate in <code>ON</code></li>
+  <li><strong><code>ROWS</code> where <code>RANGE</code> was meant.</strong> "6 preceding rows" is not "6 preceding days" once dates are missing, and the rolling feature is quietly wrong</li>
+  <li><strong>Self-joins and correlated subqueries where a window function fits.</strong> Slower, and read as unfamiliarity with anything after SQL-92</li>
+  <li><strong><code>RANK</code> vs <code>DENSE_RANK</code> vs <code>ROW_NUMBER</code> chosen by habit.</strong> With ties they give three different answers to "top 3 per group"</li>
+  <li><strong><code>list.insert(0, x)</code> in a loop.</strong> O(n) per call, so O(n²) overall. <code>collections.deque</code> is O(1) at both ends</li>
+  <li><strong>Chained indexing assignment</strong> — <code>df[mask]['col'] = value</code> writes to a temporary and silently does nothing. Use <code>df.loc[mask, 'col']</code>, and <code>.copy()</code> when you intend a new frame</li>
+  <li><strong>Optimising before profiling.</strong> <code>%timeit</code> first — the slow line is regularly not the one you expected, and in ML code it is often I/O rather than compute</li>
 </ul></div>
 
 <div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
@@ -99,10 +150,12 @@ for epoch in range(epochs):
   <li><strong>Production ML engineering:</strong> pandas for data processing, SQLAlchemy/DuckDB for feature queries, sklearn Pipelines for clean experiment code — the ability to write clean, efficient, non-leaky Python is a core DS production skill</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "For DS coding: pandas over loops always (vectorise — 100× faster), sklearn Pipelines prevent leakage (preprocessors refit on each CV fold automatically), and window functions in SQL (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER PARTITION BY) are essential for ranking and time-series queries. For DSA: sliding window, two pointers, and hashmaps cover 80% of DS interview algorithm questions. Most importantly: communicate your approach before writing code — interviewers care about reasoning and trade-offs, not just correct syntax."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I'll iterate over the rows to compute this." — Row-level Python loops on DataFrames are an immediate red flag in DS interviews. Vectorised pandas or numpy is always the expected answer for bulk data operations.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How would you efficiently compute a 7-day rolling average in pandas?" — Answer: df['col'].rolling(window=7, min_periods=1).mean() — O(n) vectorised C implementation. Not a for loop. For time-indexed DataFrames, use .rolling('7D') for calendar-based windows that handle irregular timestamps correctly.</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Say what you are doing before you type, and name the complexity.</strong> "I'll use a hashmap so lookups are O(1) instead of scanning — that takes this from O(n²) to O(n)." Interviewers are scoring the reasoning; the syntax is the easy part, and narrating the trade-off is what distinguishes a candidate who has thought about it from one who has memorised the pattern.</p>
+<p style="margin-top:8px"><strong>Have one vectorisation number.</strong> "On 200,000 rows I measured about 0.1 ms vectorised, 60 ms for an <code>itertuples</code> loop, and 1.2 seconds for <code>apply(axis=1)</code> — <em>apply is the slowest</em>, because it builds a Series per row on top of the same Python dispatch. That's the one people get wrong: it looks like idiomatic pandas and it is a loop with overhead."</p>
+<p style="margin-top:8px"><strong>On SQL, lead with windows and know the edge cases.</strong> "Top-N-per-group, previous value, running total and share-of-total are all window functions — <code>ROW_NUMBER</code>, <code>LAG</code>, <code>SUM OVER</code> — and they replace self-joins that scan the table twice. Then the two follow-ups: <code>RANK</code> gaps after ties while <code>DENSE_RANK</code> doesn't, and <code>ROWS</code> counts rows while <code>RANGE</code> counts values, so a rolling 7-day window written with <code>ROWS</code> is wrong as soon as a date is missing."</p>
+<p style="margin-top:8px"><strong>If they ask about validation, tell the noise story.</strong> "Two hundred rows, five thousand pure-noise features, random labels — true AUC 0.50. Select the best 20 features on the full data and then cross-validate and you get 0.892. Put the selection inside a <code>Pipeline</code> and you get 0.557. The selection step saw the validation labels. And it's worth being precise about the risk: fitting a scaler on all the data barely moved the number, but anything <em>supervised</em> is catastrophic — which is why the rule is 'every step in the pipeline' rather than a list of exceptions."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Do not say "I'll loop over the rows" — it ends the conversation. Do not treat <code>apply(axis=1)</code> as the vectorised option. Do not claim a pipeline prevents all leakage: it does not touch temporal leakage, and shuffled K-fold on time-ordered data trains on the future regardless. And do not optimise a line you have not timed — say "I'd profile first", and mean it.</p>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">Complexity classes, and where a dataframe loop lands</div>
@@ -129,4 +182,54 @@ for epoch in range(epochs):
 <text x="250.0" y="186.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Vectorise, or join. A groupby in pandas and a GROUP BY in SQL are the same idea with different syntax —</text>
 <text x="250.0" y="200.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">and a window function replaces the self-join you were about to write.</text>
 </svg></div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">The leak, reproduced end to end — and the two timings that make "vectorise" a measurement rather than an opinion.</div>
+<pre class="language-python"><code class="language-python">import numpy as np, pandas as pd, time
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+
+# ---- 1. LEAKAGE: pure noise, random labels, so the TRUE AUC is 0.50 --------
+rng = np.random.default_rng(0)
+n, p = 200, 5_000
+X = rng.normal(size=(n, p))
+y = rng.integers(0, 2, n)                      # independent of X
+cv = StratifiedKFold(5, shuffle=True, random_state=0)
+
+# WRONG: the selector sees every label, including the held-out folds&#x27;
+X_sel = SelectKBest(f_classif, k=20).fit_transform(X, y)
+wrong = cross_val_score(LogisticRegression(max_iter=1000), X_sel, y,
+                        cv=cv, scoring=&#x27;roc_auc&#x27;).mean()
+
+# RIGHT: every step refit inside each training fold
+pipe = Pipeline([(&#x27;sel&#x27;, SelectKBest(f_classif, k=20)),
+                 (&#x27;clf&#x27;, LogisticRegression(max_iter=1000))])
+right = cross_val_score(pipe, X, y, cv=cv, scoring=&#x27;roc_auc&#x27;).mean()
+
+print(f&quot;selection before CV : {wrong:.3f}   &lt;- fiction&quot;)      # 0.892
+print(f&quot;selection in Pipeline: {right:.3f}   &lt;- the truth&quot;)    # 0.557
+# Leakage scales with how much the step depends on the LABELS. A StandardScaler
+# fitted on all the data barely moves this; anything supervised is catastrophic.
+
+# ---- 2. VECTORISATION: same computation, three ways -----------------------
+df = pd.DataFrame({&#x27;a&#x27;: rng.normal(size=200_000), &#x27;b&#x27;: rng.normal(size=200_000)})
+def timed(f, reps=1):
+    s = time.perf_counter()
+    for _ in range(reps): f()
+    return (time.perf_counter() - s) / reps * 1000          # ms
+
+vec   = timed(lambda: df.a * df.b, reps=20)
+loop  = timed(lambda: [r.a * r.b for r in df.itertuples()])
+apply = timed(lambda: df.apply(lambda r: r.a * r.b, axis=1))
+print(f&quot;vectorised {vec:8.2f} ms | itertuples {loop:8.1f} ms ({loop/vec:,.0f}x)&quot;
+      f&quot; | apply {apply:8.1f} ms ({apply/vec:,.0f}x)&quot;)
+# apply(axis=1) is the SLOWEST -- it builds a Series per row. It is a loop.
+
+# ---- 3. O(1) vs O(n): one character of difference in the type -------------
+big, probes = list(range(1_000_000)), rng.integers(0, 1_000_000, 2_000).tolist()
+as_set = set(big)
+print(f&quot;list {timed(lambda: sum(x in big for x in probes)):.0f} ms vs &quot;
+      f&quot;set {timed(lambda: sum(x in as_set for x in probes), reps=20):.3f} ms&quot;)</code></pre></div>
 </section>

@@ -125,13 +125,13 @@ JetBrains Mono for metadata only.
 | `.tag` + `.tb .tg .ta .tr .tp .tc` | inline pills |
 | `.cgrid` `.ch` `.cg-cc` `.ctp .ctn .cfp .cfn` | confusion-matrix grid |
 | `.anim-wrap` `.anim-title` | wrapper for an inline SVG diagram |
+| `.code-runner` | interactive Python block |
 
 Every topic carries a diagram and a worked code example. The diagrams share one
 visual language (L-shaped axes, mono micro-labels, the same six semantic hues),
 so they read as one guide rather than 55 unrelated illustrations. Draw new ones
 with the legacy palette hexes — section 8 of `style.css` maps those onto the
 live tokens, so a diagram follows both themes for free.
-| `.code-runner` | interactive Python block |
 
 ### A note on diagram colours
 
@@ -149,6 +149,101 @@ Any static server works; the topic fetches need HTTP, not `file://`.
 ```bash
 python3 -m http.server 8000     # then open http://localhost:8000
 ```
+
+## Maintaining the content
+
+The 55 topics were rewritten over 20 batches; the working notes lived in
+`REVAMP-PLAN.md`, now deleted. What follows is the part worth keeping — the
+invariants, the tooling, and the traps that cost real time to find.
+
+### Invariants
+
+- Root element stays `<section class="section" id="sec-<id>">`, one per file, and the
+  id must match `topics.js` — the router looks the section up by it.
+- `div`/`section` balanced and `$$` paired. `tools/check_topics.py` verifies both with
+  a real HTML parser, not a line count.
+- No page-level `<style>` blocks in topic files. `assets/style.css` owns styling.
+- Diagram colours use the legacy palette hexes (`#5ba4fb`, `#22d3a0`, `#f5a623`,
+  `#f06767`, `#b97cf8`, `#4e5a7a`, `#1a1f2e`, `#2e3a58`…), which section 8 of
+  `style.css` remaps onto the live tokens. `tools/svgkit.py` draws in that vocabulary.
+- Topic metadata lives **only** in `assets/js/topics.js`.
+- `{{` and `{%` are fine now that `.nojekyll` exists, but keep them inside
+  `<pre>`/`<textarea>` — there is a dbt snippet in `50-data-engineering`.
+
+### Tools
+
+| Path | Does |
+|---|---|
+| `tools/check_topics.py` | structural validation. `--all` or named topics |
+| `tools/assets.py` | asset accounting vs a baseline commit; `blocks()`, `codecard()` |
+| `tools/audit_markup.py` | full tag balance, `.bl` labels, depth-matched boxes, `$` in prose |
+| `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
+| `tools/kxinline.mjs` | same for inline `$…$`, per text node — the display check misses these |
+| `tools/svgkit.py` | shared SVG vocabulary for diagrams |
+| `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, checks pager/TOC/progress |
+
+The `.mjs` tools need jsdom and katex, which are not vendored:
+
+```bash
+mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom katex --silent
+cp <repo>/tools/{smoke,kxstrict,kxinline}.mjs .
+node smoke.mjs <repo>      # expect: 55 sidebar items, 55 home cards, "errors: none"
+node kxstrict.mjs <repo>   # 152 display formulas: 0 failures, 0 strict warnings
+node kxinline.mjs <repo>   # 174 inline formulas: 0 failures, 0 strict warnings
+```
+
+Also **run the code cards**. Every worked number in the prose should be one a reader
+can reproduce, so extract a topic's `language-python` block and execute it in a
+throwaway venv. This repeatedly caught numbers that no validator would see — a
+printed vector computed a different way from the prose, a sample-size table using a
+different formula than its own code card.
+
+### Traps that cost real time
+
+- **Asset retention.** Rewrite prose *around* diagrams, code cards and tables; never
+  retype them. Use `blocks()` from `tools/assets.py`, never a hand-rolled regex —
+  wrappers carry `style` attributes (`06-bias-variance`), a widget's `<script>` can sit
+  *outside* its wrapper div (`09-confusion-roc`), and `code-runner\b` also matches
+  `code-runner-header`, which silently duplicated a header. Then check with
+  `python3 tools/assets.py cdf20c9 <topics…>` — **any count going down is a lost asset,
+  not a simplification.** Do not "fix" `counts()`: it deliberately counts raw string
+  occurrences, so `runner=2` for a single widget is correct.
+- **`check_topics.py` only tracks `div` and `section`.** A stray `</tt>`, an unclosed
+  `<th>`, a malformed `.bl` label — none of it is caught, because the parser watches
+  only the two tags the router depends on. Run `tools/audit_markup.py` alongside it,
+  never instead of it. Note a `.bl` label that swallows its closing tag still leaves
+  the divs *balanced*, so `check_topics.py` reports ok.
+- **Unsupported Unicode inside `\text{}`.** KaTeX's text mode rejects `×`, `→`, `←`,
+  `÷`, `≤`, `≥` and friends. Close the text group and emit `\times` / `\rightarrow` in
+  maths mode. Em and en dashes are fine. Check with `strict:'error'`, not the default,
+  which only warns.
+- **Dollar amounts in prose rendering as maths.** KaTeX matches `$…$` within a *single
+  text node*, so two `$` in one sentence render as inline maths. Wrap each amount in its
+  own element so each `$` sits in its own text node. Scan with an HTMLParser pass over
+  text nodes — a line-based grep both misses these and false-positives on multi-line
+  `$$` blocks.
+- **Maths rendered as raw LaTeX.** `looksLikeMath` in `lazy.js` used to require both `$`
+  on one line; display maths spans newlines. Fixed — don't reintroduce it.
+- **Content overlapping the "on this page" rail.** Grid/flex children default to
+  `min-width: auto`, so a wide KaTeX block pushes its column past the container. Fixed
+  with `min-width: 0` on card/grid containers plus `overflow-x: auto` on `.katex-display`.
+
+### Deploying
+
+- **Push once per batch.** GitHub Pages cancels an in-progress build when a new one
+  starts; three rapid pushes once cancelled each other and a whole commit never
+  deployed. It looked like CDN lag, but the build had been cancelled.
+- **`.nojekyll` is required and present.** This is a plain static site; the default
+  Jekyll build was pure overhead and slow enough for pushes to collide.
+- **Fragments are CDN-cached for 600s.** A topic can serve old content for ten minutes
+  after a successful deploy. To verify content immediately check
+  `raw.githubusercontent.com`, not the Pages URL.
+- Check a build with
+  `curl -s "https://api.github.com/repos/Yaksh-Patel/ml-guide/actions/runs?per_page=3"`
+  and parse with `json.load(f, strict=False)` — the payload contains control characters
+  that strict JSON rejects.
+
+---
 
 ## Progress storage
 

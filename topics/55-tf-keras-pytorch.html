@@ -1,6 +1,6 @@
 <section class="section" id="sec-frameworks">
 <div class="sec-title">TensorFlow, Keras &amp; PyTorch</div>
-<div class="sec-desc">The three dominant deep learning frameworks — understanding their design philosophy, differences, and when to use each is increasingly important as the ecosystem matures.</div>
+<div class="sec-desc">The framework war is effectively over — PyTorch won research and most of industry, and TensorFlow kept the deployment ecosystem. So nobody is really testing which you prefer. What the question is testing is whether you have <em>actually trained models</em>, and that shows up in four bugs: gradients that accumulate because you forgot to zero them, dropout left on at inference, a loss that returns infinity because the sigmoid saturated, and a validation loop quietly building a graph it will never use. None of the four raises an error. All four are checkable arithmetic, worked below.</div>
 
 <div class="card"><div class="card-title">Framework Comparison</div>
 <table class="tbl"><tr><th>Dimension</th><th>PyTorch</th><th>TensorFlow 2.x</th><th>Keras (standalone)</th></tr>
@@ -11,10 +11,12 @@
 <tr><td>Mobile/Edge</td><td>PyTorch Mobile, ExecuTorch</td><td>TF Lite, TF.js (best ecosystem)</td><td>Via TF Lite</td></tr>
 <tr><td>Research adoption</td><td>Dominant (~85% papers)</td><td>Declining</td><td>Used for prototyping</td></tr>
 <tr><td>Industry adoption</td><td>Growing (Meta, OpenAI)</td><td>Google products, legacy systems</td><td>Prototyping, education</td></tr>
-<tr><td>Community/ecosystem</td><td>HuggingFace, torchvision</td><td>TF Hub, TFX</td><td>keras.io models</td></tr></table></div>
+<tr><td>Community/ecosystem</td><td>HuggingFace, torchvision</td><td>TF Hub, TFX</td><td>keras.io models</td></tr></table>
+<div class="card-body" style="margin-top:10px"><strong>The row that used to decide everything — dynamic versus static graphs — has largely collapsed.</strong> TensorFlow 2 made eager execution the default and PyTorch 2 added <code>torch.compile</code>, so both now offer the same bargain: write and debug eagerly, then compile the hot path. The remaining differences are ecosystem rather than capability, and the honest summary is that <strong>your model's weights are the asset and the framework is a detail</strong> — ONNX exists precisely so that choice need not be permanent.</div>
+<div class="card-body" style="margin-top:8px">Where the choice still bites is deployment target. If the answer has to run in a browser, on Android, or on a microcontroller, TensorFlow's Lite and JS paths remain the most mature and that alone can settle it. If you are fine-tuning anything from the Hugging Face ecosystem, the decision was made for you. And on TPUs, JAX and TensorFlow are the supported route.</div></div>
 
 <div class="card"><div class="card-title">PyTorch — Core Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-python"><code class="language-python">import torch
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
@@ -74,7 +76,7 @@ class CreditDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx): return self.X[idx], self.y[idx]</code></pre></div></div>
 
 <div class="card"><div class="card-title">TensorFlow 2.x — Core Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-python"><code class="language-python">import tensorflow as tf
+<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import tensorflow as tf
 from tensorflow import keras
 
 # ─── 1. SEQUENTIAL API (simple) ───────────────────────────────
@@ -138,7 +140,8 @@ model.save('model.keras')                   # Keras format
 model.export('saved_model/')                # TF SavedModel for serving
 # TFLite for mobile:
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
-tflite_model = converter.convert()</code></pre></div></div>
+tflite_model = converter.convert()</code></pre></div>
+<div class="card-body" style="margin-top:10px"><strong>The shape of the two code blocks is the real difference.</strong> Keras hands you a training loop and asks you to configure it through <code>compile</code> and callbacks; PyTorch hands you the pieces and asks you to write the loop. That is why Keras is faster to a working baseline and PyTorch is easier to modify when the thing you need — a custom gradient step, an unusual schedule, two optimisers — is not something the loop anticipated. Neither is better; they fail in opposite directions, and <code>train_step</code> in the subclassed model above is Keras's escape hatch back towards the PyTorch position.</div></div>
 
 <div class="card"><div class="card-title">Keras (Standalone, v3.x) — Multi-Backend</div>
 <div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import keras   # Keras 3 — works with PyTorch, TF, or JAX backend
@@ -177,18 +180,46 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 
 <div class="g2">
 <div class="card cb"><div class="card-title">Key Differences Deep Dive</div>
-<ul class="bul"><li><strong>Computational graph:</strong> PyTorch builds graph dynamically as you execute (eager by default). TF 2 is also eager but <code>@tf.function</code> compiles to static graph for speed — can be hard to debug.</li><li><strong>Debugging:</strong> PyTorch = put a <code>print()</code> or breakpoint anywhere. TF graph mode = must use <code>tf.print()</code> inside the graph.</li><li><strong>GPU memory:</strong> TF claims all GPU memory upfront; set <code>tf.config.experimental.set_memory_growth(gpu, True)</code> to avoid this.</li><li><strong>DDP training:</strong> PyTorch DistributedDataParallel is cleaner API than TF's MirroredStrategy for multi-GPU.</li></ul></div>
+<ul class="bul"><li><strong>Computational graph:</strong> PyTorch builds graph dynamically as you execute (eager by default). TF 2 is also eager but <code>@tf.function</code> compiles to static graph for speed — can be hard to debug.</li><li><strong>Debugging:</strong> PyTorch = put a <code>print()</code> or breakpoint anywhere. TF graph mode = must use <code>tf.print()</code> inside the graph.</li><li><strong>GPU memory:</strong> TF claims all GPU memory upfront; set <code>tf.config.experimental.set_memory_growth(gpu, True)</code> to avoid this.</li><li><strong>DDP training:</strong> PyTorch DistributedDataParallel is cleaner API than TF's MirroredStrategy for multi-GPU.</li></ul>
+<div class="card-body" style="margin-top:10px"><strong>The debugging row has a specific trap worth stating precisely:</strong> inside a compiled function, ordinary Python statements run only during <em>tracing</em>, not on every call. So a <code>print()</code> in a <code>@tf.function</code> fires once and then never again, and a Python counter incremented there stops incrementing — which reads as the code not running when it is running fine. That is also why compiled functions want tensor operations rather than Python side effects, and why the practical rule is to debug eagerly and compile afterwards.</div></div>
 <div class="card cg"><div class="card-title">Common Gotchas</div>
-<ul class="bul"><li><strong>PyTorch:</strong> forget <code>zero_grad()</code> → accumulated gradients. Forget <code>model.eval()</code> → dropout active during inference.</li><li><strong>TF/Keras:</strong> <code>training=True/False</code> controls BN and Dropout — pass it in <code>model(x, training=True)</code>. Default <code>model.predict()</code> sets <code>training=False</code>.</li><li><strong>Data shapes:</strong> PyTorch expects [B, C, H, W] (NCHW); TF expects [B, H, W, C] (NHWC) — a common transposition bug.</li><li><strong>Loss functions:</strong> PyTorch BCEWithLogitsLoss (logits) ≠ BCELoss (probs). Use the logits version — numerically stable.</li></ul></div>
+<ul class="bul"><li><strong>PyTorch:</strong> forget <code>zero_grad()</code> → accumulated gradients. Forget <code>model.eval()</code> → dropout active during inference.</li><li><strong>TF/Keras:</strong> <code>training=True/False</code> controls BN and Dropout — pass it in <code>model(x, training=True)</code>. Default <code>model.predict()</code> sets <code>training=False</code>.</li><li><strong>Data shapes:</strong> PyTorch expects [B, C, H, W] (NCHW); TF expects [B, H, W, C] (NHWC) — a common transposition bug.</li><li><strong>Loss functions:</strong> PyTorch BCEWithLogitsLoss (logits) ≠ BCELoss (probs). Use the logits version — numerically stable.</li></ul>
+<div class="card-body" style="margin-top:10px">On the shapes row: a layout mismatch usually <em>does</em> raise a shape error, which is the good case. The dangerous case is when the dimensions happen to be compatible — a square image where height equals width, or a batch that coincidentally matches the channel count — so the tensor flows through and trains on transposed data. Assert the expected shape at the boundary of your data loader rather than relying on a downstream layer to complain.</div></div>
 </div>
 
-<div class="card cr"><div class="card-title">Common Mistakes &amp; Misconceptions</div>
+<div class="card cr" style="margin-top:13px"><div class="card-title">Worked — the four silent bugs, as arithmetic</div>
+<div class="card-body">None of these raises an exception, which is exactly why they survive. All four are arithmetic you can check.</div>
+<div class="card-body" style="margin-top:10px"><strong>1. Gradients accumulate.</strong> PyTorch adds each <code>backward()</code> into <code>.grad</code> rather than replacing it, because that is what makes gradient accumulation across micro-batches possible. Omit <code>zero_grad()</code> and the gradient at step <em>k</em> is the sum of all <em>k</em> batches:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>backward() calls without zero_grad()</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td>Gradient norm (single-batch norm = 1.005)</td><td>1.005</td><td>2.010</td><td>3.015</td><td><strong>4.020</strong></td></tr>
+</table>
+<div class="card-body" style="margin-top:10px">The optimiser then takes a step <em>k</em> times too large, so the symptom is a loss that oscillates or diverges after a few iterations while the code looks correct — and it is easily misdiagnosed as a learning rate that needs lowering, which partially masks it and wastes a day.</div>
+<div class="card-body" style="margin-top:10px"><strong>2. BCELoss overflows where BCEWithLogitsLoss does not — and sooner than people expect.</strong> In float32, <code>sigmoid(z)</code> rounds to exactly 1.0 at <strong>z ≈ 17</strong>, a logit a confident model reaches routinely. Then <code>log(1 − p)</code> is <code>log(0)</code>:</div>
+<table class="tbl" style="margin-top:10px">
+<tr><th>logit z</th><th>float32 sigmoid(z)</th><th>1 − p</th><th>BCELoss (target 0)</th><th>BCEWithLogitsLoss</th></tr>
+<tr><td>16</td><td>0.9999999</td><td>1.19e-07</td><td>15.94</td><td>16.00</td></tr>
+<tr><td><strong>17</strong></td><td><strong>1.0</strong></td><td><strong>0.0</strong></td><td><strong>inf</strong></td><td><strong>17.00</strong></td></tr>
+<tr><td>30</td><td>1.0</td><td>0.0</td><td><strong>inf</strong></td><td>30.00</td></tr>
+</table>
+<div class="card-body" style="margin-top:10px"><strong>The row above the cliff is already wrong.</strong> At z = 16 the naive form returns 15.94 where the true loss is 16.00 — the error arrives before the overflow does, because <code>1 − p</code> has already lost most of its significant digits. The stable version never forms <code>1 − p</code> at all: it computes <code>log(1 + e^z)</code> directly via log-sum-exp, which is why it stays correct on both rows. <strong>An <code>inf</code> loss produces <code>nan</code> gradients, and once a weight is <code>nan</code> it stays <code>nan</code> forever</strong> — the model does not degrade, it dies, and the traceback points nowhere. Pass logits, not probabilities, and let the loss apply the sigmoid.</div>
+<div class="card-body" style="margin-top:10px"><strong>3. <code>model.eval()</code> is not cosmetic.</strong> It changes two layers. Dropout stops zeroing activations, and BatchNorm switches from batch statistics to its running estimates. Leave it in training mode at inference and the same input returns a different answer on every call — and worse, BatchNorm normalises using the statistics of whatever happened to be in the batch, so <strong>a prediction depends on the other rows you scored alongside it</strong>. With batch size 1 the batch variance is zero and the output is meaningless. This is the bug where offline evaluation looks fine (large batches) and single-request serving is wrong.</div>
+<div class="card-body" style="margin-top:10px"><strong>4. <code>torch.no_grad()</code> is about memory, not correctness.</strong> Without it a validation pass still records the graph for a backward that never comes, so activations are retained for every layer and every batch. The result is a validation loop that OOMs on a model that trained fine — confusing, because validation is the cheaper operation. <code>torch.inference_mode()</code> goes slightly further and is the modern default.</div>
+</div>
+
+<div class="card cr"><div class="card-title">Mistakes that survive code review</div>
 <ul class="bul">
-  <li><strong>Forgetting optimizer.zero_grad() in PyTorch</strong> — PyTorch accumulates gradients by default. Without zero_grad() before each backward pass, gradients from previous batches add to current ones, effectively using an ever-growing batch size. This is a silent bug — no error thrown, just incorrect updates</li>
-  <li><strong>Not switching model.eval() / model.train()</strong> — BatchNorm and Dropout behave differently in training vs inference mode. model.eval() disables dropout and uses running statistics for BatchNorm. model.train() re-enables both. Always switch modes explicitly; forgetting model.eval() at inference causes noisy, inconsistent predictions</li>
-  <li><strong>Using BCELoss instead of BCEWithLogitsLoss</strong> — BCELoss expects probabilities (after sigmoid); BCEWithLogitsLoss expects raw logits and applies sigmoid internally using the log-sum-exp trick for numerical stability. Always use BCEWithLogitsLoss — it's more stable and avoids log(0) issues with extreme logits</li>
-  <li><strong>Tensor shape mismatches from NCHW vs NHWC</strong> — PyTorch uses [Batch, Channels, Height, Width]; TensorFlow uses [Batch, Height, Width, Channels]. Loading a PyTorch-trained image and passing it to a TF model (or vice versa) without transposing channels produces silently wrong results, not an error</li>
-  <li><strong>"torch.no_grad() is only needed for inference"</strong> — it's also valuable during validation loops. Without no_grad(), PyTorch builds a computation graph for every validation forward pass, wasting memory. Always wrap validation code in with torch.no_grad(): or @torch.inference_mode()</li>
+  <li><strong>Missing <code>optimizer.zero_grad()</code>.</strong> Gradients are summed, so after <em>k</em> batches the step is <em>k</em> times too large. Loss oscillates, nothing errors, and lowering the learning rate half-hides it</li>
+  <li><strong><code>BCELoss</code> on sigmoid output instead of <code>BCEWithLogitsLoss</code> on logits.</strong> float32 sigmoid saturates at a logit of about 17, giving <code>log(0)</code> → <code>inf</code> → <code>nan</code> weights that never recover</li>
+  <li><strong>Missing <code>model.eval()</code> at inference.</strong> Dropout stays active and BatchNorm uses batch statistics, so a prediction depends on what else was in the batch — and is meaningless at batch size 1</li>
+  <li><strong>Forgetting <code>model.train()</code> again after validation.</strong> The mirror-image bug: training continues with dropout disabled and BatchNorm frozen, and the model quietly overfits</li>
+  <li><strong>Validation without <code>torch.no_grad()</code>.</strong> Builds a graph for a backward pass that never happens; the symptom is an OOM in the cheap half of the loop</li>
+  <li><strong>Python side effects inside <code>@tf.function</code>.</strong> They run during tracing only, so a <code>print()</code> fires once and a counter stops counting. Debug eagerly, compile after</li>
+  <li><strong>NCHW/NHWC mismatches passed through on compatible dimensions.</strong> Usually a shape error, occasionally silent when height equals width. Assert shapes at the data-loader boundary</li>
+  <li><strong>Letting TensorFlow claim the whole GPU.</strong> It allocates all memory on init, so a second process on the same card fails. Set memory growth</li>
+  <li><strong>Comparing frameworks on speed rather than ecosystem.</strong> Both compile to similar kernels; what differs is the deployment target and the model zoo you need</li>
+  <li><strong>Saving the whole model object rather than <code>state_dict()</code>.</strong> Pickling the object couples the checkpoint to your class definitions and import paths, so a refactor makes old checkpoints unloadable</li>
+  <li><strong>Calling <code>model.predict()</code> in PyTorch.</strong> It does not exist — that is Keras and sklearn. It is <code>model.eval()</code> then a call inside <code>no_grad()</code></li>
 </ul></div>
 
 <div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
@@ -199,10 +230,12 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
   <li><strong>NVIDIA (TensorRT):</strong> model optimisation for GPU inference — takes PyTorch/ONNX models and compiles them to optimised TensorRT engines with FP16/INT8 quantisation; standard for low-latency production vision and NLP serving on NVIDIA GPUs</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 Interview Gold</div>
-<p><strong>What to say:</strong> "PyTorch is my default for anything using HuggingFace models or requiring research flexibility — dynamic computation graphs let you insert Python debugging, inspect tensors, and conditionally execute graph branches. TensorFlow's advantage is the production ecosystem: TF Serving, TFLite, TF.js. Keras 3 abstracts over both backends. Four PyTorch gotchas everyone must know: zero_grad() every batch (gradients accumulate); model.eval() at inference (disables dropout/BatchNorm training mode); BCEWithLogitsLoss not BCELoss (numerical stability); torch.no_grad() during validation (skip graph construction)."</p>
-<p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I use model.predict() for inference in PyTorch." — PyTorch doesn't have a predict() method; that's Keras/sklearn. PyTorch inference: model.eval(), then with torch.no_grad(): output = model(x). Confusing these frameworks signals shallow hands-on experience.</p>
-<p style="margin-top:8px"><strong>Expect the follow-up:</strong> "How does torch.compile() improve performance?" — Answer: torch.compile() (introduced in PyTorch 2.0) traces the model's computation graph and compiles it to optimised kernels using TorchInductor (targeting CUDA or CPU). It fuses operations (e.g., attention + softmax + dropout into one kernel), eliminates Python overhead in the training loop, and can achieve 30–50% speedup on transformer training with a single line: model = torch.compile(model).</p>
+<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<p><strong>Do not take the bait on "which is better".</strong> "PyTorch for anything touching Hugging Face or needing research flexibility; TensorFlow when the deployment target is mobile, browser or TPU, where Lite and JS are still the most mature paths. But the dynamic-versus-static distinction that used to decide this has collapsed — TF 2 is eager by default and PyTorch 2 has <code>torch.compile</code>, so both give you the same bargain: debug eagerly, compile the hot loop. The weights are the asset; ONNX means the choice isn't permanent."</p>
+<p style="margin-top:8px"><strong>Name the four silent bugs, with the mechanism.</strong> "<code>zero_grad()</code> every batch, because PyTorch <em>sums</em> gradients — that's what makes accumulation across micro-batches possible, and it means forgetting it makes your step k times too large after k batches. <code>model.eval()</code> at inference, because BatchNorm otherwise uses batch statistics, so a prediction depends on what else is in the batch and is meaningless at batch size 1. <code>BCEWithLogitsLoss</code> over <code>BCELoss</code>. And <code>no_grad()</code> in validation, which is a memory issue rather than a correctness one."</p>
+<p style="margin-top:8px"><strong>If they push on numerical stability, have the number.</strong> "In float32 the sigmoid saturates to exactly 1.0 at a logit around 17 — not some extreme value, a routine one for a confident model. Then <code>log(1 − p)</code> is <code>log(0)</code> and the loss is <code>inf</code>, which makes the gradients <code>nan</code>, and a <code>nan</code> weight never recovers. <code>BCEWithLogitsLoss</code> computes <code>log(1 + e^z)</code> directly and never forms <code>1 − p</code>."</p>
+<p style="margin-top:8px"><strong>On <code>torch.compile</code>:</strong> "It traces the graph and compiles fused kernels through TorchInductor — fusing elementwise chains into single kernels and removing Python overhead from the loop, commonly 30–50% on transformer training for one line of code. The trade is a compilation pause on the first batch and recompilation whenever shapes change, so it rewards fixed shapes and padded batches."</p>
+<p style="margin-top:8px"><strong>What not to say.</strong> Never say <code>model.predict()</code> in PyTorch — it does not exist and it signals you have not written a training loop. Do not argue one framework is faster; they compile to similar kernels and the difference that matters is ecosystem. Do not claim <code>no_grad()</code> is only for inference — validation needs it too, for memory. And do not describe the eval/train switch as a formality: it changes what BatchNorm and Dropout compute, which is a correctness issue and not a tidiness one.</p>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">Eager vs compiled execution</div>
@@ -226,4 +259,41 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 <text x="250.0" y="156.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Write and debug eagerly, then compile the hot loop. That order is the whole practical answer.</text>
 <text x="250.0" y="172.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Keras is the high-level API over TF; Lightning is the equivalent convention layer over PyTorch.</text>
 </svg></div>
+
+<div class="card cc"><div class="card-title">In code</div>
+<div class="card-body">Two of the four bugs are framework-independent arithmetic, so they can be reproduced without a GPU or a training run — which is also the clearest way to see why they are silent.</div>
+<pre class="language-python"><code class="language-python">import numpy as np
+
+# ---- 1. WHY zero_grad() EXISTS ------------------------------------------
+# PyTorch ADDS each backward() into .grad rather than replacing it (that is
+# what makes gradient accumulation over micro-batches possible). Omit
+# zero_grad() and the step at iteration k uses the SUM of k batches.
+per_batch_grad = np.array([0.4, -0.2, 0.9])
+acc = np.zeros(3)
+for k in range(1, 5):
+    acc = acc + per_batch_grad                 # no zero_grad()
+    print(f&quot;  after {k} backward(): grad={acc.round(2)}  norm={np.linalg.norm(acc):.3f}&quot;)
+# norm grows 1.005, 2.010, 3.015, 4.020 -- the optimiser steps k times too far.
+# Symptom: loss oscillates or diverges. No exception is ever raised.
+
+# ---- 2. WHY BCEWithLogitsLoss EXISTS ------------------------------------
+# In float32 the sigmoid saturates to EXACTLY 1.0 at a logit of about 17 --
+# a value a confident model reaches routinely, not an extreme one.
+print(f&quot;\n{&#x27;logit&#x27;:&gt;6} {&#x27;sigmoid&#x27;:&gt;12} {&#x27;1-p&#x27;:&gt;12} {&#x27;BCELoss&#x27;:&gt;10} {&#x27;BCEWithLogits&#x27;:&gt;14}&quot;)
+for z in (16.0, 17.0, 30.0):
+    z32 = np.float32(z)
+    p   = np.float32(1.0 / (1.0 + np.exp(-z32)))          # sigmoid, then BCELoss
+    with np.errstate(divide=&#x27;ignore&#x27;):
+        naive = -np.log(np.float32(1.0) - p)              # target = 0
+    stable = np.float32(np.logaddexp(0.0, z32))           # log(1 + e^z)
+    print(f&quot;{z:6.0f} {p:12.7f} {np.float32(1.0)-p:12.3e} {naive:10.2f} {stable:14.2f}&quot;)
+# At z=17: 1-p underflows to 0, so log(0) = -inf -&gt; loss inf -&gt; nan gradients,
+# and a nan weight never recovers. The stable form never forms (1 - p).
+
+# ---- 3. THE TWO MODE BUGS, stated precisely -----------------------------
+# model.eval()  : dropout off, BatchNorm uses RUNNING stats. Without it a
+#                 prediction depends on the other rows in the batch, and is
+#                 meaningless at batch size 1.
+# torch.no_grad(): a memory fix, not a correctness one -- otherwise validation
+#                 retains activations for a backward pass that never happens.</code></pre></div>
 </section>
