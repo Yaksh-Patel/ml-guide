@@ -44,7 +44,9 @@ jobs:
       # covariance spectrum against the SVD of uncentred data.
       - name: Runners — every interactive code block executes
         run: |
-          python3 -m pip install --quiet numpy
+          # install exactly what the runners declare, so an undeclared import
+          # fails here rather than in the reader's browser
+          python3 -m pip install --quiet $(python3 tools/run_runners.py --packages)
           python3 tools/run_runners.py
 
       # ---- rendering -------------------------------------------------------
