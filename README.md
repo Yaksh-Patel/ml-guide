@@ -11,6 +11,10 @@ the topic's position.
 
 **Live:** https://yaksh-patel.github.io/ml-guide/
 
+**Companion:** [Credit Scorecard Sandbox](https://yaksh-patel.github.io/credit-scorecard-sandbox/)
+— an interactive build-and-operate scorecard covering the ground in topics 45, 49 and 52.
+Those topics link into the relevant panel; the sandbox links back to the theory.
+
 ---
 
 ## Adding or editing a topic
