@@ -49,6 +49,12 @@ jobs:
           python3 -m pip install --quiet $(python3 tools/run_runners.py --packages)
           python3 tools/run_runners.py
 
+      # A class the JS sets that no CSS consumes is invisible to every other
+      # check here -- jsdom applies no stylesheets. This is how every runnable
+      # code block came to render its code twice.
+      - name: CSS hooks — every class the JS adds is consumed by a rule
+        run: python3 tools/check_css_hooks.py
+
       # ---- rendering -------------------------------------------------------
       # jsdom and katex are not vendored; install them outside the repo so the
       # working tree stays clean (a package.json at the repo root breaks the

@@ -196,6 +196,7 @@ go red is worse than no check.
 |---|---|
 | `tools/check_topics.py` | structural validation. `--all` or named topics |
 | `tools/assets.py` | asset accounting vs a baseline commit; `blocks()`, `codecard()` |
+| `tools/check_css_hooks.py` | every class the JS adds must be matched by a CSS rule — catches dead class hooks, which no smoke test can see |
 | `tools/audit_markup.py` | full tag balance, `.bl` labels, depth-matched boxes, `$` in prose |
 | `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
 | `tools/kxinline.mjs` | same for inline `$…$`, per text node — the display check misses these |
@@ -238,6 +239,13 @@ rather than Pyodide, so it is a tight proxy, not a guarantee; keep runners to nu
 stdlib and it stays tight.
 
 ### Traps that cost real time
+
+- **A class hook with no CSS rule fails silently.** `codemirror-init.js` set
+  `cm-active-runner` to hide the raw `<textarea>` once the editor mounted, and no rule ever
+  matched it — so every runnable block showed its code twice, both copies editable, and only
+  the CodeMirror copy was the one `runCode()` read. jsdom applies no stylesheets, so no smoke
+  test could see it. `tools/check_css_hooks.py` now covers it. Note the textarea must stay
+  visible when CodeMirror does *not* mount, because `runCode()` falls back to reading it.
 
 - **Asset retention.** Rewrite prose *around* diagrams, code cards and tables; never
   retype them. Use `blocks()` from `tools/assets.py`, never a hand-rolled regex —

@@ -546,6 +546,13 @@ hr.div { border: 0; border-top: 1px solid var(--border); margin: 20px 0; }
   font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; color: var(--text);
 }
 .code-input:focus { outline: none; }
+/* codemirror-init.js adds .cm-active-runner once the editor has mounted. Without
+   this rule the raw textarea stayed visible BELOW the CodeMirror editor, so every
+   runner showed its code twice and only the CodeMirror copy was the one that ran.
+   The class was being set and nothing consumed it. Keep these two together: the
+   textarea must remain visible when CodeMirror does NOT mount (CDN blocked), because
+   runCode() falls back to reading textarea.value in exactly that case. */
+.cm-active-runner .code-input { display: none; }
 .code-output {
   padding: 11px 15px; border-top: 1px solid var(--border);
   font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
