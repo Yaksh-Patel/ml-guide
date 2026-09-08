@@ -126,6 +126,43 @@ for (const t of TOPICS) {
 check('every manifest topic resolves to a matching section id',
       manifestProblems.length === 0, manifestProblems.slice(0, 5));
 
+// ---- the Power Explorer widget in 48-causal-inference ----
+// Its <script> only runs because app.js re-creates injected scripts; if that
+// path ever breaks, the readouts stay empty and this catches it.
+await window.nav('causal');
+await new Promise(r => setTimeout(r, 500));
+const pw = id => (d.getElementById(id)?.textContent || '').trim();
+console.log('\npower explorer:', 'SE', pw('pw-se'), '| line', pw('pw-crit'),
+            '| power', pw('pw-power'), '| n80', pw('pw-n80'));
+
+check('power widget svg rendered', !!d.getElementById('pw-svg'));
+check('widget script ran (readouts populated)', pw('pw-se') !== '' && pw('pw-power') !== '');
+check('widget SE matches the prose table', pw('pw-se') === '0.00456', pw('pw-se'));
+check('widget power matches the prose table', pw('pw-power') === '59.2%', pw('pw-power'));
+check('widget n-for-80% matches the prose', pw('pw-n80') === '8,159', pw('pw-n80'));
+check('curves drawn', (d.getElementById('pw-null')?.getAttribute('d') || '').length > 100);
+check('shaded regions drawn',
+  (d.getElementById('pw-alt-fill')?.getAttribute('d') || '').length > 100);
+
+{ // more users must raise power; a noisier metric must lower it
+  const before = parseFloat(pw('pw-power'));
+  const nEl = d.getElementById('pw-n');
+  nEl.value = '10000'; nEl.dispatchEvent(new window.Event('input'));
+  check('more users raises power', parseFloat(pw('pw-power')) > before,
+        before + ' -> ' + pw('pw-power'));
+  nEl.value = '5000'; nEl.dispatchEvent(new window.Event('input'));
+  const sEl = d.getElementById('pw-s');
+  sEl.value = '150'; sEl.dispatchEvent(new window.Event('input'));
+  check('noisier metric lowers power', parseFloat(pw('pw-power')) < before,
+        before + ' -> ' + pw('pw-power'));
+  sEl.value = '100'; sEl.dispatchEvent(new window.Event('input'));
+  const aEl = d.getElementById('pw-a');
+  aEl.value = '2'; aEl.dispatchEvent(new window.Event('input'));
+  check('raising alpha raises power and moves the line, not SE',
+        parseFloat(pw('pw-power')) > before && pw('pw-se') === '0.00456',
+        pw('pw-power') + ' / SE ' + pw('pw-se'));
+}
+
 console.log('\n---- checks ----');
 for (const c of checks)
   console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.name}${c.ok ? '' : '   got: ' + JSON.stringify(c.got)}`);
