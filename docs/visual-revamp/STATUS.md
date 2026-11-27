@@ -2,32 +2,57 @@
 
 Read this first, then only the current chunk in `PLAN.md`. Update this file last.
 
-**Current chunk:** 3, sidebar and icons (model: **Sonnet**). **Blocked on Yaksh's review of chunk 2** (PLAN says he reviews before chunk 3).
-**Branch:** `visual-revamp`, pushed. Chunks 0, 1 and 2 are committed.
-**Blocker:** review of chunk 2.
+**Current chunk:** 9, ship (model: **Sonnet**). **Blocked on Yaksh:** review chunks 3–7 on the branch,
+decide whether to do optional chunk 8 (margin notes) first, and approve the merge to `main`.
+**Branch:** `visual-revamp`. Chunks 0–7 are committed (3–7 in one session, one commit each).
 **CI not yet seen running:** `validate.yml` only runs on pushes to `main`, on PRs, and on manual
 dispatch, and `gh` here is the work account (403 on this repo). Opening a PR from `visual-revamp`
 (on github.com) runs it, including the layout check that has never run on a runner.
 
-## Handoff to chunk 3
-- Tools live in `/tmp/domtest` (layout check, smoke, kxstrict, kxinline, plus two one-offs not in the
-  repo: `dd_test.mjs` and `elshots.mjs`, which screenshots single elements:
-  `node elshots.mjs <repo> <out> <width> <theme> 'dtree|> .card > .tbl|1' ...`). After editing any
-  `tools/*.mjs`, copy it over again. `/tmp` clears on reboot: reinstall with
-  `npm i jsdom katex puppeteer-core@24.10.0`.
-- `run_runners.py` fails locally only because this Mac's python3 has **no numpy** (see chunk 1 note).
-- `--grp` / `--grp-bg` / `--grp-bd` exist on `.main` (style.css §1), set from `data-group`. Use them
-  for the sidebar's current-group accent and per-group progress bars rather than adding a new map.
-  The home map's `.tn-*` classes still hold their own copy of the same pairing (§7); chunk 4 can fold them in.
-- The crumb in the top bar now has a group-coloured dot **and** still the emoji (`paintTopbar`
-  builds it from `groupIcon`). Chunk 3 replaces the emoji there too.
-- Callout labels no longer carry emoji (CSS draws the icon). Emoji are still in: `topics.js` group
-  icons, the sidebar, the palette meta line, the crumb, and runner headers (`🐍 Python · numpy`, in
-  21 topic files). The runner one is content: leave it for chunk 7 or strip it with the same kind of
-  one-line regex used for `.bl` labels.
-- Baselines: `main` screenshots in `/tmp/domtest/baseline-shots/`, chunk 1 in `c1-shots/`, chunk 2 in `c2-shots/`.
+## Handoff to chunk 9
+- Tools live in `/tmp/domtest` (cleared on reboot: `npm i jsdom katex puppeteer-core@24.10.0`, then copy
+  `tools/*.mjs` back). One-offs from chunks 3–7, not in the repo: `vshots.mjs` (viewport shots with preset
+  progress: `node vshots.mjs <repo> <out> hash:width:theme[:full][:y=px]`, env `REDUCE=1`, `LAST=<id>`),
+  `motion_test.mjs` (reveal never hides content, marker tracks, no layout shift, reduced motion static),
+  `drawer_test.mjs`, `ui_shots.mjs` (drawer, dropdown, palette), `cls_probe.mjs`, `menu_vis.mjs`.
+  `motion_test.mjs` is worth promoting into `tools/` + CI if motion keeps changing.
+- README updates for chunk 9 (*Design system*, *Component classes*): sprite group icons (`topics.js`
+  `icon:` is a symbol id), `[data-group]` works on any element, `ml-guide-last` storage key, MOTION
+  section in app.js (`reveal`, `homeEntrance`, `.rv/.rv-in`, `.toc-marker`), `scrollHints`
+  (`.xs-l/.xs-r`), `.tb-menu` replaced the floating `.mob-tog`, home markup (hero art, continue strip,
+  subway map, `.home-grp`), part headings are top-level `.card-title` with no inline style.
+- Left alone on purpose: nested grid cards in 41/43/46/49 still carry inline title colours
+  (`style="font-size:13px;color:var(--blue)"`); 3–5 Title Case titles each in 28, 29, 31, 45, 53–55
+  (mostly proper names). Runner headers still say `🐍 Python · numpy` (content, 21 files).
+- Load layout shift on dtree is ~0.008 from KaTeX rendering (pre-existing, not motion).
 
 ## Log
+
+### 2026-11-27: chunks 3–7 done in one session (Opus; Yaksh asked for as many chunks as possible)
+Every chunk: check_topics, audit_markup, check_css_hooks clean; smoke 23/23; layout_check 96/96 on a
+snapshot of that commit. kxstrict/kxinline 0 failures after chunks 5 and 7. Runners not re-run (no numpy).
+- **Chunk 3 (sidebar, icons):** 11 group line icons + check + list in the sprite. Groups collapsed by
+  default except the current topic's (manual toggles still stored); the URL topic's group opens at startup,
+  not after load (that was a 0.022 layout shift). Group headers in sans with full names; progress is a
+  hairline under the name in the group colour (count in tooltip + sr-only). The three buttons beside search
+  already had `title` + `aria-label`. Search label shortened to "Search" (it wrapped). No emoji left in
+  `assets/` or `topics/00-home.html`.
+- **Chunk 4 (home):** chose the network over the boundary (it matches the logo mark). Two-column hero from
+  900px, hidden on phones. "Continue reading" strip replaces the progress widget and how-to card (last
+  opened unread topic, else the next unread after it). Subway map replaces the pills; container queries keep
+  10 stops on one line down to 390px. Grid grouped with icon, colour band and "n / m read". `.tn-*` gone.
+- **Chunk 5 (motion):** reveal only on blocks that start below the fold, `backwards` fill so hover still
+  works; sliding rail marker; ring count-up, map stops fill, card stagger; pager lift. All off under
+  reduced motion or without IntersectionObserver. `motion_test.mjs` green.
+- **Chunk 6 (mobile/tablet/dark):** top-bar menu button replaces the floating one (it covered text); icon
+  buttons on phones; display maths 1.06em on phones; fade hints on sideways-scrolling maths/tables; table
+  cells `break-word` (was `anywhere`: words split letter by letter at 390). Drawer overlay never showed
+  (sibling selector across `.layout`): now dims, closes on tap/Escape; hide button closes the drawer.
+  Confusion-matrix tints were over the grey grid gaps (muddy in light mode).
+- **Chunk 7 (content):** 13 topics, not 11: 41 and 52 had the same Title Case and inline headings. 52 Part
+  headings converted, 222 titles sentence-cased, every title read first. Only card-title lines changed;
+  `assets.py` counts identical before/after. `grep "Part [0-9]" topics/` empty.
+
 
 ### 2026-11-27: chunk 2 done (Opus)
 - **Open sections (D2):** a top-level `.card` has no box. It spans the article column, and its children
