@@ -12,6 +12,7 @@ const PROGRESS_KEY = 'ml-guide-progress-v2';   // same key as before: progress c
 const THEME_KEY    = 'ml-guide-theme';
 const SIDEBAR_KEY  = 'ml-guide-sb';
 const GROUP_KEY    = id => 'ml-grp-' + id;
+const LAST_KEY     = 'ml-guide-last';            // last topic opened, for home "Continue reading"
 
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -55,10 +56,23 @@ function paintProgress() {
   const bar = $('#progress-bar-fill');   if (bar) bar.style.width = pct + '%';
   const lab = $('#progress-label');      if (lab) lab.textContent = `${done} / ${TOTAL} read`;
   const hp  = $('#home-pct');            if (hp) hp.textContent = pct + '%';
-  const hb  = $('#home-progress-fill');  if (hb) hb.style.width = pct + '%';
   const hpl = $('.home-pct-label');      if (hpl) hpl.textContent = pct + '%';
-  const hbi = $('.home-progress-bar-inner'); if (hbi) hbi.style.width = pct + '%';
   const hpi = $('#home-progress-count'); if (hpi) hpi.textContent = `${done} of ${TOTAL} topics`;
+  const arc = $('#home-ring-arc');       // r = 21, so the circumference is 2π·21
+  if (arc) arc.style.strokeDashoffset = String(2 * Math.PI * 21 * (1 - done / TOTAL));
+
+  // per-group progress on home: grid headers and map rows
+  GROUPS.forEach(g => {
+    const n = g.topics.filter(t => p[t.id]).length, of = g.topics.length;
+    const hg = $(`.home-grp[data-group="${g.id}"]`);
+    if (hg) {
+      $('.hg-count', hg).textContent = `${n} / ${of} read`;
+      $('.hg-fill', hg).style.width = (n / of * 100) + '%';
+    }
+    const row = $(`.tmap-row[data-group="${g.id}"] .tmap-count`);
+    if (row) row.textContent = `${n}/${of}`;
+  });
+  paintContinue(p);
 
   // per-group progress in the sidebar: a small bar plus the count
   GROUPS.forEach(g => {
@@ -142,42 +156,109 @@ function setAllGroups(collapsed) {
 
 /* ═══════════════ HOME (generated from the manifest) ═══════════════ */
 
+/* Hero art: a small feed-forward network whose edges carry signals left to
+   right. Plain SVG; style.css §7 animates .hn-sig and .hn-glow and stops
+   both under prefers-reduced-motion. Seeded, so it is the same every visit. */
+function heroNetwork() {
+  const layers = [3, 5, 5, 2], W = 400, H = 300, xs = [44, 152, 260, 360];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const nodes = layers.map((n, li) => Array.from({ length: n }, (_, i) =>
+    ({ x: xs[li], y: H / 2 + (i - (n - 1) / 2) * (li === 0 || li === 3 ? 70 : 52) })));
+  let edges = '', sigs = '';
+  for (let li = 0; li < layers.length - 1; li++) {
+    for (const a of nodes[li]) for (const b of nodes[li + 1]) {
+      const d = `M${a.x} ${a.y}L${b.x} ${b.y}`;
+      edges += `<path class="hn-edge" d="${d}"/>`;
+      if (rnd() < .42) {
+        const delay = (li * .7 + rnd() * 2.2).toFixed(2);
+        sigs += `<path class="hn-sig hn-c${Math.floor(rnd() * 3)}" d="${d}" pathLength="100" style="animation-delay:${delay}s"/>`;
+      }
+    }
+  }
+  const dots = nodes.map((col, li) => col.map(n => {
+    const r = li === layers.length - 1 ? 10 : 8;
+    const delay = (li * .7 + .5 + rnd() * .6).toFixed(2);
+    return `<g${li === layers.length - 1 ? ' class="hn-out"' : ''}>
+      <circle class="hn-ring" cx="${n.x}" cy="${n.y}" r="${r}"/>
+      <circle class="hn-glow" cx="${n.x}" cy="${n.y}" r="${r - 3.5}" style="animation-delay:${delay}s"/></g>`;
+  }).join('')).join('');
+  return `<svg class="hero-net" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <g>${edges}</g><g>${sigs}</g><g>${dots}</g></svg>`;
+}
+
 function buildHome() {
+  const art = $('#home-hero-art');
+  if (art && !art.dataset.built) { art.dataset.built = '1'; art.innerHTML = heroNetwork(); }
+
   const grid = $('#home-grid-mount');
   if (grid && !grid.dataset.built) {
     grid.dataset.built = '1';
     grid.innerHTML = GROUPS.map(g => `
-      <div class="grp-label" data-group="${g.id}">${ico(g.icon)} ${g.label}</div>
-      <div class="home-grid">
-        ${g.topics.map(t => `
-          <a class="ht" href="#${t.id}" data-topic-id="${t.id}">
-            <div class="ht-header">
-              <span class="hn">${t.num}</span>
-              <span class="htime">${t.time} min</span>
-            </div>
-            <div class="hname">${t.title}</div>
-            ${t.blurb ? `<div class="hsub">${t.blurb}</div>` : ''}
-            ${t.prereqs.length
-              ? `<div class="hpre">after ${t.prereqs.map(p => BY_ID[p]?.short || p).join(', ')}</div>`
-              : ''}
-            ${t.badge === 'new' ? '<div class="hbadges"><span class="hnew">new</span></div>' : ''}
-          </a>`).join('')}
+      <div class="home-grp" data-group="${g.id}">
+        <div class="grp-label">
+          ${ico(g.icon)}<span class="hg-name">${g.label}</span>
+          <span class="hg-count"></span>
+          <span class="hg-bar" aria-hidden="true"><span class="hg-fill"></span></span>
+        </div>
+        <div class="home-grid">
+          ${g.topics.map(t => `
+            <a class="ht" href="#${t.id}" data-topic-id="${t.id}">
+              <div class="ht-header">
+                <span class="hn">${t.num}</span>
+                <span class="htime">${t.time} min</span>
+                <span class="ht-check" title="Read"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
+              </div>
+              <div class="hname">${t.title}</div>
+              ${t.blurb ? `<div class="hsub">${t.blurb}</div>` : ''}
+              ${t.prereqs.length
+                ? `<div class="hpre">After ${t.prereqs.map(p => BY_ID[p]?.short || p).join(', ')}</div>`
+                : ''}
+              ${t.badge === 'new' ? '<div class="hbadges"><span class="hnew">new</span></div>' : ''}
+            </a>`).join('')}
+        </div>
       </div>`).join('');
   }
 
+  // Learning path: one line per group, one stop per topic, filled when read.
   const map = $('#topic-map-mount');
   if (map && !map.dataset.built) {
     map.dataset.built = '1';
     map.innerHTML = GROUPS.map(g => `
-      <div class="tmap-row">
-        <div class="tmap-label">${g.label}</div>
+      <div class="tmap-row" data-group="${g.id}">
+        <div class="tmap-label">${ico(g.icon)}<span class="tmap-name">${g.label}</span><span class="tmap-count"></span></div>
         <div class="tmap-nodes">
           ${g.topics.map(t =>
-            `<a class="tmap-node tn-${g.id}" href="#${t.id}" data-topic-id="${t.id}" title="${t.title}">${t.num}</a>`
+            `<a class="tmap-node" href="#${t.id}" data-topic-id="${t.id}" data-title="${t.title}" aria-label="${t.num} ${t.title}"><span>${t.num}</span></a>`
           ).join('')}
         </div>
       </div>`).join('');
   }
+}
+
+/* Home "Continue reading": the last topic opened if it is unread, else the
+   next unread topic after it, else the first unread topic. */
+function paintContinue(p = getProgress()) {
+  const link = $('#home-continue-link');
+  if (!link) return;
+  const saved = store.get(LAST_KEY);
+  const last = BY_ID[saved] ? saved : null;
+  const unreadAfter = from => {
+    const i = ORDER.indexOf(from);
+    for (let k = 1; k <= TOTAL; k++) { const id = ORDER[(i + k) % TOTAL]; if (!p[id]) return id; }
+    return null;
+  };
+  let id, kicker;
+  if (last && !p[last]) { id = last; kicker = 'Continue reading'; }
+  else if (last)        { id = unreadAfter(last); kicker = 'Up next'; }
+  else                  { id = ORDER.find(x => !p[x]); kicker = 'Start here'; }
+  if (!id) { id = last || ORDER[0]; kicker = `All ${TOTAL} read · revisit`; }
+  const t = BY_ID[id];
+  $('#home-continue-kicker').textContent = kicker;
+  link.href = '#' + id;
+  link.dataset.group = t.group;
+  link.innerHTML = `<span class="hc-num">${t.num}</span>${t.title}`;
+  const btn = $('#home-continue-btn'); if (btn) btn.href = '#' + id;
 }
 
 /* ═══════════════ SEARCH ═══════════════ */
@@ -428,6 +509,7 @@ async function go(id, { push = true, scroll = true } = {}) {
   section?.classList.add('active');
 
   paintGroups(id === 'home' ? null : BY_ID[id].group);
+  if (id !== 'home') store.set(LAST_KEY, id);
   $$('.sb-item').forEach(i => i.classList.toggle('active', i.dataset.topicId === id));
   $(`.sb-item[data-topic-id="${id}"]`)?.scrollIntoView({ block: 'nearest' });
 
