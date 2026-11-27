@@ -393,6 +393,15 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 }
 .toc-list a:hover { color: var(--text2); }
 .toc-list a.active { color: var(--grp); border-left-color: var(--grp); }
+/* With motion, one marker slides to the active entry instead (app.js buildToc). */
+.toc-list.has-marker { position: relative; }
+.toc-list.has-marker a.active { border-left-color: transparent; }
+.toc-marker {
+  position: absolute; left: -19px; top: 0; width: 2px; height: 0; border-radius: 1px;
+  background: var(--grp); opacity: 0; pointer-events: none;
+  transition: transform .32s var(--ease), height .32s var(--ease), opacity .2s var(--ease);
+}
+.toc-marker.on { opacity: 1; }
 
 /* Below 1280px the rail folds into an "On this page" menu in the top bar.
    Built by buildToc() from the same headings, with the same scroll-spy. */
@@ -431,7 +440,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   padding: 13px 16px; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); transition: all .18s var(--ease);
 }
-.pager-link:hover { border-color: var(--accent); transform: translateY(-1px); }
+.pager-link:hover { border-color: var(--grp-bd); transform: translateY(-2px); box-shadow: 0 8px 22px var(--shadow); }
 .pager-link.next { text-align: right; }
 .pager-dir { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); }
 .pager-name { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; color: var(--text); letter-spacing: -.01em; }
@@ -476,8 +485,16 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 
 /* ═══ 5. CONTENT COMPONENTS ═══════════════════════════════ */
 .section { display: none; }
-.section.active { display: block; animation: fadein .2s var(--ease); }
-@keyframes fadein { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.section.active { display: block; animation: fadein .32s var(--ease); }
+@keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Scroll reveal (app.js reveal()). JS adds .rv only to blocks below the fold,
+   then .rv-in when they enter the viewport. Without JS nothing is hidden.
+   `backwards` fill only, so nothing is held after the entrance (hover still works). */
+.rv:not(.rv-in) { opacity: 0; transform: translateY(12px); }
+.rv-in { animation: rv-up .3s var(--ease) backwards; }
+@keyframes rv-up { from { opacity: 0; transform: translateY(12px); } }
+@media print { .rv { opacity: 1 !important; transform: none !important; } }
 
 .sec-title {
   font-family: var(--font-display); font-size: 28px; font-weight: 700;
@@ -898,6 +915,9 @@ hr.div { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
 }
 .tmap-node:hover, .tmap-node:focus-visible { transform: scale(1.14); box-shadow: 0 0 0 5px var(--grp-bg); z-index: 2; }
 .tmap-node.tmap-read { background: var(--grp); color: var(--bg); }
+/* On arrival home, read stops fill in reading order (app.js homeEntrance). */
+.tmap-anim .tmap-node.tmap-read { animation: tmap-fill .45s var(--ease) backwards; animation-delay: calc(200ms + var(--i, 0) * 16ms); }
+@keyframes tmap-fill { from { background: var(--surface); color: var(--grp); transform: scale(.7); } }
 /* Hover title: hidden (not just transparent) so it never widens the page. */
 .tmap-node::after {
   content: attr(data-title); display: none; position: absolute; bottom: calc(100% + 9px); left: 50%;
@@ -942,6 +962,9 @@ hr.div { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
 }
 .ht::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--grp); opacity: .75; }
 .ht:hover { border-color: var(--grp-bd); transform: translateY(-2px); box-shadow: 0 8px 22px var(--shadow); }
+/* Cards in a group arrive one after another when the group scrolls in. */
+.home-grp.rv:not(.rv-in) .ht { opacity: 0; }
+.home-grp.rv-in .ht { animation: rv-up .4s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
 .ht:hover::before { opacity: 1; }
 .ht-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .ht .hn { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--grp); }
@@ -1060,4 +1083,5 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
   /* Infinite loops would flicker at .01ms: stop them and show a still frame. */
   .hn-sig { animation: none !important; display: none; }
   .hn-glow { animation: none !important; opacity: .35; }
+  .rv:not(.rv-in) { opacity: 1; transform: none; }
 }

@@ -17,6 +17,12 @@ const LAST_KEY     = 'ml-guide-last';            // last topic opened, for home 
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
+/* Motion (PLAN D7) is an enhancement only: content is visible by default, and
+   none of it runs under prefers-reduced-motion or without IntersectionObserver. */
+const MOTION = typeof window.matchMedia === 'function'
+  && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  && 'IntersectionObserver' in window;
+
 /* A sprite icon (index.html). `id` is a <symbol> id such as a group's `icon`. */
 const ico = (id, cls = '') => `<svg class="ico${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
 
@@ -112,7 +118,8 @@ function buildSidebar() {
       </div>
     </div>`).join('');
 
-  paintGroups(null);
+  // open the group of the topic in the URL now, not after it loads (no jump)
+  paintGroups(BY_ID[location.hash.slice(1)]?.group ?? null);
 
   mount.addEventListener('click', e => {
     const gl = e.target.closest('.sb-gl');
@@ -202,8 +209,8 @@ function buildHome() {
           <span class="hg-bar" aria-hidden="true"><span class="hg-fill"></span></span>
         </div>
         <div class="home-grid">
-          ${g.topics.map(t => `
-            <a class="ht" href="#${t.id}" data-topic-id="${t.id}">
+          ${g.topics.map((t, i) => `
+            <a class="ht" href="#${t.id}" data-topic-id="${t.id}" style="--i:${i}">
               <div class="ht-header">
                 <span class="hn">${t.num}</span>
                 <span class="htime">${t.time} min</span>
@@ -229,7 +236,7 @@ function buildHome() {
         <div class="tmap-label">${ico(g.icon)}<span class="tmap-name">${g.label}</span><span class="tmap-count"></span></div>
         <div class="tmap-nodes">
           ${g.topics.map(t =>
-            `<a class="tmap-node" href="#${t.id}" data-topic-id="${t.id}" data-title="${t.title}" aria-label="${t.num} ${t.title}"><span>${t.num}</span></a>`
+            `<a class="tmap-node" href="#${t.id}" data-topic-id="${t.id}" data-title="${t.title}" aria-label="${t.num} ${t.title}" style="--i:${ORDER.indexOf(t.id)}"><span>${t.num}</span></a>`
           ).join('')}
         </div>
       </div>`).join('');
@@ -259,6 +266,59 @@ function paintContinue(p = getProgress()) {
   link.dataset.group = t.group;
   link.innerHTML = `<span class="hc-num">${t.num}</span>${t.title}`;
   const btn = $('#home-continue-btn'); if (btn) btn.href = '#' + id;
+}
+
+/* ═══════════════ MOTION ═══════════════ */
+
+/* Blocks below the fold fade and rise once as they enter the viewport.
+   Only blocks that start below the fold get .rv, so the first screen never
+   waits; .rv hides nothing until JS has added it (style.css §2). */
+let revealIO = null;
+function reveal(section) {
+  if (!MOTION || !section) return;
+  revealIO ??= new IntersectionObserver(entries => entries.forEach(en => {
+    if (!en.isIntersecting) return;
+    en.target.classList.add('rv-in');
+    revealIO.unobserve(en.target);
+  }), { rootMargin: '0px 0px -6% 0px' });
+  const sel = section.id === 'sec-home'
+    ? ':scope > :is(.home-continue, .topic-map, .home-h), :scope > #home-grid-mount > .home-grp'
+    : ':scope > :not(script, style, .pager)';
+  const fold = window.innerHeight;
+  $$(sel, section).forEach(el => {
+    if (el.classList.contains('rv-in') || el.getBoundingClientRect().top < fold) return;
+    el.classList.add('rv');
+    revealIO.observe(el);
+  });
+}
+
+/* Home on arrival: the ring fills and its number counts up, and read stops
+   on the learning path fill in reading order (style.css §7, .tmap-anim). */
+function homeEntrance() {
+  if (!MOTION) return;
+  const p = getProgress();
+  const done = ORDER.filter(id => p[id]).length, pct = Math.round(done / TOTAL * 100);
+  const C = 2 * Math.PI * 21;
+  const arc = $('#home-ring-arc');
+  if (arc) {
+    arc.style.transition = 'none';
+    arc.style.strokeDashoffset = String(C);
+    arc.getBoundingClientRect();
+    arc.style.transition = '';
+    arc.style.strokeDashoffset = String(C * (1 - done / TOTAL));
+  }
+  const label = $('.home-pct-label');
+  if (label && pct > 0) {
+    const t0 = performance.now();
+    const step = now => {
+      const k = Math.min(1, (now - t0) / 800), e = 1 - Math.pow(1 - k, 3);
+      label.textContent = Math.round(pct * e) + '%';
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const map = $('#topic-map-mount');
+  if (map) { map.classList.remove('tmap-anim'); void map.offsetWidth; map.classList.add('tmap-anim'); }
 }
 
 /* ═══════════════ SEARCH ═══════════════ */
@@ -405,7 +465,16 @@ function buildToc(section) {
   rail.hidden = false;
   rail.innerHTML = `
     <div class="toc-label">On this page</div>
-    <nav class="toc-list">${linksHtml}</nav>`;
+    <nav class="toc-list${MOTION ? ' has-marker' : ''}">${linksHtml}${MOTION ? '<span class="toc-marker" aria-hidden="true"></span>' : ''}</nav>`;
+  // The active marker slides between entries instead of jumping.
+  const marker = $('.toc-marker', rail);
+  const moveMarker = id => {
+    const a = $(`a[data-toc="${id}"]`, rail);
+    if (!marker || !a) return;
+    marker.style.transform = `translateY(${a.offsetTop}px)`;
+    marker.style.height = a.offsetHeight + 'px';
+    marker.classList.add('on');
+  };
   if (dd) { dd.hidden = false; $('.toc-dd-panel', dd).innerHTML = linksHtml; }
 
   // scroll-spy, shared by both lists
@@ -414,6 +483,7 @@ function buildToc(section) {
     entries.forEach(en => {
       if (en.isIntersecting) {
         allLinks.forEach(a => a.classList.toggle('active', a.dataset.toc === en.target.id));
+        moveMarker(en.target.id);
       }
     });
   }, { rootMargin: '-72px 0px -70% 0px' });
@@ -521,6 +591,8 @@ async function go(id, { push = true, scroll = true } = {}) {
 
   $('#sidebar')?.classList.remove('open');
   paintProgress();
+  reveal(section);
+  if (id === 'home') homeEntrance();
 
   // warm the next topic while the reader is busy with this one
   const next = ORDER[ORDER.indexOf(id) + 1];
