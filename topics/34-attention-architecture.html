@@ -136,46 +136,39 @@ d_k &= \text{key/query dimension (scale factor prevents softmax saturation)}
 &\text{Typical: } h=8 \text{ heads},\; d_k = d_v = d_{\text{model}}/h = 64
 \end{aligned}$$</div>
 <div class="anim-wrap"><div class="anim-title">Attention: token "bank" attends — high weight to "deposit" and "$", low to other tokens</div>
-<svg viewBox="0 0 480 145" xmlns="http://www.w3.org/2000/svg">
-<text x="240" y="14" text-anchor="middle" fill="#4e5a7a" font-size="10" font-family="DM Sans">Query token "bank" attends to all tokens — learns it means the financial kind from context</text>
-<rect x="10" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="37" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">I</text>
-<rect x="73" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="100" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">went</text>
-<rect x="136" y="25" width="55" height="26" rx="4" fill="#5ba4fb" stroke="#5ba4fb" opacity=".9"/>
-<text x="163" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">to</text>
-<rect x="199" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#f5a623" stroke-width="2"/>
-<text x="226" y="42" text-anchor="middle" fill="#f5a623" font-size="11" font-family="DM Sans">bank</text>
-<rect x="262" y="25" width="55" height="26" rx="4" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="289" y="42" text-anchor="middle" fill="#8e97b8" font-size="11" font-family="DM Sans">to</text>
-<rect x="325" y="25" width="68" height="26" rx="4" fill="#22d3a0" stroke="#22d3a0" opacity=".9"/>
-<text x="359" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">deposit</text>
-<rect x="401" y="25" width="45" height="26" rx="4" fill="#22d3a0" stroke="#22d3a0" opacity=".9"/>
-<text x="424" y="42" text-anchor="middle" fill="#fff" font-size="11" font-family="DM Sans">$</text>
-<text x="240" y="72" text-anchor="middle" fill="#4e5a7a" font-size="8.5" font-family="DM Sans">attention weights (QK score after softmax)</text>
-<rect x="10" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
-<rect x="10" y="80" width="10" height="5" rx="2" fill="#5ba4fb" opacity=".5"/>
-<rect x="73" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
-<rect x="73" y="80" width="12" height="5" rx="2" fill="#5ba4fb" opacity=".5"/>
-<rect x="136" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
-<rect x="136" y="80" width="24" height="5" rx="2" fill="#5ba4fb" opacity=".8"/>
-<rect x="199" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
-<rect x="199" y="80" width="16" height="5" rx="2" fill="#f5a623" opacity=".6"/>
-<rect x="262" y="80" width="55" height="5" rx="2" fill="#2e3a58"/>
-<rect x="262" y="80" width="14" height="5" rx="2" fill="#5ba4fb" opacity=".4"/>
-<rect x="325" y="80" width="68" height="5" rx="2" fill="#2e3a58"/>
-<rect x="325" y="80" width="66" height="5" rx="2" fill="#22d3a0" opacity=".9"/>
-<rect x="401" y="80" width="45" height="5" rx="2" fill="#2e3a58"/>
-<rect x="401" y="80" width="43" height="5" rx="2" fill="#22d3a0" opacity=".8"/>
-<text x="37" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.04</text>
-<text x="100" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.06</text>
-<text x="163" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.10</text>
-<text x="226" y="98" text-anchor="middle" fill="#f5a623" font-size="8" font-family="DM Sans">0.08</text>
-<text x="289" y="98" text-anchor="middle" fill="#4e5a7a" font-size="8" font-family="DM Sans">0.05</text>
-<text x="359" y="98" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="DM Sans">0.42 ↑</text>
-<text x="424" y="98" text-anchor="middle" fill="#22d3a0" font-size="8" font-family="DM Sans">0.25 ↑</text>
-<text x="240" y="126" text-anchor="middle" fill="#4e5a7a" font-size="9.5" font-family="DM Sans">High attention to "deposit" and "$" → model learns "bank" = financial institution, not riverbank</text>
-<text x="240" y="140" text-anchor="middle" fill="#4e5a7a" font-size="8.5" font-family="DM Sans">Head 1: syntax · Head 2: coreference · Head 3: semantics · Heads 4–8: other specialisations</text>
+<svg viewBox="0 0 560 214" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs></defs>
+<rect x="44.0" y="122.8" width="28.0" height="9.2" rx="2" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1" opacity="0.6"/>
+<text x="58.0" y="116.8" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="JetBrains Mono" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.04</text>
+<rect x="27.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="58.0" y="157.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">I</text>
+<rect x="118.0" y="118.2" width="28.0" height="13.8" rx="2" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1" opacity="0.6"/>
+<text x="132.0" y="112.2" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="JetBrains Mono" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.06</text>
+<rect x="101.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="132.0" y="157.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">went</text>
+<rect x="192.0" y="109.0" width="28.0" height="23.0" rx="2" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1" opacity="0.6"/>
+<text x="206.0" y="103.0" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="JetBrains Mono" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.10</text>
+<rect x="175.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="206.0" y="157.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">to</text>
+<rect x="266.0" y="113.6" width="28.0" height="18.4" rx="2" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1" opacity="0.6"/>
+<text x="280.0" y="107.6" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="JetBrains Mono" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.08</text>
+<rect x="249.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#f5a623" stroke-width="1.8"/>
+<text x="280.0" y="157.3" fill="#f5a623" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">bank</text>
+<rect x="340.0" y="120.5" width="28.0" height="11.5" rx="2" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1" opacity="0.6"/>
+<text x="354.0" y="114.5" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="JetBrains Mono" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.05</text>
+<rect x="323.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="354.0" y="157.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">to</text>
+<rect x="414.0" y="35.4" width="28.0" height="96.6" rx="2" fill="#22d3a0" stroke="#22d3a0" stroke-width="1" opacity="0.85"/>
+<text x="428.0" y="29.4" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.42</text>
+<rect x="397.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.2"/>
+<text x="428.0" y="157.3" fill="#22d3a0" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">deposit</text>
+<rect x="488.0" y="74.5" width="28.0" height="57.5" rx="2" fill="#22d3a0" stroke="#22d3a0" stroke-width="1" opacity="0.85"/>
+<text x="502.0" y="68.5" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.25</text>
+<rect x="471.0" y="140.0" width="62.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.2"/>
+<text x="502.0" y="157.3" fill="#22d3a0" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">$</text>
+<text x="280.0" y="182.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">query</text>
+<text x="27.0" y="18.0" fill="#8e97b8" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">attention weight from &quot;bank&quot; to each token (softmax: they sum to 1)</text>
+<text x="280.0" y="206.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">most of the weight lands on &quot;deposit&quot; and &quot;$&quot;: this &quot;bank&quot; holds money, not a river</text>
 </svg></div></div>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -321,20 +314,86 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 </table></div>
 
 <!-- ── Interactive Attention Heatmap ── -->
-<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-wrap">
 <div class="anim-title">Interactive — Self-Attention Heatmap: click any token to see its attention weights</div>
-<div style="margin:12px 0 6px;font-size:12px;color:var(--text3)">Sentence: <em style="color:var(--text2)">"The cat sat on the mat because it was tired"</em></div>
-<div id="attn-tokens" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
-<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Attention weights from selected token to all tokens</div>
-<div id="attn-grid" style="overflow-x:auto"></div>
-<svg id="attn-svg" viewBox="0 0 580 130" style="width:100%;display:block;margin-top:14px"><g id="attn-fan"></g></svg>
-<div id="attn-explain" style="font-size:12px;color:var(--text2);margin-top:4px;padding:8px 10px;background:var(--bg3);border-radius:7px;line-height:1.6">Click any token above to see which other tokens it attends to most.</div>
+<div class="fx-controls">
+  <span>Sentence: <em>"The cat sat on the mat because it was tired"</em>. Click a token to make it the query.</span>
+  <span class="fx-chip" id="atx-chip" style="color:var(--amber)">query: it</span>
 </div>
+<svg viewBox="0 0 560 172" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs></defs>
+<g id="atx-arcs">
+<path d="M407.0,110.0 Q222.0,-39.8 37.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.52" stroke-linecap="round" stroke-opacity="0.43"/>
+<path d="M407.0,110.0 Q249.0,-21.4 91.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="5.36" stroke-linecap="round" stroke-opacity="0.88"/>
+<path d="M407.0,110.0 Q276.0,-3.1 145.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="2.24" stroke-linecap="round" stroke-opacity="0.52"/>
+<path d="M407.0,110.0 Q303.0,15.3 199.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.52" stroke-linecap="round" stroke-opacity="0.43"/>
+<path d="M407.0,110.0 Q330.0,33.6 253.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.52" stroke-linecap="round" stroke-opacity="0.43"/>
+<path d="M407.0,110.0 Q357.0,52.0 307.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.52" stroke-linecap="round" stroke-opacity="0.43"/>
+<path d="M407.0,110.0 Q384.0,70.4 361.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.76" stroke-linecap="round" stroke-opacity="0.46"/>
+<path d="M423.0,110.0 Q446.0,70.4 469.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.52" stroke-linecap="round" stroke-opacity="0.43"/>
+<path d="M423.0,110.0 Q473.0,52.0 523.0,110.0" fill="none" stroke="#5ba4fb" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.41"/>
+</g>
+<rect id="atx-b0" x="13.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="37.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t0">The</text>
+<rect id="atx-c0" x="13.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.138" stroke="#2e3a58" stroke-width="1"/>
+<text x="37.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w0">0.06</text>
+<rect id="atx-b1" x="67.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="91.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t1">cat</text>
+<rect id="atx-c1" x="67.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.554" stroke="#2e3a58" stroke-width="1"/>
+<text x="91.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="atx-w1">0.38</text>
+<rect id="atx-b2" x="121.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="145.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t2">sat</text>
+<rect id="atx-c2" x="121.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.216" stroke="#2e3a58" stroke-width="1"/>
+<text x="145.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w2">0.12</text>
+<rect id="atx-b3" x="175.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="199.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t3">on</text>
+<rect id="atx-c3" x="175.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.138" stroke="#2e3a58" stroke-width="1"/>
+<text x="199.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w3">0.06</text>
+<rect id="atx-b4" x="229.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="253.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t4">the</text>
+<rect id="atx-c4" x="229.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.138" stroke="#2e3a58" stroke-width="1"/>
+<text x="253.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w4">0.06</text>
+<rect id="atx-b5" x="283.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="307.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t5">mat</text>
+<rect id="atx-c5" x="283.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.138" stroke="#2e3a58" stroke-width="1"/>
+<text x="307.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w5">0.06</text>
+<rect id="atx-b6" x="337.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="361.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t6">because</text>
+<rect id="atx-c6" x="337.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.164" stroke="#2e3a58" stroke-width="1"/>
+<text x="361.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w6">0.08</text>
+<rect id="atx-b7" x="391.0" y="112" width="48" height="24" rx="6" fill="#f5a623" fill-opacity=".16" stroke="#f5a623" stroke-width="1.8"/>
+<text x="415.0" y="127.5" fill="#f5a623" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" id="atx-t7">it</text>
+<rect id="atx-c7" x="391.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.164" stroke="#f5a623" stroke-width="1.6"/>
+<text x="415.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w7">0.08</text>
+<rect id="atx-b8" x="445.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="469.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t8">was</text>
+<rect id="atx-c8" x="445.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.138" stroke="#2e3a58" stroke-width="1"/>
+<text x="469.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w8">0.06</text>
+<rect id="atx-b9" x="499.0" y="112" width="48" height="24" rx="6" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="523.0" y="127.5" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" id="atx-t9">tired</text>
+<rect id="atx-c9" x="499.0" y="142" width="48" height="24" rx="4" fill="#5ba4fb" fill-opacity="0.112" stroke="#2e3a58" stroke-width="1"/>
+<text x="523.0" y="157.2" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="JetBrains Mono" id="atx-w9">0.04</text>
+<rect id="atx-k0" x="10.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;The&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k1" x="64.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;cat&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k2" x="118.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;sat&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k3" x="172.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;on&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k4" x="226.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;the&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k5" x="280.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;mat&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k6" x="334.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;because&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k7" x="388.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;it&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k8" x="442.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;was&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+<rect id="atx-k9" x="496.0" y="108" width="54" height="60" fill="transparent" tabindex="0" role="button" aria-label="Make &quot;tired&quot; the query" style="cursor:pointer;outline-offset:-2px"/>
+</svg>
+<div class="fx-read" id="atx-read"></div>
+<div class="fx-note" id="atx-note"></div>
 <script>
 (function(){
-  var tokens=['The','cat','sat','on','the','mat','because','it','was','tired'];
-  var n=tokens.length;
-  var rawW=[
+  // Same frame as tools/figures/f34_2.py (keep in step): the module draws the
+  // initial state; this recolours boxes and cells by id and redraws the arcs.
+  var T=['The','cat','sat','on','the','mat','because','it','was','tired'];
+  var X0=13, BW=48, GX=6, TY=112;
+  // one row per query token: its softmax(QK^T/sqrt(d_k)) row, each sums to 1
+  var W=[
     [0.30,0.15,0.10,0.08,0.12,0.08,0.06,0.04,0.04,0.03],
     [0.12,0.28,0.14,0.06,0.08,0.06,0.06,0.08,0.06,0.06],
     [0.08,0.18,0.20,0.10,0.08,0.10,0.08,0.06,0.06,0.06],
@@ -346,78 +405,59 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
     [0.06,0.14,0.10,0.06,0.06,0.06,0.10,0.18,0.16,0.08],
     [0.04,0.18,0.08,0.06,0.04,0.06,0.08,0.20,0.10,0.16]
   ];
-  var selected=7;
-  function alphaCol(w){return 'rgba(91,125,248,'+Math.max(0.04,w.toFixed(2))+')';}
-  function textCol(w){return w>0.15?'#e6e9f4':'#4e5a7a';}
-  var tokDiv=document.getElementById('attn-tokens');
-  tokens.forEach(function(t,i){
-    var btn=document.createElement('button');
-    btn.textContent=t;btn.id='tok-'+i;
-    btn.style.cssText='padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s';
-    btn.onclick=function(){selected=i;render();};
-    tokDiv.appendChild(btn);
-  });
-  function renderGrid(){
-    var row=rawW[selected];
-    var html='<table style="border-collapse:collapse;font-size:11px;width:100%"><tr><td style="padding:3px 6px;color:var(--text3);font-size:10px">attending to →</td>';
-    tokens.forEach(function(t){html+='<td style="padding:3px 5px;text-align:center;color:var(--text3);font-size:10px;font-weight:600">'+t+'</td>';});
-    html+='</tr><tr>';
-    html+='<td style="padding:3px 6px;color:var(--accent);font-size:10px;font-weight:700">'+tokens[selected]+'</td>';
-    row.forEach(function(w,j){
-      var bg=alphaCol(w),tc=textCol(w);
-      var border=j===selected?'2px solid var(--accent)':'1px solid var(--border)';
-      html+='<td style="padding:6px 4px;text-align:center;background:'+bg+';border:'+border+';border-radius:4px;color:'+tc+';font-weight:'+(w>0.15?'700':'400')+';font-family:\'JetBrains Mono\',monospace">'+w.toFixed(2)+'</td>';
-    });
-    html+='</tr></table>';
-    document.getElementById('attn-grid').innerHTML=html;
-  }
-  function renderFan(){
-    var row=rawW[selected];
-    var W=560,srcY=100,tgtY=20,x0=10,slotW=W/n;
-    var srcX=x0+selected*slotW+slotW/2;
-    var html='';
-    row.forEach(function(w,j){
-      var tgtX=x0+j*slotW+slotW/2;
-      var thick=Math.max(0.5,w*14);
-      var alpha=Math.min(1,Math.max(0.08,w*1.8));
-      var col=j===selected?'#f5a623':'#5b7df8';
-      html+='<line x1="'+srcX.toFixed(1)+'" y1="'+srcY+'" x2="'+tgtX.toFixed(1)+'" y2="'+(tgtY+18)+'" stroke="'+col+'" stroke-width="'+thick.toFixed(1)+'" stroke-opacity="'+alpha.toFixed(2)+'" stroke-linecap="round"/>';
-    });
-    row.forEach(function(w,j){
-      var tgtX=x0+j*slotW+slotW/2;
-      var isSrc=j===selected,isTop=row.indexOf(Math.max.apply(null,row))===j;
-      var bg=isSrc?'#f5a623':(isTop?'rgba(91,125,248,.35)':'rgba(91,125,248,'+Math.max(0.05,w)+')');
-      var stroke=isSrc?'#f5a623':'#5b7df8';
-      html+='<rect x="'+(tgtX-22).toFixed(1)+'" y="'+tgtY+'" width="44" height="18" rx="5" fill="'+bg+'" stroke="'+stroke+'" stroke-width="'+(isSrc?'1.5':'0.75')+'" stroke-opacity="0.6"/>';
-      html+='<text x="'+tgtX.toFixed(1)+'" y="'+(tgtY+12).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="'+(isSrc?'#0b0d12':'#e6e9f4')+'" font-family="Inter,sans-serif" font-weight="'+(isSrc||isTop?'700':'400')+'">'+tokens[j]+'</text>';
-      html+='<text x="'+tgtX.toFixed(1)+'" y="'+(tgtY+32).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+(w>0.15?'#5b7df8':'#4e5a7a')+'" font-family="JetBrains Mono,monospace">'+w.toFixed(2)+'</text>';
-    });
-    html+='<rect x="'+(srcX-28).toFixed(1)+'" y="'+(srcY-14)+'" width="56" height="20" rx="6" fill="rgba(245,166,35,.25)" stroke="#f5a623" stroke-width="1.5"/>';
-    html+='<text x="'+srcX.toFixed(1)+'" y="'+(srcY-1)+'" text-anchor="middle" font-size="10" fill="#f5a623" font-family="Inter,sans-serif" font-weight="700">'+tokens[selected]+' (Q)</text>';
-    document.getElementById('attn-fan').innerHTML=html;
-  }
-  function renderExplain(){
-    var row=rawW[selected];
-    var sorted=row.map(function(w,j){return{w:w,j:j};}).sort(function(a,b){return b.w-a.w;});
-    var top3=sorted.slice(0,3).map(function(d){return'"'+tokens[d.j]+'" ('+d.w.toFixed(2)+')';}).join(', ');
-    var insight='';
-    if(selected===7)insight=' <em>Note: "it" attends most to "cat" (0.38) — the model has learned coreference: "it" refers to "cat".</em>';
-    else if(selected===9)insight=' <em>"tired" attends to "it"/"cat" — understanding who is tired requires resolving "it"→"cat".</em>';
-    else if(selected===6)insight=' <em>"because" attends to itself and surrounding context — bridging two clauses.</em>';
-    document.getElementById('attn-explain').innerHTML='<strong style="color:var(--amber)">"'+tokens[selected]+'"</strong> attends most to: '+top3+'.'+insight+' Line thickness ∝ attention weight α<sub>ij</sub> = softmax(QKᵀ/√d<sub>k</sub>).';
+  // legacy hexes: style.css §8 maps them to both themes
+  var AMBER='#f5a623', SURF='#1a1f2e', BORD='#2e3a58', BLUE='#5ba4fb', INK='#e6e9f4';
+  var NOTES={
+    7:'<strong style="color:var(--amber)">"it" attends most to "cat" (0.38).</strong> The model has resolved the coreference: "it" refers to the cat.',
+    9:'<strong style="color:var(--amber)">"tired" attends to "it" and "cat".</strong> Working out who is tired means resolving "it" → "cat" first.',
+    6:'<strong style="color:var(--amber)">"because" attends to itself and its neighbours</strong>, the words that bridge the two clauses.'
+  };
+  var $=function(id){return document.getElementById(id);};
+  if(!$('atx-arcs')) return;
+  var q=7;
+  function cx(i){return X0+BW/2+i*(BW+GX);}
+  function arcD(q,j){
+    var sx=cx(q)+(j>q?8:-8), ex=cx(j), h=12+0.17*Math.abs(ex-sx), y=TY-2;
+    return 'M'+sx.toFixed(1)+','+y+' Q'+((sx+ex)/2).toFixed(1)+','+(y-2*h).toFixed(1)+' '+ex.toFixed(1)+','+y;
   }
   function render(){
-    tokens.forEach(function(_,i){
-      var btn=document.getElementById('tok-'+i);
-      btn.style.background=i===selected?'rgba(245,166,35,.2)':'var(--surface)';
-      btn.style.borderColor=i===selected?'#f5a623':'var(--border)';
-      btn.style.color=i===selected?'#f5a623':'var(--text2)';
+    var row=W[q], html='';
+    row.forEach(function(w,j){
+      if(j===q) return;
+      html+='<path d="'+arcD(q,j)+'" fill="none" stroke="'+BLUE+'" stroke-width="'+(0.8+12*w).toFixed(2)
+          +'" stroke-linecap="round" stroke-opacity="'+Math.min(0.95,0.35+1.4*w).toFixed(2)+'"/>';
     });
-    renderGrid();renderFan();renderExplain();
+    $('atx-arcs').innerHTML=html;
+    row.forEach(function(w,i){
+      var isQ=i===q, b=$('atx-b'+i), t=$('atx-t'+i), c=$('atx-c'+i), v=$('atx-w'+i);
+      b.setAttribute('fill',isQ?AMBER:SURF); b.setAttribute('fill-opacity',isQ?'.16':'1');
+      b.setAttribute('stroke',isQ?AMBER:BORD); b.setAttribute('stroke-width',isQ?'1.8':'1.2');
+      t.setAttribute('fill',isQ?AMBER:INK);
+      if(isQ) t.setAttribute('font-weight','600'); else t.removeAttribute('font-weight');
+      c.setAttribute('fill-opacity',(0.06+1.3*w).toFixed(3));
+      c.setAttribute('stroke',isQ?AMBER:BORD); c.setAttribute('stroke-width',isQ?'1.6':'1');
+      v.textContent=w.toFixed(2);
+      if(w>0.15) v.setAttribute('font-weight','600'); else v.removeAttribute('font-weight');
+      $('atx-k'+i).setAttribute('aria-pressed',String(isQ));
+    });
+    var top=row.map(function(w,j){return{w:w,j:j};}).filter(function(d){return d.j!==q;})
+               .sort(function(a,b){return b.w-a.w;}).slice(0,3);
+    $('atx-chip').textContent='query: '+T[q];
+    $('atx-read').innerHTML='<span>strongest:</span>'+top.map(function(d){
+      return '<span>"'+T[d.j]+'" <b style="color:var(--blue)">'+d.w.toFixed(2)+'</b></span>';}).join('')
+      +'<span>row sums to <b>1.00</b></span>';
+    $('atx-note').innerHTML=(NOTES[q]||'<strong style="color:var(--amber)">"'+T[q]+'"</strong> spreads its attention across the sentence.')
+      +' Arc width and cell shade are the weight α<sub>ij</sub> = softmax(QKᵀ/√d<sub>k</sub>).';
   }
+  T.forEach(function(_,i){
+    var k=$('atx-k'+i);
+    k.addEventListener('click',function(){q=i;render();});
+    k.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();q=i;render();}});
+  });
   render();
 })();
 </script>
+</div>
 
 
 <div class="card cc"><div class="card-title">In code</div>

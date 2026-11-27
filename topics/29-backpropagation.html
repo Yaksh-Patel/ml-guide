@@ -303,107 +303,170 @@ print(f"dW2 = {dW2.flatten().round(4)}")
   </div>
 </div>
 
-<div class="anim-wrap" style="padding:16px 20px">
+<div class="anim-wrap">
 <div class="anim-title">Interactive — Forward Pass → Loss → Backward Pass (step through)</div>
-<div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap;align-items:center">
-  <button id="bp-btn" onclick="bpStep()" style="background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">▶ Step Forward</button>
-  <button onclick="bpReset()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit">↺ Reset</button>
-  <span id="bp-phase" style="font-size:12px;color:var(--text3);margin-left:4px"></span>
+<div class="fx-controls">
+  <button type="button" class="run-btn" id="bpx-step">Step forward</button>
+  <button type="button" class="reset-btn" id="bpx-reset">Reset</button>
+  <span class="fx-chip" id="bpx-chip">step 0 of 4</span>
 </div>
-<svg id="bp-svg" viewBox="0 0 580 280" style="width:100%;display:block">
-  <defs>
-    <marker id="bp-arr-f" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 2L8 5L1 8" fill="none" stroke="#5ba4fb" stroke-width="1.5" stroke-linecap="round"/></marker>
-    <marker id="bp-arr-b" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M9 2L2 5L9 8" fill="none" stroke="#f06767" stroke-width="1.5" stroke-linecap="round"/></marker>
-  </defs>
-  <!-- Forward edges -->
-  <line id="e-x-z1"  x1="74"  y1="140" x2="152" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-z1-h1" x1="208" y1="140" x2="278" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-w1-z1" x1="178" y1="52"  x2="178" y2="120" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-h1-z2" x1="336" y1="140" x2="396" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-w2-z2" x1="418" y1="52"  x2="418" y2="120" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-z2-yh" x1="452" y1="140" x2="510" y2="140" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <line id="e-yh-L"  x1="546" y1="162" x2="546" y2="192" stroke="#2e3a58" stroke-width="1.5" marker-end="url(#bp-arr-f)"/>
-  <!-- Backward edges (hidden) -->
-  <line id="b-z2-h1" x1="452" y1="158" x2="338" y2="158" stroke="#f06767" stroke-width="1.5" stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
-  <line id="b-z1-x"  x1="208" y1="158" x2="76"  y2="158" stroke="#f06767" stroke-width="1.5" stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
-  <line id="b-w1"    x1="178" y1="120" x2="178" y2="62"  stroke="#b97cf8" stroke-width="2"   stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
-  <line id="b-w2"    x1="418" y1="120" x2="418" y2="62"  stroke="#b97cf8" stroke-width="2"   stroke-dasharray="5 3" opacity="0" marker-end="url(#bp-arr-b)"/>
-  <!-- Nodes -->
-  <g id="n-x"><ellipse cx="50" cy="140" rx="26" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="50" y="137" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">x</text><text id="v-x" x="50" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">input</text></g>
-  <g id="n-w1"><rect x="152" y="26" width="52" height="36" rx="7" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="178" y="41" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">W₁</text><text id="v-w1" x="178" y="54" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">0.5</text></g>
-  <g id="n-z1"><ellipse cx="178" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="178" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">z₁=W₁x</text><text id="v-z1" x="178" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
-  <g id="n-h1"><ellipse cx="308" cy="140" rx="30" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="308" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">h₁=ReLU</text><text id="v-h1" x="308" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
-  <g id="n-w2"><rect x="392" y="26" width="52" height="36" rx="7" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="418" y="41" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">W₂</text><text id="v-w2" x="418" y="54" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace">0.8</text></g>
-  <g id="n-z2"><ellipse cx="420" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="420" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">z₂=W₂h₁</text><text id="v-z2" x="420" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
-  <g id="n-yh"><ellipse cx="530" cy="140" rx="28" ry="22" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="530" y="136" text-anchor="middle" font-size="10" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">ŷ=σ(z₂)</text><text id="v-yh" x="530" y="150" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
-  <g id="n-L"><rect x="508" y="192" width="76" height="42" rx="9" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.5"/><text x="546" y="210" text-anchor="middle" font-size="11" fill="#8e97b8" font-family="Inter,sans-serif" font-weight="600">L = BCE</text><text id="v-L" x="546" y="225" text-anchor="middle" font-size="9" fill="#4e5a7a" font-family="JetBrains Mono,monospace"></text></g>
-  <!-- Gradient labels -->
-  <text id="g-w2" x="428" y="85"  font-size="9" fill="#b97cf8" font-family="JetBrains Mono,monospace" opacity="0"></text>
-  <text id="g-w1" x="186" y="85"  font-size="9" fill="#b97cf8" font-family="JetBrains Mono,monospace" opacity="0"></text>
-  <text id="g-z2" x="370" y="172" font-size="9" fill="#f06767" font-family="JetBrains Mono,monospace" text-anchor="middle" opacity="0"></text>
-  <text id="g-h1" x="270" y="172" font-size="9" fill="#f06767" font-family="JetBrains Mono,monospace" text-anchor="middle" opacity="0"></text>
-  <text id="bp-phase-svg" x="290" y="268" text-anchor="middle" font-size="10" fill="#4e5a7a" font-family="Inter,sans-serif" font-weight="700" letter-spacing=".6"></text>
+<svg viewBox="0 0 560 192" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs><marker id="bpx-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#4e5a7a"/></marker></defs>
+<rect id="bpx-n-x" x="26.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-z1" x="116.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-h1" x="206.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-z2" x="296.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-yh" x="386.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-L" x="476.0" y="96.0" width="58" height="56" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<rect id="bpx-n-w1" x="116.0" y="22.0" width="58" height="28" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<text x="145.0" y="39.5" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">W₁ = 0.5</text>
+<rect id="bpx-n-w2" x="296.0" y="22.0" width="58" height="28" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<text x="325.0" y="39.5" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">W₂ = 0.8</text>
+<rect id="bpx-n-y" x="476.0" y="22.0" width="58" height="28" rx="7" fill="#1a1f2e" fill-opacity="1" stroke="#2e3a58" stroke-width="1.4"/>
+<text x="505.0" y="39.5" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">y = 1</text>
+<line x1="88.0" y1="124.0" x2="112.0" y2="124.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-x"><path d="M88.0,124.0 L106.0,124.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M112.0,124.0 L105.0,127.0 L105.0,121.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="178.0" y1="124.0" x2="202.0" y2="124.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-z1"><path d="M178.0,124.0 L196.0,124.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M202.0,124.0 L195.0,127.0 L195.0,121.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="268.0" y1="124.0" x2="292.0" y2="124.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-h1"><path d="M268.0,124.0 L286.0,124.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M292.0,124.0 L285.0,127.0 L285.0,121.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="358.0" y1="124.0" x2="382.0" y2="124.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-z2"><path d="M358.0,124.0 L376.0,124.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M382.0,124.0 L375.0,127.0 L375.0,121.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="448.0" y1="124.0" x2="472.0" y2="124.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-yh"><path d="M448.0,124.0 L466.0,124.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M472.0,124.0 L465.0,127.0 L465.0,121.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="137.0" y1="54.0" x2="137.0" y2="92.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-w1"><path d="M137.0,54.0 L137.0,86.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M137.0,92.0 L134.0,85.0 L140.0,85.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="317.0" y1="54.0" x2="317.0" y2="92.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-w2"><path d="M317.0,54.0 L317.0,86.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M317.0,92.0 L314.0,85.0 L320.0,85.0 z" fill="#5ba4fb" opacity="0"/></g>
+<line x1="505.0" y1="54.0" x2="505.0" y2="92.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#bpx-ah0)"/>
+<g id="bpx-f-y"><path d="M505.0,54.0 L505.0,86.0" fill="none" stroke="#5ba4fb" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M505.0,92.0 L502.0,85.0 L508.0,85.0 z" fill="#5ba4fb" opacity="0"/></g>
+<g id="bpx-b-h1"><path d="M211.0,172.0 L175.0,172.0" fill="none" stroke="#f06767" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M169.0,172.0 L176.0,169.0 L176.0,175.0 z" fill="#f06767" opacity="0"/></g>
+<g id="bpx-b-z2"><path d="M301.0,172.0 L265.0,172.0" fill="none" stroke="#f06767" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M259.0,172.0 L266.0,169.0 L266.0,175.0 z" fill="#f06767" opacity="0"/></g>
+<g id="bpx-b-yh"><path d="M391.0,172.0 L355.0,172.0" fill="none" stroke="#f06767" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M349.0,172.0 L356.0,169.0 L356.0,175.0 z" fill="#f06767" opacity="0"/></g>
+<g id="bpx-b-L"><path d="M481.0,172.0 L445.0,172.0" fill="none" stroke="#f06767" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M439.0,172.0 L446.0,169.0 L446.0,175.0 z" fill="#f06767" opacity="0"/></g>
+<g id="bpx-b-w1"><path d="M153.0,92.0 L153.0,60.0" fill="none" stroke="#b97cf8" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M153.0,54.0 L156.0,61.0 L150.0,61.0 z" fill="#b97cf8" opacity="0"/></g>
+<g id="bpx-b-w2"><path d="M333.0,92.0 L333.0,60.0" fill="none" stroke="#b97cf8" stroke-width="1.8" stroke-linecap="butt" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/><path d="M333.0,54.0 L336.0,61.0 L330.0,61.0 z" fill="#b97cf8" opacity="0"/></g>
+<text x="55.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">x</text>
+<text x="55.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">input</text>
+<text x="55.0" y="142.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-x">2.0</text>
+<text x="145.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">z₁</text>
+<text x="145.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">W₁ · x</text>
+<text x="145.0" y="142.0" fill="#5ba4fb" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-z1" opacity="0">1.00</text>
+<text x="235.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">h₁</text>
+<text x="235.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">ReLU(z₁)</text>
+<text x="235.0" y="142.0" fill="#5ba4fb" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-h1" opacity="0">1.00</text>
+<text x="325.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">z₂</text>
+<text x="325.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">W₂ · h₁</text>
+<text x="325.0" y="142.0" fill="#5ba4fb" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-z2" opacity="0">0.80</text>
+<text x="415.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">ŷ</text>
+<text x="415.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">σ(z₂)</text>
+<text x="415.0" y="142.0" fill="#5ba4fb" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-yh" opacity="0">0.690</text>
+<text x="505.0" y="111.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">L</text>
+<text x="505.0" y="124.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">BCE(ŷ, y)</text>
+<text x="505.0" y="142.0" fill="#f5a623" font-size="10" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" id="bpx-v-L" opacity="0">0.371</text>
+<text x="145.0" y="170.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-z1" opacity="0">−0.248</text>
+<text x="145.0" y="182.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-z1" opacity="0">∂L/∂z₁</text>
+<text x="235.0" y="170.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-h1" opacity="0">−0.248</text>
+<text x="235.0" y="182.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-h1" opacity="0">∂L/∂h₁</text>
+<text x="325.0" y="170.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-z2" opacity="0">−0.310</text>
+<text x="325.0" y="182.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-z2" opacity="0">∂L/∂z₂</text>
+<text x="415.0" y="170.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-yh" opacity="0">−1.449</text>
+<text x="415.0" y="182.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-yh" opacity="0">∂L/∂ŷ</text>
+<text x="505.0" y="170.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-L" opacity="0">1</text>
+<text x="505.0" y="182.0" fill="#f06767" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-L" opacity="0">∂L/∂L</text>
+<text x="182.0" y="34.0" fill="#b97cf8" font-size="9" text-anchor="start" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-w1" opacity="0">−0.496</text>
+<text x="182.0" y="46.0" fill="#b97cf8" font-size="8.5" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-w1" opacity="0">∂L/∂W₁</text>
+<text x="362.0" y="34.0" fill="#b97cf8" font-size="9" text-anchor="start" font-family="JetBrains Mono" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-g-w2" opacity="0">−0.310</text>
+<text x="362.0" y="46.0" fill="#b97cf8" font-size="8.5" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round" id="bpx-gn-w2" opacity="0">∂L/∂W₂</text>
+<text x="26.0" y="84.0" fill="#5ba4fb" font-size="9" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">forward →</text>
+<text x="26.0" y="176.0" fill="#f06767" font-size="9" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">← backward</text>
 </svg>
-<div id="bp-explain" style="font-size:12px;color:var(--text2);margin-top:8px;padding:8px 12px;background:var(--bg3);border-radius:7px;line-height:1.7"></div>
-</div>
+<div class="fx-note" id="bpx-note" style="min-height:88px"></div>
 <script>
 (function(){
+  // Same graph and numbers as tools/figures/f29_2.py (keep in step); this only reveals them.
   var x=2.0,W1=0.5,W2=0.8,y=1.0;
   var z1=W1*x,h1=Math.max(0,z1),z2=W2*h1,yh=1/(1+Math.exp(-z2));
   var L=-(y*Math.log(yh)+(1-y)*Math.log(1-yh));
-  var dL_dz2=yh-y,dL_dW2=dL_dz2*h1,dL_dh1=dL_dz2*W2,dL_dz1=dL_dh1*(z1>0?1:0),dL_dW1=dL_dz1*x;
-  function hi(id,stroke,fill){var el=document.querySelector('#n-'+id+' ellipse')||document.querySelector('#n-'+id+' rect');if(el){el.setAttribute('stroke',stroke);el.setAttribute('fill',fill);}}
-  function se(id,op){document.getElementById(id).style.opacity=op;}
-  function st(id,t){document.getElementById(id).textContent=t;}
-  function sg(id,t){var el=document.getElementById(id);el.textContent=t;el.style.opacity='1';}
-  var phase=0;
-  function bpReset(){
-    phase=0;
-    ['x','z1','h1','z2','yh','L','w1','w2'].forEach(function(id){hi(id,'#2e3a58','#1a1f2e');});
-    st('v-x','2.0');st('v-w1','0.5');st('v-w2','0.8');
-    ['v-z1','v-h1','v-z2','v-yh','v-L'].forEach(function(id){st(id,'');});
-    ['e-x-z1','e-z1-h1','e-w1-z1','e-h1-z2','e-w2-z2','e-z2-yh','e-yh-L'].forEach(function(id){document.getElementById(id).style.stroke='#2e3a58';});
-    ['b-z2-h1','b-z1-x','b-w1','b-w2'].forEach(function(id){se(id,0);});
-    ['g-w2','g-w1','g-z2','g-h1'].forEach(function(id){document.getElementById(id).style.opacity='0';});
-    document.getElementById('bp-btn').textContent='▶ Step Forward';
-    document.getElementById('bp-btn').style.background='var(--accent)';
-    document.getElementById('bp-phase').textContent='';
-    st('bp-phase-svg','');
-    document.getElementById('bp-explain').innerHTML='Click <strong>Step Forward</strong> to walk through: values flow left→right (forward pass), then gradients flow right→left (backward pass).';
+  var g_yh=-y/yh+(1-y)/(1-yh),g_z2=yh-y,g_h1=g_z2*W2,g_z1=g_h1*(z1>0?1:0),g_W2=g_z2*h1,g_W1=g_z1*x;
+  var $=function(id){return document.getElementById(id);};
+  var n=function(v,d){return v.toFixed(d).replace('-','−');};
+  var C={blue:'#5ba4fb',red:'#f06767',purple:'#b97cf8',amber:'#f5a623',bord:'#2e3a58',surf:'#1a1f2e'};
+  var DRAW=0.4, still=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var EASE='cubic-bezier(.45,0,.25,1)', timers=[], pending=[], phase=0;
+  var ARROWS=['f-x','f-z1','f-h1','f-z2','f-yh','f-w1','f-w2','f-y','b-yh','b-z2','b-h1','b-L','b-w1','b-w2'];
+  var NODES=['x','z1','h1','z2','yh','L','w1','w2','y'];
+  var VALS=['z1','h1','z2','yh','L'], GRADS=['z1','h1','z2','yh','L','w1','w2'];
+  function line(k){return $('bpx-'+k).firstChild;} function head(k){return $('bpx-'+k).lastChild;}
+  function anim(on){
+    ARROWS.forEach(function(k){ line(k).style.transition=on?'stroke-dashoffset '+DRAW+'s '+EASE:'none';
+      head(k).style.transition=on?'opacity .12s linear '+(DRAW-0.1)+'s':'none'; });
+    NODES.forEach(function(k){ $('bpx-n-'+k).style.transition=on?'stroke .3s, fill-opacity .3s':'none'; });
+    VALS.concat(GRADS).forEach(function(k){ ['bpx-v-','bpx-g-','bpx-gn-'].forEach(function(p){ var e=$(p+k); if(e) e.style.transition=on?'opacity .3s':'none'; }); });
   }
-  window.bpReset=bpReset;
-  window.bpStep=function(){
-    phase++;
-    if(phase===1){
-      hi('x','#5ba4fb','rgba(91,164,251,.15)');hi('z1','#5ba4fb','rgba(91,164,251,.15)');hi('w1','#5ba4fb','rgba(91,164,251,.12)');
-      st('v-x',x.toFixed(1));st('v-z1',z1.toFixed(2));
-      document.getElementById('e-x-z1').style.stroke='#5ba4fb';document.getElementById('e-w1-z1').style.stroke='#5ba4fb';
-      st('bp-phase-svg','FORWARD PASS');document.getElementById('bp-phase').textContent='Step 1 / 4';
-      document.getElementById('bp-explain').innerHTML='<strong style="color:#5ba4fb">Forward pass (layer 1):</strong> z₁ = W₁ · x = '+W1+' × '+x+' = <strong>'+z1.toFixed(2)+'</strong>. h₁ = ReLU('+z1.toFixed(2)+') = <strong>'+h1.toFixed(2)+'</strong>.';
-    } else if(phase===2){
-      hi('h1','#5ba4fb','rgba(91,164,251,.15)');hi('z2','#5ba4fb','rgba(91,164,251,.15)');hi('yh','#5ba4fb','rgba(91,164,251,.15)');hi('w2','#5ba4fb','rgba(91,164,251,.12)');hi('L','#f5a623','rgba(245,166,35,.15)');
-      st('v-h1',h1.toFixed(2));st('v-z2',z2.toFixed(2));st('v-yh',yh.toFixed(3));st('v-L','L='+L.toFixed(3));
-      ['e-h1-z2','e-w2-z2','e-z2-yh','e-yh-L'].forEach(function(id){document.getElementById(id).style.stroke='#5ba4fb';});
-      document.getElementById('bp-phase').textContent='Step 2 / 4';
-      document.getElementById('bp-explain').innerHTML='<strong style="color:#5ba4fb">Forward pass (layer 2 + loss):</strong> z₂ = W₂ · h₁ = '+W2+' × '+h1+' = <strong>'+z2.toFixed(2)+'</strong>. ŷ = σ(z₂) = <strong>'+yh.toFixed(3)+'</strong>. L = BCE = <strong>'+L.toFixed(3)+'</strong>. This scalar is what we differentiate.';
-    } else if(phase===3){
-      se('b-z2-h1',1);hi('z2','#f06767','rgba(240,103,103,.18)');hi('h1','#f06767','rgba(240,103,103,.15)');
-      sg('g-z2','∂L/∂z₂='+dL_dz2.toFixed(3));sg('g-h1','∂L/∂h₁='+dL_dh1.toFixed(3));
-      st('bp-phase-svg','BACKWARD PASS');document.getElementById('bp-phase').textContent='Step 3 / 4';
-      document.getElementById('bp-btn').textContent='▶ Step Backward';document.getElementById('bp-btn').style.background='#b97cf8';
-      document.getElementById('bp-explain').innerHTML='<strong style="color:#f06767">Backward pass:</strong> ∂L/∂z₂ = ŷ − y = '+yh.toFixed(3)+' − 1 = <strong>'+dL_dz2.toFixed(3)+'</strong> (sigmoid+BCE gradient simplifies cleanly). ∂L/∂h₁ = ∂L/∂z₂ · W₂ = <strong>'+dL_dh1.toFixed(3)+'</strong>. Gradients flow right → left.';
-    } else if(phase===4){
-      se('b-z1-x',1);se('b-w1',1);se('b-w2',1);
-      hi('w1','#b97cf8','rgba(185,124,248,.2)');hi('w2','#b97cf8','rgba(185,124,248,.2)');
-      sg('g-w2','∂L/∂W₂='+dL_dW2.toFixed(3));sg('g-w1','∂L/∂W₁='+dL_dW1.toFixed(3));
-      document.getElementById('bp-phase').textContent='Step 4 / 4 — Complete';
-      document.getElementById('bp-btn').textContent='↺ Reset';document.getElementById('bp-btn').style.background='#2e3a58';
-      document.getElementById('bp-explain').innerHTML='<strong style="color:#b97cf8">Weight gradients:</strong> ∂L/∂W₂ = ∂L/∂z₂ · h₁ = <strong>'+dL_dW2.toFixed(3)+'</strong>. ∂L/∂W₁ = ∂L/∂z₁ · x = <strong>'+dL_dW1.toFixed(3)+'</strong>. Update: W₁ ← W₁ − α·('+dL_dW1.toFixed(3)+'), W₂ ← W₂ − α·('+dL_dW2.toFixed(3)+'). Then repeat for next batch.';
-    } else { bpReset(); }
-  };
-  bpReset();
+  function drawIn(k){ line(k).setAttribute('stroke-dashoffset','0'); head(k).setAttribute('opacity','1'); }
+  function light(k,col,tint){ var r=$('bpx-n-'+k); r.setAttribute('stroke',col); r.setAttribute('fill',col); r.setAttribute('fill-opacity',tint||'.14'); }
+  function show(id){ var e=$(id); if(e) e.setAttribute('opacity','1'); }
+  function val(k){ light(k,k==='L'?C.amber:C.blue); show('bpx-v-'+k); }
+  function grad(k,col){ light(k,col||C.red); show('bpx-g-'+k); show('bpx-gn-'+k); }
+  // each step: [seconds, action]
+  var STEPS=[
+    [[0,function(){drawIn('f-x');drawIn('f-w1');light('x',C.blue);light('w1',C.blue);}],[DRAW,function(){val('z1');}],
+     [DRAW+0.1,function(){drawIn('f-z1');}],[2*DRAW+0.1,function(){val('h1');}]],
+    [[0,function(){drawIn('f-h1');drawIn('f-w2');light('w2',C.blue);}],[DRAW,function(){val('z2');}],
+     [DRAW+0.1,function(){drawIn('f-z2');}],[2*DRAW+0.1,function(){val('yh');}],
+     [2*DRAW+0.2,function(){drawIn('f-yh');drawIn('f-y');light('y',C.blue);}],[3*DRAW+0.2,function(){val('L');}]],
+    [[0,function(){grad('L');}],[0.1,function(){drawIn('b-L');}],[DRAW+0.1,function(){grad('yh');}],
+     [DRAW+0.2,function(){drawIn('b-yh');}],[2*DRAW+0.2,function(){grad('z2');}],
+     [2*DRAW+0.3,function(){drawIn('b-z2');}],[3*DRAW+0.3,function(){grad('h1');}]],
+    [[0,function(){drawIn('b-w2');}],[DRAW,function(){grad('w2',C.purple);}],
+     [DRAW+0.1,function(){drawIn('b-h1');}],[2*DRAW+0.1,function(){grad('z1');}],
+     [2*DRAW+0.2,function(){drawIn('b-w1');}],[3*DRAW+0.2,function(){grad('w1',C.purple);}]]
+  ];
+  var CHIP=[['step 0 of 4',''],['1 of 4 · forward','var(--blue)'],['2 of 4 · forward + loss','var(--blue)'],
+            ['3 of 4 · backward','var(--red)'],['4 of 4 · weight gradients','var(--purple)']];
+  var NOTE=[
+    'Press <strong>Step forward</strong> to walk through it: values flow left → right (forward pass), then gradients flow right → left (backward pass).',
+    '<strong style="color:var(--blue)">Forward pass, layer 1:</strong> z₁ = W₁ · x = '+W1+' × '+x.toFixed(1)+' = <strong>'+z1.toFixed(2)+'</strong>. h₁ = ReLU('+z1.toFixed(2)+') = <strong>'+h1.toFixed(2)+'</strong>.',
+    '<strong style="color:var(--blue)">Forward pass, layer 2 + loss:</strong> z₂ = W₂ · h₁ = '+W2+' × '+h1+' = <strong>'+z2.toFixed(2)+'</strong>. ŷ = σ(z₂) = <strong>'+yh.toFixed(3)+'</strong>. L = BCE = <strong>'+L.toFixed(3)+'</strong>. This scalar is what we differentiate.',
+    '<strong style="color:var(--red)">Backward pass:</strong> start from ∂L/∂L = 1. ∂L/∂ŷ = −y/ŷ = <strong>'+n(g_yh,3)+'</strong>. Times σ′(z₂) = ŷ(1 − ŷ) gives ∂L/∂z₂ = ŷ − y = <strong>'+n(g_z2,3)+'</strong> (sigmoid + BCE simplify cleanly). ∂L/∂h₁ = ∂L/∂z₂ · W₂ = <strong>'+n(g_h1,3)+'</strong>. Gradients flow right → left.',
+    '<strong style="color:var(--purple)">Weight gradients:</strong> ∂L/∂W₂ = ∂L/∂z₂ · h₁ = <strong>'+n(g_W2,3)+'</strong>. The ReLU gate is open (z₁ &gt; 0), so ∂L/∂z₁ = ∂L/∂h₁ = '+n(g_z1,3)+', and ∂L/∂W₁ = ∂L/∂z₁ · x = <strong>'+n(g_W1,3)+'</strong>. Update: W ← W − α·∂L/∂W. Both gradients are negative, so both weights go up and ŷ moves toward y = 1. Then repeat for the next batch.'
+  ];
+  var LABEL=['Step forward','Step forward','Step backward','Step backward','Start over'];
+  function flush(){ timers.forEach(clearTimeout); timers=[]; pending.forEach(function(a){a();}); pending=[]; }
+  function reset(){
+    flush(); anim(false); phase=0;
+    ARROWS.forEach(function(k){ line(k).setAttribute('stroke-dashoffset','1'); head(k).setAttribute('opacity','0'); });
+    NODES.forEach(function(k){ var r=$('bpx-n-'+k); r.setAttribute('stroke',C.bord); r.setAttribute('fill',C.surf); r.setAttribute('fill-opacity','1'); });
+    VALS.forEach(function(k){ $('bpx-v-'+k).setAttribute('opacity','0'); });
+    GRADS.forEach(function(k){ $('bpx-g-'+k).setAttribute('opacity','0'); $('bpx-gn-'+k).setAttribute('opacity','0'); });
+    render();
+  }
+  function render(){
+    $('bpx-step').textContent=LABEL[phase];
+    $('bpx-chip').textContent=CHIP[phase][0]; $('bpx-chip').style.color=CHIP[phase][1];
+    $('bpx-note').innerHTML=NOTE[phase];
+  }
+  function step(){
+    if(phase===4){ reset(); return; }
+    flush(); phase++;
+    var beats=STEPS[phase-1];
+    if(still){ anim(false); beats.forEach(function(b){b[1]();}); }
+    else {
+      void $('bpx-n-x').getBoundingClientRect(); anim(true);
+      beats.forEach(function(b){
+        var fn=b[1]; pending.push(fn);
+        timers.push(setTimeout(function(){ var i=pending.indexOf(fn); if(i>=0){ pending.splice(i,1); fn(); } }, b[0]*1000));
+      });
+    }
+    render();
+  }
+  $('bpx-step').addEventListener('click',step);
+  $('bpx-reset').addEventListener('click',reset);
+  reset();
 })();
 </script>
+</div>
 
 <div class="card ca"><div class="card-title">What this looks like at scale</div>
 <ul class="bul">
