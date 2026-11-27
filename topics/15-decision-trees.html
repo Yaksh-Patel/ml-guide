@@ -27,30 +27,35 @@ I_R &= 1 - (0.125^2 + 0.875^2) = 0.2188 \\
 <div class="card-body" style="margin-top:8px">That 0.1875 is the number the split is chosen by, and — weighted by how many rows passed through the node — it is also exactly what gets accumulated into <code>feature_importances_</code>. Knowing that the importance <em>is</em> summed training-time impurity gain is what makes its biases predictable rather than mysterious.</div>
 <div class="card-body" style="margin-top:8px"><strong>On Gini versus entropy: they almost never disagree.</strong> The two curves have the same shape and differ by a scale factor over most of the range; published comparisons find them producing identical trees the large majority of the time. Gini is the sklearn default because it skips a logarithm. Do not spend interview minutes defending a choice worth a fraction of a percent.</div>
 <div class="anim-wrap"><div class="anim-title">One split, measured by the impurity it buys</div>
-<svg viewBox="0 0 500 198" xmlns="http://www.w3.org/2000/svg">
-<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
-<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">a split is chosen by the impurity it removes</text>
-<rect x="190" y="24" width="120" height="32" rx="5" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="250.0" y="38.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.667</text>
-<text x="250.0" y="51.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">50 / 50 / 50</text>
-<line x1="220" y1="58" x2="150" y2="78" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
-<line x1="280" y1="58" x2="350" y2="78" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
-<text x="178.0" y="72.0" fill="#f5a623" font-size="8.5" text-anchor="end" font-family="DM Sans">petal ≤ 2.45</text>
-<text x="322.0" y="72.0" fill="#f5a623" font-size="8.5" text-anchor="start" font-family="DM Sans">&gt; 2.45</text>
-<rect x="80" y="82" width="130" height="32" rx="5" fill="#1a1f2e" stroke="#22d3a0"/>
-<text x="145.0" y="96.0" fill="#22d3a0" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.000</text>
-<text x="145.0" y="109.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">50 / 0 / 0  pure</text>
-<rect x="292" y="82" width="130" height="32" rx="5" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="357.0" y="96.0" fill="#8e97b8" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.500</text>
-<text x="357.0" y="109.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">0 / 50 / 50</text>
-<line x1="357" y1="116" x2="357" y2="132" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
-<rect x="292" y="136" width="130" height="30" rx="5" fill="#1a1f2e" stroke="#2e3a58"/>
-<text x="357.0" y="149.0" fill="#8e97b8" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.168 / 0.043</text>
-<text x="357.0" y="162.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">split again on petal width</text>
-<text x="122.0" y="140.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">Δimpurity, weighted by</text>
-<text x="122.0" y="154.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">node size, IS the feature</text>
-<text x="122.0" y="168.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans">importance number.</text>
-<text x="250.0" y="188.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Which is why high-cardinality features score highly whether or not they generalise.</text>
+<svg viewBox="0 0 560 262" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs><marker id="dt-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#4e5a7a"/></marker></defs>
+<rect x="216.0" y="14.0" width="128.0" height="38.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="280.0" y="31.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.667</text>
+<text x="280.0" y="44.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">50 / 50 / 50</text>
+<rect x="56.0" y="102.0" width="128.0" height="38.0" rx="6" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.2"/>
+<text x="120.0" y="119.0" fill="#22d3a0" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.000</text>
+<text x="120.0" y="132.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">50 / 0 / 0   pure</text>
+<rect x="336.0" y="102.0" width="128.0" height="38.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="400.0" y="119.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.500</text>
+<text x="400.0" y="132.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">0 / 50 / 50</text>
+<rect x="274.0" y="190.0" width="112.0" height="38.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="330.0" y="207.0" fill="#8e97b8" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.168</text>
+<text x="330.0" y="220.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">0 / 49 / 5</text>
+<rect x="414.0" y="190.0" width="112.0" height="38.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="470.0" y="207.0" fill="#8e97b8" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">gini 0.043</text>
+<text x="470.0" y="220.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">0 / 1 / 45</text>
+<line x1="258.2" y1="53.3" x2="123.8" y2="100.7" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#dt-ah0)"/>
+<line x1="301.6" y1="53.8" x2="396.4" y2="100.2" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#dt-ah0)"/>
+<line x1="379.1" y1="142.8" x2="332.9" y2="187.2" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#dt-ah0)"/>
+<line x1="420.9" y1="142.8" x2="467.1" y2="187.2" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#dt-ah0)"/>
+<text x="175.0" y="73.0" fill="#f5a623" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">petal length ≤ 2.45</text>
+<text x="365.0" y="73.0" fill="#f5a623" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">&gt; 2.45</text>
+<text x="342.0" y="163.0" fill="#f5a623" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">petal width ≤ 1.75</text>
+<text x="458.0" y="163.0" fill="#f5a623" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">&gt; 1.75</text>
+<text x="354.0" y="46.0" fill="#8e97b8" font-size="8.5" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">setosa / versicolor / virginica</text>
+<text x="120.0" y="180.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">gain at the root, weighted by node size</text>
+<text x="120.0" y="196.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">0.667 − (⅓·0 + ⅔·0.500) = 0.333</text>
+<text x="280.0" y="254.0" fill="#8e97b8" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Summed over every split on a feature, this gain is its feature_importances_.</text>
 </svg></div>
 </div>
 

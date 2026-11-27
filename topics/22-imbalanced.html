@@ -41,31 +41,36 @@
 <p>The derivation assumes p means what it says. Tree ensembles are not calibrated out of the box, and anything you do in the next two cards — class weights, resampling — deliberately breaks calibration by shifting the implied base rate. If you reweight and then apply a cost-derived threshold, the threshold is being applied to numbers that are no longer probabilities. Either leave the data alone and threshold, or reweight and recalibrate on the true prevalence before thresholding.</p></div></div>
 
 <div class="anim-wrap"><div class="anim-title">Four ways to handle imbalance, in pipeline order</div>
-<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
-<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
-<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">four responses, and where in the pipeline each one acts</text>
-<line x1="40" y1="52" x2="470" y2="52" stroke="#2e3a58" stroke-width="2"/>
-<circle cx="88" cy="52" r="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.6"/>
-<text x="88.0" y="40.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">data</text>
-<circle cx="208" cy="52" r="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.6"/>
-<text x="208.0" y="40.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">loss</text>
-<circle cx="328" cy="52" r="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.6"/>
-<text x="328.0" y="40.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">model</text>
-<circle cx="448" cy="52" r="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.6"/>
-<text x="448.0" y="40.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">threshold</text>
-<line x1="88" y1="57" x2="88" y2="74" stroke="#f06767" stroke-width="1" stroke-dasharray="2 2"/>
-<text x="88.0" y="78.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">resample / SMOTE</text>
-<text x="88.0" y="90.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">synthesises rows; must sit inside the CV fold</text>
-<line x1="208" y1="57" x2="208" y2="100" stroke="#f5a623" stroke-width="1" stroke-dasharray="2 2"/>
-<text x="208.0" y="104.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">class_weight</text>
-<text x="208.0" y="116.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">reweights the loss; no data invented</text>
-<line x1="328" y1="57" x2="328" y2="126" stroke="#b97cf8" stroke-width="1" stroke-dasharray="2 2"/>
-<text x="328.0" y="130.0" fill="#b97cf8" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">focal loss</text>
-<text x="328.0" y="142.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">down-weights the easy majority</text>
-<line x1="448" y1="57" x2="448" y2="152" stroke="#22d3a0" stroke-width="1" stroke-dasharray="2 2"/>
-<text x="448.0" y="156.0" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">move the cut</text>
-<text x="448.0" y="168.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">changes nothing but the decision</text>
-<text x="250.0" y="190.0" fill="#22d3a0" font-size="8.5" text-anchor="middle" font-family="DM Sans">Try the last one first: it costs nothing, invents no data, and is usually competitive.</text>
+<svg viewBox="0 0 560 172" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs><marker id="imb-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#4e5a7a"/></marker><marker id="imb-ah1" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#f06767"/></marker><marker id="imb-ah2" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#f5a623"/></marker><marker id="imb-ah3" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#b97cf8"/></marker><marker id="imb-ah4" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#22d3a0"/></marker></defs>
+<rect x="14.0" y="18.0" width="100.0" height="40.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="64.0" y="36.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">training data</text>
+<text x="64.0" y="49.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">rows the model sees</text>
+<rect x="150.0" y="18.0" width="260.0" height="40.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="280.0" y="36.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">training loss</text>
+<text x="280.0" y="49.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">what each row costs</text>
+<rect x="450.0" y="18.0" width="96.0" height="40.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="498.0" y="36.0" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600">threshold</text>
+<text x="498.0" y="49.5" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans">flag if p &gt; t</text>
+<line x1="118.0" y1="38.0" x2="146.0" y2="38.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#imb-ah0)"/>
+<line x1="414.0" y1="38.0" x2="446.0" y2="38.0" stroke="#4e5a7a" stroke-width="1.4" stroke-linecap="round" marker-end="url(#imb-ah0)"/>
+<line x1="64.0" y1="80.0" x2="64.0" y2="62.0" stroke="#f06767" stroke-width="1.3" stroke-linecap="round" marker-end="url(#imb-ah1)"/>
+<text x="64.0" y="96.0" fill="#f06767" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">resample / SMOTE</text>
+<text x="64.0" y="110.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">synthesises minority rows;</text>
+<text x="64.0" y="122.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">only inside the CV fold</text>
+<line x1="215.0" y1="80.0" x2="215.0" y2="62.0" stroke="#f5a623" stroke-width="1.3" stroke-linecap="round" marker-end="url(#imb-ah2)"/>
+<text x="215.0" y="96.0" fill="#f5a623" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">class_weight</text>
+<text x="215.0" y="110.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">reweights rows by class;</text>
+<text x="215.0" y="122.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">no data invented</text>
+<line x1="345.0" y1="80.0" x2="345.0" y2="62.0" stroke="#b97cf8" stroke-width="1.3" stroke-linecap="round" marker-end="url(#imb-ah3)"/>
+<text x="345.0" y="96.0" fill="#b97cf8" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">focal loss</text>
+<text x="345.0" y="110.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">down-weights easy rows</text>
+<text x="345.0" y="122.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">of either class</text>
+<line x1="498.0" y1="80.0" x2="498.0" y2="62.0" stroke="#22d3a0" stroke-width="1.3" stroke-linecap="round" marker-end="url(#imb-ah4)"/>
+<text x="498.0" y="96.0" fill="#22d3a0" font-size="10" text-anchor="middle" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">move the cut</text>
+<text x="498.0" y="110.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">changes only the decision;</text>
+<text x="498.0" y="122.0" fill="#8e97b8" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">p stays calibrated</text>
+<text x="280.0" y="162.0" fill="#22d3a0" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Try the last one first: it costs nothing, invents no data, and is usually competitive.</text>
 </svg></div>
 
 <div class="card ca"><div class="card-title">Class weights: the same effect without touching the data</div>
