@@ -3,7 +3,9 @@
 
     python3 tools/figures/build.py              # every module in tools/figures/
     python3 tools/figures/build.py f06_0 f29_1  # named modules
-    python3 tools/figures/build.py --check      # render + check only, write nothing
+    python3 tools/figures/build.py --check      # render + check layout only, write nothing
+    python3 tools/figures/build.py --verify     # also fail if a topic's svg differs from
+                                                # what its module renders (CI)
 
 Each module sets TARGET = ('06-bias-variance', 0) — topic file stem and the
 index of the .anim-wrap in that file — and defines draw() -> figkit.Fig.
@@ -34,7 +36,8 @@ def wraps(src):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    check_only = '--check' in sys.argv
+    verify = '--verify' in sys.argv
+    check_only = '--check' in sys.argv or verify
     mods = args or sorted(p.stem for p in HERE.glob('f*.py'))
     failed = False
     for name in mods:
@@ -56,11 +59,19 @@ def main():
         s1 = block.index('</svg>', s0) + len('</svg>')
         new_block = block[:s0] + fig.svg() + block[s1:]
         if new_block == block:
-            print(f'== {name}: unchanged')
+            print(f'== {name}: up to date')
             continue
-        if not check_only:
-            path.write_text(src[:a] + new_block + src[b:])
-        print(f'{"ok" if check_only else "++"} {name} -> {stem}.html figure {idx}')
+        if verify:
+            # the topic no longer matches its module: someone edited the svg by
+            # hand, or changed the module without running build.py
+            failed = True
+            print(f'!! {name}: {stem}.html figure {idx} differs from what the module renders; run build.py {name}')
+            continue
+        if check_only:
+            print(f'ok {name} -> {stem}.html figure {idx} (not written)')
+            continue
+        path.write_text(src[:a] + new_block + src[b:])
+        print(f'++ {name} -> {stem}.html figure {idx}')
     sys.exit(1 if failed else 0)
 
 

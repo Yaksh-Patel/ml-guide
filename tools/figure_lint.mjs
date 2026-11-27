@@ -20,7 +20,12 @@ const BASE = `http://127.0.0.1:${server.address().port}/`;
 const src = fs.readFileSync(path.join(ROOT, 'assets/js/topics.js'), 'utf8');
 let ids = [...src.matchAll(/\{ id: '([^']+)', num: '(\d+)'/g)].map(m => [m[1], m[2]]);
 if (ONLY) ids = ids.filter(([id, n]) => ONLY.split(',').includes(n) || ONLY.split(',').includes(id));
-const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const CHROME = process.env.CHROME_PATH || [
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium',
+].find(p => fs.existsSync(p));
+if (!CHROME) { console.error('no Chrome found; set CHROME_PATH'); process.exit(2); }
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--font-render-hinting=none'] });
 const page = await browser.newPage();
 await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
 await page.setViewport({ width: W, height: 1000 });

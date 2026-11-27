@@ -68,6 +68,7 @@ jobs:
           cp "$GITHUB_WORKSPACE"/tools/kxstrict.mjs .
           cp "$GITHUB_WORKSPACE"/tools/kxinline.mjs .
           cp "$GITHUB_WORKSPACE"/tools/layout_check.mjs .
+          cp "$GITHUB_WORKSPACE"/tools/figure_lint.mjs .
 
       - name: KaTeX — every $$ block compiles under strict:'error'
         run: cd /tmp/nodecheck && node kxstrict.mjs "$GITHUB_WORKSPACE"
@@ -84,3 +85,12 @@ jobs:
       # starts passing everywhere fails the build until removed.
       - name: Layout — 8 pages × 6 widths × 2 themes in headless Chrome
         run: cd /tmp/nodecheck && node layout_check.mjs "$GITHUB_WORKSPACE"
+
+      # Every diagram: no label cut off by its viewBox, no two labels printed
+      # over each other. Figures drawn with tools/figkit.py are also checked
+      # against lines at build time (tools/figures/build.py --check).
+      - name: Figures — no clipped or overlapping labels in any diagram
+        run: cd /tmp/nodecheck && node figure_lint.mjs "$GITHUB_WORKSPACE"
+
+      - name: Figures — every figkit module renders clean and matches its topic
+        run: python3 tools/figures/build.py --verify
