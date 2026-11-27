@@ -1030,6 +1030,7 @@ svg text[font-family*="Mono"], svg tspan[font-family*="Mono"] { font-family: var
 svg [stroke="#2e3a58"] { stroke: var(--border2) !important; }
 svg [stroke="#242d45"] { stroke: var(--border) !important; }
 svg [stroke="#0b0d12"] { stroke: var(--bg) !important; }
+svg [stroke="#1a1f2e"] { stroke: var(--surface) !important; }   /* figkit label halos */
 svg [stroke="#4e5a7a"] { stroke: var(--text3) !important; }
 svg [stroke="#8e97b8"] { stroke: var(--text2) !important; }
 svg [stroke="#e6e9f4"] { stroke: var(--text) !important; }

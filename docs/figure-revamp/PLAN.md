@@ -17,6 +17,7 @@ Written 2026-11-27 after screenshotting all 63 figures (`.anim-wrap`) at 1440 in
 | G5 | Three figures taught the wrong thing | 06-0 total error drawn as ∩, sweet spot at the peak; 29-1 gradient descent climbing a hill; 53-0 O(·) labels not matching curves | **fixed (F1)** |
 | G6 | Emoji in figures (🔵🔴 ⚡ 🟡) | old content | F5 |
 | G7 | Interactives: dead space, legends over curves, clipped nodes | layout | F6 |
+| G9 | The audit was screenshot-only, so it missed motion; F1's first cut dropped 29-1's animation | process | **fixed (F1b)**: 29-1 animated again; motion rules in §2 |
 | G8 | Phones: a 500–640 unit figure in a 330px column has 5–6px labels | width | F7 (tap to expand) |
 
 Tried and rejected: a minimum width with sideways scroll on phones. A chart whose point is its
@@ -28,7 +29,19 @@ shape showed only its left half on first view, which is worse than small text.
   `python3 tools/figures/build.py`. Only the `<svg>` changes; wrapper and caption stay.
 - Canvas **560** wide (640 only if needed). Heights to fit, ≤ 320.
 - Text: LABEL 10, SMALL 9, TINY 8.5 units. Weight 600 for labels that name a series.
-- **Direct labels** against their curve/box, never on top of a line; no legend boxes.
+- **Direct labels** against their curve/box, never on top of a line; no legend boxes. Draw
+  geometry first, then place labels with `Fig.label()` / `Fig.along()`, which take the first
+  candidate spot clear of every label, stroke and edge. `Fig.check()` fails a figure whose
+  text touches text, a line or the edge (text over lines was the main "clunky" complaint
+  after F1, and the browser lint cannot see it).
+- **Arrows:** one arrowhead size (user units, not scaled by stroke width), stopping `GAP` short
+  of the target. Chunky heads on thin short hops were the other complaint.
+- **Motion:** keep it, and improve it, wherever the old figure animated (04, 26, 29, 32, 35, 36
+  use SMIL) or where a process unfolds over time (steps, passes, iterations). One SMIL clock per
+  figure (`figkit.Anim`), eased with the same spline everywhere. Set `Fig.still` to a time
+  whose frame shows the whole picture: app.js freezes the figure there under reduced motion,
+  and pauses animated figures while off screen. Verify with `/tmp/domtest/animframes.mjs`
+  (frames at chosen times + the reduced-motion still).
 - Axis titles: y title horizontal above the axis, x title at the end or centred below.
 - At most one takeaway sentence inside the SVG. Long explanations belong in the prose.
 - Colours: the legacy hexes in figkit (style.css §8 maps them). Semantic use: red = error / bad /

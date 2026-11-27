@@ -574,12 +574,16 @@ function enhance(section, html) {
    1. One text scale: each figure renders at most FIG_SCALE px per viewBox unit,
       so labels come out the same size in every figure (they used to range
       from 1.1x to 1.9x, with whatever width the column happened to give).
-   2. Own ids: 37 topics call their arrowhead marker "ah". Loaded topics stay
+   2. SMIL motion: a figure with data-still="<seconds>" is frozen on that
+      frame under prefers-reduced-motion (the still must show everything);
+      otherwise animated figures run only while on screen.
+   3. Own ids: 37 topics call their arrowhead marker "ah". Loaded topics stay
       in the page (hidden), and url(#ah) resolves to the FIRST #ah in the
       document, inside a hidden topic, so arrowheads vanished after a few
       topics. Each SVG's <defs> ids get a per-figure prefix, and that SVG's
       own references are rewritten to match. */
 const FIG_SCALE = 1.45;
+let figIO = null;
 const REF_ATTRS = ['marker-end', 'marker-start', 'marker-mid', 'fill', 'stroke', 'clip-path', 'mask', 'filter', 'href', 'xlink:href'];
 function normaliseFigures(section) {
   if (!section || section.dataset.figs) return;
@@ -587,6 +591,10 @@ function normaliseFigures(section) {
   $$('svg', section).forEach((svg, n) => {
     const vb = svg.viewBox?.baseVal;
     if (vb?.width && svg.parentElement?.classList.contains('anim-wrap')) svg.style.maxWidth = (vb.width * FIG_SCALE) + 'px';
+    if (svg.querySelector('animate, animateMotion, animateTransform') && svg.pauseAnimations) {
+      if (!MOTION && svg.dataset.still) { svg.pauseAnimations(); svg.setCurrentTime(+svg.dataset.still); }
+      else if (MOTION) { figIO ??= new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? e.target.unpauseAnimations() : e.target.pauseAnimations())); figIO.observe(svg); }
+    }
     const defs = $$('defs [id]', svg);
     if (!defs.length) return;
     const map = {};

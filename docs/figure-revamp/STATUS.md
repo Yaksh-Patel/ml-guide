@@ -2,7 +2,7 @@
 
 Read this first, then only the current chunk in `PLAN.md`. Update this file last.
 
-**Current chunk:** F2 (model: **Opus**). **Waiting on Yaksh:** review the F1 style sample
+**Current chunk:** F2 (model: **Opus**). **Waiting on Yaksh:** review the F1b style sample
 (06 bias–variance, 29 gradient descent, 53 complexity) before the batch redraws use it.
 **Branch:** `figure-revamp`.
 
@@ -16,6 +16,15 @@ Read this first, then only the current chunk in `PLAN.md`. Update this file last
 - F0 decisions: FIG_SCALE 1.45; SVG text in IBM Plex Sans Condensed; per-figure def ids.
 
 ## Log
+
+### 2026-11-27: F1b, after Yaksh's review of the live sample (Opus)
+- His feedback: still clunky, random overlaps, arrows not smooth or consistent, and the
+  backprop figure used to animate. All true: labels ran over lines (the kit only checked
+  text against text), arrowheads scaled with stroke width, and F1 dropped 29-1's animation.
+- figkit: text-vs-stroke check, auto label placement, label halos, fixed-size arrowheads,
+  `Anim` (shared SMIL clock). app.js: `data-still` freeze under reduced motion, off-screen pause.
+- 29-1 is animated again: a ball hops down the bowl, arcs draw under it, landing dots stay.
+  06-0 and 53-0 relabelled with the placer (53's leader line, which crossed a curve, is gone).
 
 ### 2026-11-27: F0 + F1 done (Opus)
 - Audit of all 63 figures (PLAN §3). Content errors found in 06-0, 29-1, 53-0; 54-0's "wrong
