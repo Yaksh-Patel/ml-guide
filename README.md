@@ -245,7 +245,10 @@ go red is worse than no check.
 | `tools/audit_markup.py` | full tag balance, `.bl` labels, depth-matched boxes, `$` in prose |
 | `tools/kxstrict.mjs` | renders every `$$` block under KaTeX `strict:'error'` |
 | `tools/kxinline.mjs` | same for inline `$…$`, per text node — the display check misses these |
-| `tools/svgkit.py` | shared SVG vocabulary for diagrams |
+| `tools/svgkit.py` | the original SVG vocabulary (figures drawn before the figure revamp) |
+| `tools/figkit.py` | v2 drawing kit: 560 canvas, three text sizes, direct labels, colour markers; `Fig.check()` rejects overlapping or off-canvas text |
+| `tools/figures/` | one module per redrawn figure (`TARGET`, `draw()`); `build.py` swaps each into its topic's Nth `.anim-wrap`, keeping wrapper and caption. `--check` writes nothing |
+| `tools/figure_lint.mjs` | real-browser figure check: labels cut off by the viewBox, labels printed over each other, render scale per figure. Text over lines is not detected; look at the figure |
 | `tools/run_runners.py` | executes the code inside every `.code-runner` and fails if any errors |
 | `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, then asserts 23 invariants — sidebar/home/map counts against the manifest, the app globals, pager and TOC, and that **every** topic in `topics.js` resolves to a file with a matching `id="sec-<id>"` |
 | `tools/layout_check.mjs` | real-browser layout check (puppeteer-core + installed Chrome; serves the repo itself). 8 pages × 6 widths × 2 themes: no sideways scroll, nothing under the "on this page" rail, prose width, rail/dropdown by breakpoint. `--expect-fail` marks known gaps, and an entry that starts passing everywhere fails the run. `--shots DIR` saves screenshots |

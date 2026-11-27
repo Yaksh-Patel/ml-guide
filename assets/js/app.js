@@ -563,10 +563,39 @@ async function loadTopic(id) {
 /* Syntax highlighting, maths and editors are applied after the topic is
    already on screen. Each is independently lazy and independently failable. */
 function enhance(section, html) {
+  normaliseFigures(section);
   highlight(section).catch(() => {});
   if (looksLikeMath(html)) renderMath(section).then(() => scrollHints(section)).catch(() => {});
   scrollHints(section);
   if (section.querySelector('.code-runner')) initRunners(section);
+}
+
+/* Diagrams. Two fixes applied when a topic loads:
+   1. One text scale: each figure renders at most FIG_SCALE px per viewBox unit,
+      so labels come out the same size in every figure (they used to range
+      from 1.1x to 1.9x, with whatever width the column happened to give).
+   2. Own ids: 37 topics call their arrowhead marker "ah". Loaded topics stay
+      in the page (hidden), and url(#ah) resolves to the FIRST #ah in the
+      document, inside a hidden topic, so arrowheads vanished after a few
+      topics. Each SVG's <defs> ids get a per-figure prefix, and that SVG's
+      own references are rewritten to match. */
+const FIG_SCALE = 1.45;
+const REF_ATTRS = ['marker-end', 'marker-start', 'marker-mid', 'fill', 'stroke', 'clip-path', 'mask', 'filter', 'href', 'xlink:href'];
+function normaliseFigures(section) {
+  if (!section || section.dataset.figs) return;
+  section.dataset.figs = '1';
+  $$('svg', section).forEach((svg, n) => {
+    const vb = svg.viewBox?.baseVal;
+    if (vb?.width && svg.parentElement?.classList.contains('anim-wrap')) svg.style.maxWidth = (vb.width * FIG_SCALE) + 'px';
+    const defs = $$('defs [id]', svg);
+    if (!defs.length) return;
+    const map = {};
+    defs.forEach(el => { map[el.id] = `${section.id}-f${n}-${el.id}`; el.id = map[el.id]; });
+    $$('*', svg).forEach(el => REF_ATTRS.forEach(a => {
+      const v = el.getAttribute(a);
+      if (v && v.includes('#')) el.setAttribute(a, v.replace(/#([\w-]+)/g, (m, id) => map[id] ? '#' + map[id] : m));
+    }));
+  });
 }
 
 /* Maths and tables that are wider than the column scroll sideways. Fade the
