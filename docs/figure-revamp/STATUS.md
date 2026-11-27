@@ -2,35 +2,46 @@
 
 Read this first, then only the current chunk in `PLAN.md`. Update this file last.
 
-**Current chunk:** F2 (model: **Opus**). **Waiting on Yaksh:** review the F1b style sample
-(06 bias–variance, 29 gradient descent, 53 complexity) before the batch redraws use it.
-**Branch:** `figure-revamp`.
+**Where it stands (2026-11-27, end of the long session):** 45 figures redrawn and committed on
+branch `figure-revamp` (not yet on `main`; live site has F0–F1b only). Yaksh approved the style
+("these changes are better, go ahead with remaining figures").
 
-## Handoff
-- Tools: `tools/figure_lint.mjs` (copy to `/tmp/domtest` like the other .mjs tools),
-  `tools/figkit.py`, `tools/figures/build.py`. One-offs in `/tmp/domtest` (not in the repo):
-  `figshots.mjs <repo> <out> <width> <theme> [nums]` screenshots every figure,
-  `sheets.py <dir> 8 2 640` tiles them into contact sheets (needs Pillow; run without `-I`).
-- Lint after F1: 63 figures, 14 with problems, 4 clipped labels, 17 overlapping pairs. The lint
-  sees text-on-text only; text over lines needs the screenshots.
-- F0 decisions: FIG_SCALE 1.45; SVG text in IBM Plex Sans Condensed; per-figure def ids.
+**In flight when this was written**: four background agents, each writing into the working tree
+(uncommitted) and leaving screenshots in `/tmp/domtest/<batch>/`:
+- B1: 02, 05, 07, 12, 16; shots `/tmp/domtest/b1/`
+- B2: 17, 18, 19, 24, 30; shots `/tmp/domtest/b2/`
+- B3: 37, 38, 44, 46, 49; shots `/tmp/domtest/b3/`
+- B5 (interactive): 09-0 explorer, 29-2 stepper, 34-1 (static), 34-2 heatmap; shots `/tmp/domtest/b5/`
 
-## Log
+## Resume here
+1. `git status`: modified topics / untracked `tools/figures/f*.py` are B1–B3/B5 output. For each
+   batch: look at its screenshots (tile them with PIL or `/tmp/domtest/sheets.py`), check every
+   content change against the topic's own prose (agents record them as "History:" in the module
+   docstring), run `python3 tools/figures/build.py --verify <modules>`, confirm the topic diff
+   touches only the `<svg>` (interactives may also rewrite their wrapper HTML + script), then
+   commit that batch alone. If a batch is half-done (agent stopped), finish or redo its figures.
+2. Interactives: drive them in a browser (`/tmp/domtest/interact_test.mjs` is a template).
+3. Full checks: check_topics, audit_markup, check_css_hooks, `assets.py 1ed04fd --all` (no count
+   may go down), smoke, kxstrict, kxinline, motion_test, layout_check, figure_lint (must be 0
+   everywhere; CI enforces it), `build.py --verify`.
+4. Commit the README *Diagrams* section (already written in the working tree), delete
+   `docs/figure-revamp/` and the CLAUDE.md "Active work" pointer, then ask Yaksh before
+   fast-forwarding `main` and pushing (he reviews on the live site).
+- Brief given to every batch agent: PLAN §2, plus: read the prose around the figure; fix wrong
+  content and record it as History; keep/improve motion with figkit.Anim + Fig.still; verify in
+  both themes at 2x; don't commit, don't edit figkit/app.js/style.css/captions.
 
-### 2026-11-27: F1b, after Yaksh's review of the live sample (Opus)
-- His feedback: still clunky, random overlaps, arrows not smooth or consistent, and the
-  backprop figure used to animate. All true: labels ran over lines (the kit only checked
-  text against text), arrowheads scaled with stroke width, and F1 dropped 29-1's animation.
-- figkit: text-vs-stroke check, auto label placement, label halos, fixed-size arrowheads,
-  `Anim` (shared SMIL clock). app.js: `data-still` freeze under reduced motion, off-screen pause.
-- 29-1 is animated again: a ball hops down the bowl, arcs draw under it, landing dots stay.
-  06-0 and 53-0 relabelled with the placer (53's leader line, which crossed a curve, is gone).
+## Open questions for Yaksh (not figure work)
+- 45: the code card computes WoE as ln(good/bad); the prose and the corrected figure use
+  ln(bad/good), positive = riskier. Flip the code?
+- 36: a table row says "BERT-large → DistilBERT" (prose elsewhere: BERT-Base 110M); the
+  "Why soft labels" example puts 0.72 on dog while saying fox is similar to cat.
 
-### 2026-11-27: F0 + F1 done (Opus)
-- Audit of all 63 figures (PLAN §3). Content errors found in 06-0, 29-1, 53-0; 54-0's "wrong
-  connectors" were the vanishing-arrowhead bug (G2).
-- F0: `normaliseFigures()` in app.js (scale cap + def-id prefix), condensed face, lint and kit.
-  Phone min-width + sideways scroll tried and reverted (PLAN §1).
-- F1: three figures redrawn with figkit on a 560 canvas; lint 0/0; checked in both themes.
-  All checks green: check_topics, audit_markup, css hooks, smoke 23/23, kxstrict/kxinline 0,
-  assets.py counts unchanged.
+## Done (committed on figure-revamp)
+- F0 systemic (scale cap, per-figure def ids, condensed face); F1/F1b samples (06-0, 29-1 animated,
+  53-0); kit v2 (`figkit`: label placement, text-vs-line check, halos, fixed arrowheads,
+  box/connect/smooth, `Anim` + `data-still`); app.js reduced-motion freeze + off-screen pause.
+- Batches A1–A5 (34 figures) and B4 (4); interactives 06-1 (rebuilt; noise was double-counted)
+  and 48 (labels follow their curves); shared `.fx-*` styles; phone tap-to-expand viewer.
+- ~25 figures contradicted their own prose; each fix is in its module's docstring.
+- CI: figure_lint at zero + `build.py --verify` (fails when a topic's svg differs from its module).
