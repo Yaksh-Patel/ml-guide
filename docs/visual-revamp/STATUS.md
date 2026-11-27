@@ -5,6 +5,9 @@ Read this first, then only the current chunk in `PLAN.md`. Update this file last
 **Current chunk:** 2, declutter topic pages (model: **Opus**). Yaksh reviews after it, before chunk 3.
 **Branch:** `visual-revamp`, pushed. Chunks 0 and 1 are committed.
 **Blocker:** none.
+**CI not yet seen running:** `validate.yml` only runs on pushes to `main`, on PRs, and on manual
+dispatch, and `gh` here is the work account (403 on this repo). Opening a PR from `visual-revamp`
+(on github.com) runs it, including the layout check that has never run on a runner.
 
 ## Handoff to chunk 2
 - Tools live in `/tmp/domtest`, which now has the layout check, smoke, kxstrict, kxinline and
