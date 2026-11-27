@@ -15,50 +15,71 @@
 <div class="card-body" style="margin-top:8px">Finite differences do keep one job: <strong>gradient checking.</strong> When you implement a custom layer or loss, compare its analytic gradient against a finite-difference estimate on a couple of parameters. It is far too slow to train with and exactly right for confirming you got the maths correct.</div></div>
 
 <div class="anim-wrap"><div class="anim-title">Backprop: gradients flow backward layer by layer via chain rule</div>
-<svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <marker id="fwd" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#5ba4fb"/></marker>
-  <marker id="bwd" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f06767"/></marker>
-</defs>
-<rect x="10" y="90" width="50" height="30" rx="5" fill="#1a1f2e" stroke="#5ba4fb" stroke-width="1.5"/>
-<text x="35" y="109" text-anchor="middle" fill="#5ba4fb" font-size="10" font-family="JetBrains Mono">x</text>
-<rect x="100" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
-<text x="130" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">z¹=W¹x+b¹</text>
-<rect x="210" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
-<text x="240" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">h=ReLU(z¹)</text>
-<rect x="320" y="80" width="60" height="30" rx="5" fill="#1a1f2e" stroke="#b97cf8" stroke-width="1.5"/>
-<text x="350" y="99" text-anchor="middle" fill="#b97cf8" font-size="10" font-family="JetBrains Mono">z²=W²h+b²</text>
-<rect x="430" y="80" width="55" height="30" rx="5" fill="#1a1f2e" stroke="#22d3a0" stroke-width="1.5"/>
-<text x="457" y="99" text-anchor="middle" fill="#22d3a0" font-size="10" font-family="JetBrains Mono">ŷ=σ(z²)</text>
-<rect x="430" y="130" width="55" height="30" rx="5" fill="#f06767" opacity=".3" stroke="#f06767" stroke-width="1.5"/>
-<text x="457" y="149" text-anchor="middle" fill="#f06767" font-size="10" font-family="JetBrains Mono">L(ŷ,y)</text>
-<line x1="60" y1="105" x2="98" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
-<line x1="160" y1="95" x2="208" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
-<line x1="270" y1="95" x2="318" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
-<line x1="380" y1="95" x2="428" y2="95" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
-<line x1="457" y1="110" x2="457" y2="128" stroke="#5ba4fb" stroke-width="1.5" marker-end="url(#fwd)"/>
-<line x1="428" y1="130" x2="428" y2="115" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
-  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite"/>
-</line>
-<text x="390" y="125" fill="#f06767" font-size="8.5" font-family="JetBrains Mono">∂L/∂ŷ=ŷ−y</text>
-<line x1="428" y1="95" x2="382" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
-  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.2s" repeatCount="indefinite"/>
-</line>
-<text x="395" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">·σ'(z²)</text>
-<text x="350" y="125" fill="#f5a623" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">∂L/∂W²=δ²·hᵀ</text>
-<line x1="350" y1="112" x2="350" y2="108" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="3,2"/>
-<line x1="318" y1="95" x2="272" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
-  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.4s" repeatCount="indefinite"/>
-</line>
-<text x="293" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">W²ᵀ·δ²</text>
-<line x1="208" y1="95" x2="162" y2="95" stroke="#f06767" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#bwd)">
-  <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" begin="0.6s" repeatCount="indefinite"/>
-</line>
-<text x="183" y="88" fill="#f06767" font-size="8" font-family="JetBrains Mono">·𝟙(z¹&gt;0)</text>
-<text x="130" y="125" fill="#f5a623" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">∂L/∂W¹=δ¹·xᵀ</text>
-<line x1="130" y1="112" x2="130" y2="108" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="3,2"/>
-<text x="250" y="195" fill="#5ba4fb" font-size="9" font-family="DM Sans" text-anchor="middle">— Forward (blue) · · · Backward gradient (red) · Weight gradient (orange)</text>
-<text x="250" y="210" fill="#4e5a7a" font-size="9" font-family="DM Sans" text-anchor="middle">δ² = ∂L/∂z² (output error signal);  δ¹ = ∂L/∂z¹ (hidden error signal)</text>
+<svg viewBox="0 0 560 248" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2" data-still="7.0">
+<defs><marker id="bp-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#5ba4fb"/></marker><marker id="bp-ah1" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#f06767"/></marker><marker id="bp-ah2" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#f5a623"/></marker></defs>
+<rect x="20.0" y="48.0" width="34.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="37.0" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">x</text>
+<rect x="20.0" y="48.0" width="34" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.0211;0.0389;0.8889;0.9444;1.0000"/></rect>
+<rect x="84.4" y="48.0" width="76.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="122.4" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">z¹ = W¹x + b¹</text>
+<rect x="84.4" y="48.0" width="76" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.0767;0.0944;0.8889;0.9444;1.0000"/></rect>
+<rect x="190.8" y="48.0" width="72.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="226.8" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">h = ReLU(z¹)</text>
+<rect x="190.8" y="48.0" width="72" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1322;0.1500;0.8889;0.9444;1.0000"/></rect>
+<rect x="293.2" y="48.0" width="76.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="331.2" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">z² = W²h + b²</text>
+<rect x="293.2" y="48.0" width="76" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1878;0.2056;0.8889;0.9444;1.0000"/></rect>
+<rect x="399.6" y="48.0" width="60.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="429.6" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">ŷ = σ(z²)</text>
+<rect x="399.6" y="48.0" width="60" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2433;0.2611;0.8889;0.9444;1.0000"/></rect>
+<rect x="490.0" y="48.0" width="50.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#2e3a58" stroke-width="1.2"/>
+<text x="515.0" y="65.3" fill="#e6e9f4" font-size="10" text-anchor="middle" font-family="DM Sans">L(ŷ, y)</text>
+<rect x="490.0" y="48.0" width="50" height="28" rx="6" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" fill-opacity=".14" opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2989;0.3167;0.8889;0.9444;1.0000"/></rect>
+<line x1="58.0" y1="62.0" x2="80.4" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.0333;0.0778;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="79.4" y1="62.0" x2="80.4" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" marker-end="url(#bp-ah0)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.0767;0.0944;0.8889;0.9444;1.0000"/></line>
+<line x1="164.4" y1="62.0" x2="186.8" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.0889;0.1333;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="185.8" y1="62.0" x2="186.8" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" marker-end="url(#bp-ah0)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1322;0.1500;0.8889;0.9444;1.0000"/></line>
+<line x1="266.8" y1="62.0" x2="289.2" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.1444;0.1889;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="288.2" y1="62.0" x2="289.2" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" marker-end="url(#bp-ah0)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1878;0.2056;0.8889;0.9444;1.0000"/></line>
+<line x1="373.2" y1="62.0" x2="395.6" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.2000;0.2444;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="394.6" y1="62.0" x2="395.6" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" marker-end="url(#bp-ah0)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2433;0.2611;0.8889;0.9444;1.0000"/></line>
+<line x1="463.6" y1="62.0" x2="486.0" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.2556;0.3000;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="485.0" y1="62.0" x2="486.0" y2="62.0" stroke="#5ba4fb" stroke-width="1.6" marker-end="url(#bp-ah0)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2989;0.3167;0.8889;0.9444;1.0000"/></line>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3878;0.4056;0.8889;0.9444;1.0000"/>
+<rect x="399.6" y="124.0" width="60.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#f06767" stroke-width="1.2"/>
+<text x="429.6" y="141.3" fill="#f06767" font-size="10" text-anchor="middle" font-family="DM Sans">∂L/∂ŷ</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4544;0.4722;0.8889;0.9444;1.0000"/>
+<rect x="293.2" y="124.0" width="76.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#f06767" stroke-width="1.2"/>
+<text x="331.2" y="141.3" fill="#f06767" font-size="10" text-anchor="middle" font-family="DM Sans">δ² = ŷ − y</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5211;0.5389;0.8889;0.9444;1.0000"/>
+<rect x="190.8" y="124.0" width="72.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#f06767" stroke-width="1.2"/>
+<text x="226.8" y="141.3" fill="#f06767" font-size="10" text-anchor="middle" font-family="DM Sans">∂L/∂h</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5878;0.6056;0.8889;0.9444;1.0000"/>
+<rect x="84.4" y="124.0" width="76.0" height="28.0" rx="6" fill="#1a1f2e" stroke="#f06767" stroke-width="1.2"/>
+<text x="122.4" y="141.3" fill="#f06767" font-size="10" text-anchor="middle" font-family="DM Sans">δ¹</text>
+</g>
+<path d="M515.0,80.0 Q515.0,138.0 463.6,138.0" fill="none" stroke="#f06767" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.3333;0.3889;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></path><line x1="464.6" y1="138.0" x2="463.6" y2="138.0" stroke="#f06767" stroke-width="1.6" marker-end="url(#bp-ah1)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3878;0.4056;0.8889;0.9444;1.0000"/></line>
+<line x1="395.6" y1="138.0" x2="373.2" y2="138.0" stroke="#f06767" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.4111;0.4556;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="374.2" y1="138.0" x2="373.2" y2="138.0" stroke="#f06767" stroke-width="1.6" marker-end="url(#bp-ah1)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4544;0.4722;0.8889;0.9444;1.0000"/></line>
+<line x1="289.2" y1="138.0" x2="266.8" y2="138.0" stroke="#f06767" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.4778;0.5222;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="267.8" y1="138.0" x2="266.8" y2="138.0" stroke="#f06767" stroke-width="1.6" marker-end="url(#bp-ah1)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5211;0.5389;0.8889;0.9444;1.0000"/></line>
+<line x1="186.8" y1="138.0" x2="164.4" y2="138.0" stroke="#f06767" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.5444;0.5889;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="165.4" y1="138.0" x2="164.4" y2="138.0" stroke="#f06767" stroke-width="1.6" marker-end="url(#bp-ah1)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5878;0.6056;0.8889;0.9444;1.0000"/></line>
+<line x1="331.2" y1="156.0" x2="331.2" y2="184.0" stroke="#f5a623" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.4778;0.5222;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="331.2" y1="183.0" x2="331.2" y2="184.0" stroke="#f5a623" stroke-width="1.6" marker-end="url(#bp-ah2)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5211;0.5389;0.8889;0.9444;1.0000"/></line>
+<line x1="122.4" y1="156.0" x2="122.4" y2="184.0" stroke="#f5a623" stroke-width="1.6" pathLength="1" stroke-dasharray="1 1" stroke-linecap="butt"><animate attributeName="stroke-dashoffset" dur="9.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.6111;0.6556;0.8889;0.9444;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/></line><line x1="122.4" y1="183.0" x2="122.4" y2="184.0" stroke="#f5a623" stroke-width="1.6" marker-end="url(#bp-ah2)"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.6544;0.6722;0.8889;0.9444;1.0000"/></line>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4544;0.4722;0.8889;0.9444;1.0000"/>
+<text x="384.4" y="167.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">× σ′(z²)</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5211;0.5389;0.8889;0.9444;1.0000"/>
+<text x="278.0" y="167.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">× W²ᵀ</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5878;0.6056;0.8889;0.9444;1.0000"/>
+<text x="175.6" y="167.0" fill="#f06767" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">⊙ ReLU′(z¹)</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5211;0.5389;0.8889;0.9444;1.0000"/>
+<text x="331.2" y="196.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">∂L/∂W² = δ² hᵀ</text>
+</g>
+<g opacity="0"><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.6544;0.6722;0.8889;0.9444;1.0000"/>
+<text x="122.4" y="196.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">∂L/∂W¹ = δ¹ xᵀ</text>
+</g>
+<text x="20.0" y="30.0" fill="#5ba4fb" font-size="9" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">forward pass</text>
+<text x="20.0" y="141.0" fill="#f06767" font-size="9" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">backward pass</text>
+<text x="280.0" y="236.0" fill="#e6e9f4" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Each layer multiplies δ by its local derivative and hands it down; weight gradients branch off it.</text>
 </svg></div>
 
 <div class="card cg"><div class="card-title">The chain rule, read as a data structure</div>
