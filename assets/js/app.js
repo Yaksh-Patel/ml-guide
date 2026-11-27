@@ -282,34 +282,42 @@ let tocObserver = null;
 
 function buildToc(section) {
   const rail = $('#toc');
+  const dd = $('#toc-dd');
   if (!rail) return;
   if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
+  if (dd) dd.open = false;
 
   const titles = $$(':scope > .card > .card-title, :scope > .g2 > .card > .card-title, :scope > .anim-wrap > .anim-title', section);
-  if (titles.length < 4) { rail.hidden = true; rail.innerHTML = ''; return; }
+  if (titles.length < 4) {
+    rail.hidden = true; rail.innerHTML = '';
+    if (dd) { dd.hidden = true; $('.toc-dd-panel', dd).innerHTML = ''; }
+    return;
+  }
 
   titles.forEach((el, i) => {
     const host = el.closest('.card, .anim-wrap');
     if (host && !host.id) host.id = 'x-' + section.id + '-' + i;
   });
 
+  // One list of links, rendered twice: the rail (>= 1280px) and the top-bar
+  // dropdown (below). CSS decides which one is visible.
+  const linksHtml = titles.map(el => {
+    const host = el.closest('.card, .anim-wrap');
+    return `<a href="#${host.id}" data-toc="${host.id}">${escapeHtml(el.textContent.trim())}</a>`;
+  }).join('');
+
   rail.hidden = false;
   rail.innerHTML = `
     <div class="toc-label">On this page</div>
-    <nav class="toc-list">
-      ${titles.map((el, i) => {
-        const host = el.closest('.card, .anim-wrap');
-        return `<a href="#${host.id}" data-toc="${host.id}">${escapeHtml(el.textContent.trim())}</a>`;
-      }).join('')}
-    </nav>`;
+    <nav class="toc-list">${linksHtml}</nav>`;
+  if (dd) { dd.hidden = false; $('.toc-dd-panel', dd).innerHTML = linksHtml; }
 
-  // scroll-spy
-  const links = new Map($$('a[data-toc]', rail).map(a => [a.dataset.toc, a]));
+  // scroll-spy, shared by both lists
+  const allLinks = [...$$('a[data-toc]', rail), ...(dd ? $$('a[data-toc]', dd) : [])];
   tocObserver = new IntersectionObserver(entries => {
     entries.forEach(en => {
       if (en.isIntersecting) {
-        links.forEach(a => a.classList.remove('active'));
-        links.get(en.target.id)?.classList.add('active');
+        allLinks.forEach(a => a.classList.toggle('active', a.dataset.toc === en.target.id));
       }
     });
   }, { rootMargin: '-72px 0px -70% 0px' });
@@ -317,13 +325,27 @@ function buildToc(section) {
     const host = el.closest('.card, .anim-wrap');
     if (host) tocObserver.observe(host);
   });
+}
 
-  rail.onclick = e => {
-    const a = e.target.closest('a[data-toc]');
-    if (!a) return;
-    e.preventDefault();
-    document.getElementById(a.dataset.toc)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+function jumpToc(e) {
+  const a = e.target.closest('a[data-toc]');
+  if (!a) return;
+  e.preventDefault();
+  const dd = $('#toc-dd');
+  if (dd) dd.open = false;
+  document.getElementById(a.dataset.toc)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function initToc() {
+  $('#toc')?.addEventListener('click', jumpToc);
+  const dd = $('#toc-dd');
+  if (!dd) return;
+  dd.addEventListener('click', jumpToc);
+  // close on outside click and on Escape, like any menu
+  document.addEventListener('click', e => { if (dd.open && !dd.contains(e.target)) dd.open = false; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && dd.open) { dd.open = false; dd.querySelector('summary')?.focus(); }
+  });
 }
 
 /* ═══════════════ ROUTER ═══════════════ */
@@ -616,6 +638,7 @@ function boot() {
   buildSidebar();
   initChrome();
   initKeys();
+  initToc();
   initScrollProgress();
   applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
   go(location.hash.slice(1) || 'home', { push: false });

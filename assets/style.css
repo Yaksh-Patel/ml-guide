@@ -53,7 +53,10 @@
   --font-mono:    'JetBrains Mono', ui-monospace, monospace;
 
   --sb-w:      272px;
-  --toc-w:     206px;
+  --toc-w:     224px;   /* "on this page" rail, its own grid column */
+  --toc-gap:   56px;    /* between the article column and the rail */
+  --prose-w:   720px;   /* running text, about 75 characters a line */
+  --wide-w:    1080px;  /* diagrams, tables, side-by-side grids, editors */
   --radius:    10px;
   --radius-sm: 6px;
   --ease:      cubic-bezier(.22, .61, .36, 1);
@@ -305,13 +308,41 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   transition: transform .1s linear;
 }
 
-/* ---- Content column + TOC rail ---- */
-.content-shell { display: flex; gap: 34px; align-items: flex-start; }
-#topic-container { flex: 1; min-width: 0; max-width: 800px; }
+/* ---- Content column + TOC rail ----------------------------------------------
+   Two grid columns: the article, then the "on this page" rail pinned to the far
+   right. The rail has its own track, so nothing in the article column can ever
+   reach it. layout_check.mjs (A2) asserts that. Below 1280px, or on a page with
+   no rail, the grid is one column and the rail becomes .toc-dropdown in the top
+   bar. Contract numbers live at the top of tools/layout_check.mjs too. */
+.content-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--toc-gap);
+  align-items: start;
+}
+@media (min-width: 1280px) {
+  .content-shell:has(> .toc:not([hidden])) { grid-template-columns: minmax(0, 1fr) var(--toc-w); }
+}
+#topic-container { min-width: 0; width: 100%; max-width: var(--wide-w); margin-inline: auto; }
+
+/* Text is capped at --prose-w and centred; wide blocks break out to the full
+   article column (≤ --wide-w). Only direct children of a topic are sized here:
+   wide blocks nested inside a card still fill the card. The home page has its
+   own grid layout and uses the whole column.
+   !important on margin-inline: 60 "Part N" headings carry an inline
+   `margin: 28px 0 12px`, which would pin them to the column's left edge. Every
+   top-level inline margin in topics/ has 0 horizontally, so nothing is lost. */
+#topic-container > .section > * { max-width: var(--prose-w); margin-inline: auto !important; }
+#topic-container > .section > :is(.anim-wrap, .tbl, .g2, .g3, .code-runner, .cgrid) { max-width: none; }
+#topic-container > #sec-home > * { max-width: none; }
+
+/* Jumps from the rail or the dropdown land below the sticky top bar. */
+#topic-container .section [id^="x-"] { scroll-margin-top: 72px; }
 
 .toc {
+  grid-column: 2;
   position: sticky; top: 74px;
-  width: var(--toc-w); flex-shrink: 0;
+  width: var(--toc-w);
   max-height: calc(100vh - 100px); overflow-y: auto;
   padding-left: 18px; border-left: 1px solid var(--border);
   scrollbar-width: thin;
@@ -332,6 +363,33 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 }
 .toc-list a:hover { color: var(--text2); }
 .toc-list a.active { color: var(--accent); border-left-color: var(--accent); }
+
+/* Below 1280px the rail folds into an "On this page" menu in the top bar.
+   Built by buildToc() from the same headings, with the same scroll-spy. */
+.toc-dropdown { position: static; }
+.toc-dropdown[hidden] { display: none; }
+.toc-dropdown > summary { list-style: none; cursor: pointer; user-select: none; }
+.toc-dropdown > summary::-webkit-details-marker { display: none; }
+.toc-dropdown > summary svg { width: 11px; height: 11px; transform: rotate(90deg); transition: transform .16s var(--ease); }
+.toc-dropdown[open] > summary { border-color: var(--accent-bd); color: var(--accent); }
+.toc-dropdown[open] > summary svg { transform: rotate(-90deg); }
+.toc-dd-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(65vh, 520px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 12px 32px var(--shadow);
+  scrollbar-width: thin;
+}
+.toc-dd-panel a {
+  font-size: 13px; line-height: 1.4; color: var(--text2);
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  border-left: 2px solid transparent;
+}
+.toc-dd-panel a:hover { background: var(--bg3); color: var(--text); }
+.toc-dd-panel a.active { color: var(--accent); background: var(--accent-bg); border-left-color: var(--accent); }
 
 /* ---- Prev / next ---- */
 .pager {
@@ -710,8 +768,11 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
 /* ═══ 9. RESPONSIVE ═══════════════════════════════════════ */
 .mob-tog, .mob-overlay { display: none; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1279.98px) {
   .toc { display: none; }
+}
+@media (min-width: 1280px) {
+  .toc-dropdown { display: none; }
 }
 
 @media (max-width: 860px) {
@@ -738,6 +799,14 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
   .home-progress-widget { flex-wrap: wrap; }
   .tmap-row { flex-direction: column; align-items: flex-start; gap: 5px; }
   .tmap-label { width: auto; text-align: left; }
+}
+
+/* Phones: the top bar holds title, "On this page", Mark read, Home and theme.
+   Drop the reading-time tag and show Home as an icon so the title keeps room. */
+@media (max-width: 560px) {
+  .tb-right { gap: 5px; }
+  .tb-tag { display: none; }
+  #tb-home-btn { font-size: 0; gap: 0; padding: 5px 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

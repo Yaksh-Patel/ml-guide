@@ -80,7 +80,7 @@ jobs:
 
       # Real-browser layout: no sideways scroll, nothing under the "on this page"
       # rail, prose width, rail/dropdown by breakpoint. Uses the runner's Chrome.
-      # --expect-fail lists what the visual revamp has not delivered yet; an
-      # entry that starts passing everywhere fails the build until removed.
+      # Add --expect-fail A<n> only for a known, temporary gap; an entry that
+      # starts passing everywhere fails the build until removed.
       - name: Layout — 8 pages × 6 widths × 2 themes in headless Chrome
-        run: cd /tmp/nodecheck && node layout_check.mjs "$GITHUB_WORKSPACE" --expect-fail A3,A4
+        run: cd /tmp/nodecheck && node layout_check.mjs "$GITHUB_WORKSPACE"

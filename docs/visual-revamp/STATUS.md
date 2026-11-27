@@ -2,28 +2,52 @@
 
 Read this first, then only the current chunk in `PLAN.md`. Update this file last.
 
-**Current chunk:** 1, layout shell (model: **Opus**)
-**Branch:** `visual-revamp` (local only; chunk 0 work is not yet committed or pushed)
-**Blocker:** none. Local server allowed in `.claude/settings.local.json` (gitignored).
+**Current chunk:** 2, declutter topic pages (model: **Opus**). Yaksh reviews after it, before chunk 3.
+**Branch:** `visual-revamp`, pushed. Chunks 0 and 1 are committed.
+**Blocker:** none.
 
-## Handoff to chunk 1
-- Tool: `tools/layout_check.mjs`. Run it from `/tmp/domtest` (deps already installed there:
-  jsdom, katex, puppeteer-core@24.10.0). It serves the repo itself, so no http.server is needed for it.
-  Copy the tool over after any edit: `cp tools/layout_check.mjs /tmp/domtest/`.
-- CI runs it with `--expect-fail A3,A4`. **When chunk 1 lands, A3 and A4 must pass, so remove
-  `--expect-fail A3,A4` from `.github/workflows/validate.yml`** (otherwise XPASS fails the build).
-- Contracts the tool already checks, which chunk 1 must implement exactly:
-  - Prose: any `p`/`li` outside wide blocks is ≤ **720px** (`PROSE_W`).
-  - Wide blocks (`.anim-wrap .g2 .g3 .code-runner .cgrid`) are ≤ the `#topic-container` width.
-  - Rail `#toc` visible at **≥1280px**, hidden below (`TOC_MIN_W`).
-  - Below 1280px, a visible element with class **`.toc-dropdown`** must exist.
-  - Rail clearance ≥ **24px** from any content (overlap guard; the 56px design gap is checked by eye).
-  If a D1 number changes, change the constant at the top of `layout_check.mjs` in the same commit.
-- Baseline screenshots (180, from `main` at 499b801): `/tmp/domtest/baseline-shots/`
-  named `<page>-<width>-<theme>-<top|mid>.png`. `/tmp` clears on reboot; to regenerate, make a
-  worktree of `main` and run the tool with `--shots`.
+## Handoff to chunk 2
+- Tools live in `/tmp/domtest`, which now has the layout check, smoke, kxstrict, kxinline and
+  `dd_test.mjs` (a one-off dropdown test, not in the repo). After editing any `tools/*.mjs`, copy it
+  over again. `/tmp` clears on reboot: reinstall with `npm i jsdom katex puppeteer-core@24.10.0`.
+- `run_runners.py` fails 18 of 21 locally only because this Mac's python3 has **no numpy**. That is
+  environmental: CI installs what the runners need. Locally, first run
+  `python3 -m pip install $(python3 tools/run_runners.py --packages)`.
+- Layout rules from chunk 1 that chunk 2 has to fit (style.css §3, "Content column + TOC rail"):
+  - `#topic-container > .section > *` is capped at `--prose-w` and centred, with
+    `margin-inline: auto !important` (60 "Part N" headings carry inline `margin: 28px 0 12px`).
+  - Top-level `.anim-wrap .tbl .g2 .g3 .code-runner .cgrid` get `max-width: none`, so they fill
+    the column (≤ `--wide-w` 1080).
+  - **Not done yet, deliberately:** wide blocks *nested inside* a top-level card (189 tables,
+    21 editors, 18 diagrams, 40 `.g2`) still fill the 720px card. Breaking them out of a bordered
+    card looked broken. Once D2 removes the top-level card boxes, add the breakout:
+    `container-type: inline-size` on `#topic-container`, then the nested wide block gets
+    `width: min(var(--wide-w), 100cqw); margin-left: calc(50% - min(var(--wide-w), 100cqw) / 2)`
+    (this works because the card is centred in the container). Check that no topic uses
+    `position: fixed` inside a section first, since containers can trap it.
+  - Interactive SVG diagrams scale with width, so at 1080px their labels get big (biasvar at 1728).
+    Worth a `max-height` or a figure width cap when chunk 2 treats diagrams as figures.
+- Baselines: `main` screenshots in `/tmp/domtest/baseline-shots/`, chunk 1 in `/tmp/domtest/c1-shots/`.
 
 ## Log
+
+### 2026-11-27: chunk 1 done (Opus)
+- `.content-shell` is a grid: `minmax(0,1fr)`, plus a `--toc-w` (224px) rail track at ≥1280px when
+  a rail exists (`:has(> .toc:not([hidden]))`), with a 56px gap. On pages without a rail (home, or
+  topics with fewer than 4 headings) the article is centred in the full width.
+- Tokens added: `--prose-w 720`, `--wide-w 1080`, `--toc-w 224` (was 206), `--toc-gap 56`.
+- Top-bar **"On this page ▾"** below 1280px: a `<details class="toc-dropdown">` in `.tb-right`,
+  filled by `buildToc()` from the same links as the rail, with shared scroll-spy. Closes on jump,
+  outside click and Escape. The panel is anchored to the sticky top bar, so it stays on screen at 390px.
+- Rail/dropdown jumps now land below the sticky top bar (`scroll-margin-top: 72px` on `[id^="x-"]`).
+- Phones (≤560px): the reading-time tag is hidden and Home is icon-only, so the title still shows.
+  Without that, the new button pushed the 390px top bar 18px wider than the screen (A1).
+- `--expect-fail A3,A4` removed from `validate.yml` and from the README command.
+- **Checks:** `layout_check` passes all 96 cases (A1–A4); `dd_test` 27/27 at 390, 768 and 1180;
+  smoke 23/23; kxstrict and kxinline 0 failures; check_topics, audit_markup and check_css_hooks clean.
+  No topic file touched.
+- Screenshots: at 1440 and 1728 the rail sits at the far right and the gutters are balanced; at 2560
+  the article is centred with roughly 650px of gutter on each side.
 
 ### 2026-11-27: chunk 0 done (Opus, same session as the plan)
 - Branch `visual-revamp` created. Plan files, CLAUDE.md and the .gitignore entry came along uncommitted.

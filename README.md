@@ -213,7 +213,7 @@ cp <repo>/tools/{smoke,kxstrict,kxinline,layout_check}.mjs .
 node smoke.mjs <repo>      # expect: 13/13 checks passed
 node kxstrict.mjs <repo>   # 152 display formulas: 0 failures, 0 strict warnings
 node kxinline.mjs <repo>   # 174 inline formulas: 0 failures, 0 strict warnings
-node layout_check.mjs <repo> --expect-fail A3,A4   # ~3 min; same flags as CI
+node layout_check.mjs <repo>   # ~3 min; same flags as CI
 ```
 
 Install those deps **outside** the repo, as above. A `package.json` at the repo root
@@ -276,6 +276,8 @@ stdlib and it stays tight.
 - **Content overlapping the "on this page" rail.** Grid/flex children default to
   `min-width: auto`, so a wide KaTeX block pushes its column past the container. Fixed
   with `min-width: 0` on card/grid containers plus `overflow-x: auto` on `.katex-display`.
+  Since the visual revamp the rail also has its own grid track (`.content-shell`), so
+  content cannot reach it at all; `layout_check.mjs` A2 asserts it.
 
 ### Deploying
 
