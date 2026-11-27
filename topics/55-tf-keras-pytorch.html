@@ -239,25 +239,51 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 </div>
 
 <div class="anim-wrap"><div class="anim-title">Eager vs compiled execution</div>
-<svg viewBox="0 0 500 182" xmlns="http://www.w3.org/2000/svg">
-<defs><marker id="ah" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#4e5a7a"/></marker></defs>
-<text x="250.0" y="14.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">the difference that actually shows up in your workflow</text>
-<rect x="26" y="26" width="204" height="112" rx="6" fill="#1a1f2e" stroke="#5ba4fb"/>
-<text x="128.0" y="44.0" fill="#5ba4fb" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">eager  (PyTorch default)</text>
-<text x="128.0" y="62.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">line runs</text>
-<text x="128.0" y="79.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">value exists</text>
-<text x="128.0" y="96.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">pdb works here</text>
-<text x="128.0" y="113.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">graph rebuilt each step</text>
-<rect x="270" y="26" width="204" height="112" rx="6" fill="#1a1f2e" stroke="#22d3a0"/>
-<text x="372.0" y="44.0" fill="#22d3a0" font-size="9.5" text-anchor="middle" font-family="DM Sans" font-weight="600">compiled  (tf.function, torch.compile)</text>
-<text x="372.0" y="62.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">traced once</text>
-<text x="372.0" y="79.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">then optimised &amp; fused</text>
-<text x="372.0" y="96.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">faster, harder to debug</text>
-<text x="372.0" y="113.0" fill="#8e97b8" font-size="8.4" text-anchor="middle" font-family="DM Sans">python side-effects run ONCE</text>
-<line x1="232" y1="82" x2="268" y2="82" stroke="#4e5a7a" stroke-width="1.4" marker-end="url(#ah)"/>
-<text x="250.0" y="74.0" fill="#4e5a7a" font-size="7.8" text-anchor="middle" font-family="DM Sans">decorate</text>
-<text x="250.0" y="156.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">Write and debug eagerly, then compile the hot loop. That order is the whole practical answer.</text>
-<text x="250.0" y="172.0" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">Keras is the high-level API over TF; Lightning is the equivalent convention layer over PyTorch.</text>
+<svg viewBox="0 0 560 232" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2">
+<defs><marker id="eagc-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#4e5a7a"/></marker></defs>
+<rect x="24.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="43.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="62.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="91.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="110.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="129.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="158.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="177.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="196.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="225.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="244.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="263.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="292.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="311.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="330.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="359.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="378.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="397.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="426.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="445.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="464.0" y="46.0" width="15.0" height="22.0" rx="3" fill="#5ba4fb" stroke="#5ba4fb" stroke-width="1.2" opacity="0.7"/>
+<rect x="24.0" y="132.0" width="76.0" height="22.0" rx="3" fill="#f5a623" stroke="#f5a623" stroke-width="1.2" opacity="0.3"/>
+<text x="62.0" y="146.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans" font-weight="600">trace + compile</text>
+<rect x="106.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="148.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="190.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="232.0" y="132.0" width="52.0" height="22.0" rx="3" fill="#f5a623" stroke="#f5a623" stroke-width="1.2" opacity="0.3"/>
+<text x="258.0" y="146.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans" font-weight="600">recompile</text>
+<rect x="290.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="332.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="374.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<rect x="416.0" y="132.0" width="36.0" height="22.0" rx="3" fill="#22d3a0" stroke="#22d3a0" stroke-width="1.2" opacity="0.7"/>
+<line x1="24.0" y1="198.0" x2="520.0" y2="198.0" stroke="#4e5a7a" stroke-width="1.2" stroke-linecap="round" marker-end="url(#eagc-ah0)"/>
+<text x="24.0" y="36.0" fill="#5ba4fb" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">eager  (PyTorch default)</text>
+<text x="24.0" y="122.0" fill="#22d3a0" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">compiled  (torch.compile, tf.function)</text>
+<text x="487.0" y="60.0" fill="#4e5a7a" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">7 steps</text>
+<text x="460.0" y="146.0" fill="#4e5a7a" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">7 steps</text>
+<text x="24.0" y="85.0" fill="#8e97b8" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">every op dispatched from Python: each value exists as the line runs, pdb works anywhere</text>
+<text x="24.0" y="169.0" fill="#f5a623" font-size="8.5" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Python side effects run here, once</text>
+<text x="258.0" y="169.0" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">shape changed</text>
+<text x="24.0" y="186.0" fill="#8e97b8" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">one fused kernel per step, no Python between ops: commonly 30–50% faster</text>
+<text x="528.0" y="201.5" fill="#4e5a7a" font-size="9" text-anchor="start" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">time</text>
+<text x="280.0" y="224.0" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">Write and debug eagerly, then compile the hot loop.</text>
 </svg></div>
 
 <div class="card cc"><div class="card-title">In code</div>
