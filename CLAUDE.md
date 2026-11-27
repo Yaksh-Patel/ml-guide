@@ -5,10 +5,6 @@ Static site (no build step), GitHub Pages. 55 topic fragments in `topics/`, rout
 in `assets/style.css` (tokens at the top). README has the full architecture, invariants,
 tools and traps. Read the relevant README section before touching that area.
 
-## Active work
-Visual revamp. Read `docs/visual-revamp/STATUS.md`, then **only** the chunk it names in
-`docs/visual-revamp/PLAN.md`. Update STATUS last.
-
 ## Rules that bite
 - Topic root stays `<section class="section" id="sec-<id>">`, matching `topics.js`.
 - No `<style>` blocks in topic files; style lives in `style.css`.

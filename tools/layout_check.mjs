@@ -29,7 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-// ---- design contract (keep in step with docs/visual-revamp/PLAN.md §2 D1) --
+// ---- design contract (keep in step with README → Design system → Layout) --
 const PROSE_W = 720;            // max text column width
 const TOC_MIN_W = 1280;         // viewport width from which the rail shows
 const MIN_TOC_CLEARANCE = 24;   // px between content and the rail, at least
