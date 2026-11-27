@@ -13,7 +13,7 @@
   <li><strong>Policy questions are always interventional.</strong> "Should we raise X?" is $do(X)$. No amount of predictive accuracy answers it</li>
 </ul></div>
 
-<div class="card cg"><div class="card-title">The Potential Outcomes Framework (Rubin Causal Model)</div>
+<div class="card cg"><div class="card-title">The potential outcomes framework (Rubin causal model)</div>
 <div class="formula math-formula">$$\begin{aligned}
 Y_i(1) &= \text{outcome for unit } i \text{ if treated} \\
 Y_i(0) &= \text{outcome for unit } i \text{ if not treated} \\
@@ -28,9 +28,9 @@ Y_i(0) &= \text{outcome for unit } i \text{ if not treated} \\
 </div>
 
 <!-- A/B testing -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — A/B Testing: The Gold Standard</div>
+<div class="card-title">A/B testing: the gold standard</div>
 
-<div class="card ca"><div class="card-title">Why Randomised Experiments Are the Gold Standard</div>
+<div class="card ca"><div class="card-title">Why randomised experiments are the gold standard</div>
 <div class="card-body">Random assignment makes treatment and control identical in expectation on every covariate — including the ones you never measured and the ones you never thought of. That last clause is the whole value proposition, and it is the one thing no observational method can replicate.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -268,7 +268,7 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 <div class="card-body" style="margin-top:10px">A standard experiment dashboard carries more than 20 metrics, so <strong>the coin-flip default is that something on it is significant and meaningless.</strong> Designate one primary metric before launch and treat everything else as guardrails or exploration; use Bonferroni (α/k) when you genuinely have a small family of confirmatory tests, and Benjamini–Hochberg FDR when you are screening many. The important half is the pre-registration, not the correction.</div>
 </div>
 
-<div class="card"><div class="card-title">Common A/B Testing Pitfalls</div>
+<div class="card"><div class="card-title">Common A/B testing pitfalls</div>
 <table class="tbl">
 <tr><th>Pitfall</th><th>What happens</th><th>Fix</th></tr>
 <tr><td><strong>Peeking / stopping early</strong></td><td>Checking results repeatedly inflates α — "significant" result is actually false positive</td><td>Pre-register n; use sequential testing (mSPRT) if early stopping is needed</td></tr>
@@ -283,7 +283,7 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 </div>
 
 <!-- Variance reduction -->
-<div class="card cc"><div class="card-title">Variance Reduction — Getting Significant Results Faster</div>
+<div class="card cc"><div class="card-title">Variance reduction — getting significant results faster</div>
 <table class="tbl">
 <tr><th>Technique</th><th>How</th><th>Typical variance reduction</th></tr>
 <tr><td><strong>CUPED</strong> (Controlled-experiment Using Pre-Experiment Data)</td><td>Regress out variance explained by pre-experiment metric: $Y^* = Y - \theta(X - \bar{X})$ where X = pre-experiment covariate</td><td>30–80% variance reduction; equivalent to 1.5–5× sample size</td></tr>
@@ -302,9 +302,9 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
 </div>
 
 <!-- Observational methods -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Observational Causal Inference (When You Can't Randomise)</div>
+<div class="card-title">Observational causal inference (when you can't randomise)</div>
 
-<div class="card cp"><div class="card-title">Difference-in-Differences (DiD)</div>
+<div class="card cp"><div class="card-title">Difference-in-differences (DiD)</div>
 <div class="formula math-formula">$$\begin{aligned}
 \hat{\tau}_{\text{DiD}} &= (\bar{Y}_{T,\text{post}} - \bar{Y}_{T,\text{pre}}) - (\bar{Y}_{C,\text{post}} - \bar{Y}_{C,\text{pre}}) \\
 &= \text{change in treated} - \text{change in control} \\
@@ -340,7 +340,7 @@ print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
 </div>
 </div></div>
 
-<div class="card"><div class="card-title">Other Observational Causal Methods</div>
+<div class="card"><div class="card-title">Other observational causal methods</div>
 <table class="tbl">
 <tr><th>Method</th><th>Key idea</th><th>Assumption</th><th>When to use</th></tr>
 <tr><td><strong>Propensity Score Matching (PSM)</strong></td><td>Match treated and control units with similar probability of being treated; compare outcomes</td><td>No unmeasured confounders (conditional ignorability)</td><td>Observational study with rich covariates; reduce selection bias</td></tr>
@@ -361,9 +361,9 @@ print(f"p-value: {result.pvalues['post:treated']:.4f}")</pre>
 </div>
 
 <!-- Uplift modelling -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 3 — Uplift Modelling (Heterogeneous Treatment Effects)</div>
+<div class="card-title">Uplift modelling (heterogeneous treatment effects)</div>
 
-<div class="card cg"><div class="card-title">Uplift Modelling — Targeting Who Responds to Treatment</div>
+<div class="card cg"><div class="card-title">Uplift modelling — targeting who responds to treatment</div>
 <div class="card-body">A propensity model ranks who is <em>likely to convert</em>. An uplift model ranks who converts <em>because you intervened</em>. Those rankings are close to unrelated, and the gap between them is usually the entire return on the campaign — because the people most likely to convert are frequently the people who were going to convert anyway.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -415,7 +415,7 @@ print(f"ATE: {ate:.4f}")
 # Target top quartile of ITE for marketing campaign</pre>
 
 </div>
-<div class="card" style="margin-top:13px"><div class="card-title">Uplift Evaluation — Qini Curve &amp; AUUC</div>
+<div class="card" style="margin-top:13px"><div class="card-title">Uplift evaluation — Qini curve &amp; AUUC</div>
 <div class="g2">
 <div>
 <ul class="bul">
@@ -440,9 +440,9 @@ print(f"AUUC: {auuc:.4f}")</pre>
 </div></div>
 
 <!-- DoWhy -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — DoWhy &amp; Causal Graphs</div>
+<div class="card-title">DoWhy &amp; causal graphs</div>
 
-<div class="card cr"><div class="card-title">DoWhy — Microsoft's Causal Inference Library</div>
+<div class="card cr"><div class="card-title">DoWhy — Microsoft's causal inference library</div>
 <div class="card-body">DoWhy implements Pearl's causal framework: specify a causal graph (DAG), identify whether the causal effect is estimable from data, estimate it, and test robustness of the estimate.</div>
 <div class="card-body" style="margin-top:8px">The reason the library is shaped in four steps — <strong>model, identify, estimate, refute</strong> — is that it forces the order most analyses get wrong. Identification comes <em>before</em> estimation: you first ask whether the effect is recoverable from the data you have given the graph you drew, and only then pick an estimator. Most bad causal work runs a regression and then argues about what it means.</div>
 <pre class="formula">import dowhy
@@ -520,7 +520,7 @@ print(refute)</pre>
 </ul></div>
 
 <!-- Used at top companies -->
-<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Netflix:</strong> CUPED variance reduction as standard practice on all A/B tests; causal forests for personalised recommendation treatment effects</li>
   <li><strong>Airbnb:</strong> DiD for evaluating policy changes (e.g. host cancellation policy) where randomisation is infeasible; SUTVA-aware cluster experiments for marketplace interventions</li>

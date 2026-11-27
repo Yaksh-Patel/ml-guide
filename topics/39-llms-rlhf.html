@@ -3,10 +3,10 @@
 <div class="sec-desc">A pretrained language model predicts likely next tokens, which is not the same as being useful, truthful or safe — and no amount of pretraining closes that gap, because the objective does not mention any of those things. Everything in this topic after the architecture is about that gap: alignment changes what the model optimises for, prompting steers it within a single forward pass, and retrieval supplies what its weights do not contain.</div>
 
 <!-- PART 1 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Architecture &amp; Scaling</div>
+<div class="card-title">Architecture &amp; scaling</div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Architecture of a Modern LLM</div>
+<div class="card cb"><div class="card-title">Architecture of a modern LLM</div>
 <ul class="bul">
   <li>Decoder-only Transformer (GPT-style) — causal self-attention, each token attends to past only</li>
   <li><strong>RoPE positional encodings</strong> — rotates Q/K vectors by position; extends to longer contexts than learned embeddings</li>
@@ -24,7 +24,7 @@
 </table>
 <div class="card-body" style="margin-top:10px"><strong>A model 2.5× smaller beat one 2.5× larger, on the same compute budget, by training on 4.7× more data.</strong> That is the whole result, and it redirected the field: for a fixed compute budget, parameters had been over-weighted relative to data. Every subsequent model got smaller relative to its training set.</div>
 <div class="card-body" style="margin-top:8px"><strong>And then the field deliberately left the optimum.</strong> Chinchilla optimises <em>training</em> compute, but a deployed model's cost is dominated by inference — which depends on parameter count and not at all on how many tokens it was trained on. So it is rational to overtrain a smaller model well past 20:1 in order to serve it cheaply forever, which is why current small models are trained on token counts many times Chinchilla-optimal. <strong>Chinchilla-optimal is the right answer to a question most people deploying a model are not asking.</strong></div></div>
-<div class="card cg"><div class="card-title">Scaling Laws (Chinchilla)</div>
+<div class="card cg"><div class="card-title">Scaling laws (Chinchilla)</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Chinchilla optimal: } N_{tokens} \approx 20 \times N_{params} \\
 \text{Llama-3 8B trained on 15T tokens (5}\times\text{ Chinchilla)} \\
@@ -38,9 +38,9 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </div>
 
 <!-- PART 2 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Alignment: RLHF, DPO &amp; ORPO</div>
+<div class="card-title">Alignment: RLHF, DPO &amp; ORPO</div>
 
-<div class="card ca"><div class="card-title">RLHF — The Classic Pipeline</div>
+<div class="card ca"><div class="card-title">RLHF — the classic pipeline</div>
 <div class="formula math-formula">$$\begin{aligned}
 &\text{Stage 1: Pre-train on massive text (self-supervised next-token prediction)} \\
 &\text{Stage 2: SFT on high-quality (prompt, response) demonstrations} \\
@@ -56,7 +56,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 <div class="card-body" style="margin-top:8px">The second term is a leash to the pretrained model. Without it the policy drifts to whatever maximises the proxy — outputs that score highly and are degenerate: excessive hedging, padding with agreeable filler, a particular flattering register, or in the classic failure mode, text that stops resembling language at all while the reward climbs. <strong>The reward going up is not evidence the model is improving; past a point it is evidence the reward model is being exploited.</strong></div>
 <div class="card-body" style="margin-top:8px">So β is not a tuning nicety, it is the constraint that keeps the policy inside the region where the reward model was trained and is therefore meaningful. Note what this implies: <strong>RLHF cannot make a model better than its reward model can recognise</strong>, and the reward model inherits every bias of the humans who labelled the comparisons — which is where sycophancy comes from. It is trained on what raters <em>preferred</em>, and raters prefer confident, agreeable answers.</div>
 <div class="card-body" style="margin-top:8px">DPO's appeal is that the same objective can be solved in closed form over preference pairs, removing the separate reward model and the RL loop — β survives as the same deviation budget. Its limitation is the flip side: being offline, it only ever sees responses already in the dataset, so it cannot discover a better response the way an on-policy method can.</div></div>
-<div class="card cp"><div class="card-title">DPO — Direct Preference Optimization</div>
+<div class="card cp"><div class="card-title">DPO — direct preference optimization</div>
 <div class="formula math-formula">$$\mathcal{L}_\text{DPO} = -\mathbb{E}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$</div>
 <ul class="bul" style="margin-top:8px">
   <li>Skips the separate reward model — solves for the optimal policy directly from preference pairs</li>
@@ -64,7 +64,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
   <li>Simpler to train than PPO, often comparable quality</li>
   <li><strong>Weakness:</strong> offline — cannot explore new responses; requires high-quality paired preference data</li>
 </ul></div>
-<div class="card cc"><div class="card-title">ORPO — Odds Ratio Preference Optimization</div>
+<div class="card cc"><div class="card-title">ORPO — odds ratio preference optimization</div>
 <div class="formula math-formula">$$\mathcal{L}_\text{ORPO} = \mathcal{L}_\text{SFT} - \lambda\cdot\mathbb{E}\!\left[\log\sigma\!\left(\log\frac{\text{odds}(y_w|x)}{\text{odds}(y_l|x)}\right)\right]$$</div>
 <ul class="bul" style="margin-top:8px">
   <li>Merges SFT and preference alignment into a <strong>single training stage</strong></li>
@@ -81,10 +81,10 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </table>
 
 <!-- PART 3 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 3 — Prompt Engineering Patterns</div>
+<div class="card-title">Prompt engineering patterns</div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Core Techniques</div>
+<div class="card cb"><div class="card-title">Core techniques</div>
 <table class="tbl"><tr><th>Technique</th><th>What It Does</th><th>When to Use</th></tr>
 <tr><td><strong>Zero-shot</strong></td><td>Instruction only</td><td>Simple tasks, GPT-4-class models</td></tr>
 <tr><td><strong>Few-shot (k-shot)</strong></td><td>k examples in prompt</td><td>Format adherence, classification, style</td></tr>
@@ -93,7 +93,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 <tr><td><strong>Tree of Thought</strong></td><td>LLM explores branching paths, backtracks</td><td>Planning, search-like problems</td></tr>
 <tr><td><strong>ReAct</strong></td><td>Interleave Thought + Action + Observation</td><td>Agents needing real-world tool calls</td></tr>
 </table></div>
-<div class="card cg"><div class="card-title">RAG Pipeline Design</div>
+<div class="card cg"><div class="card-title">RAG pipeline design</div>
 <div class="card-body">Inject retrieved external knowledge into the context at inference time — reduces hallucination and keeps knowledge fresh without retraining.</div>
 <ol class="num" style="margin-top:8px">
   <li><strong>Chunk documents</strong> — fixed (512 tokens) or semantic boundaries</li>
@@ -105,7 +105,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </ol></div>
 </div>
 
-<div class="card"><div class="card-title">Context Window Management</div>
+<div class="card"><div class="card-title">Context window management</div>
 <table class="tbl"><tr><th>Challenge</th><th>Technique</th><th>Trade-off</th></tr>
 <tr><td>Context too long</td><td>Truncation / sliding window</td><td>Simple but may lose early important context</td></tr>
 <tr><td>Long documents</td><td>Map-reduce: summarise chunks → combine summaries</td><td>Loses fine-grained detail</td></tr>
@@ -115,10 +115,10 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </table></div>
 
 <!-- PART 4 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-orange,#f5a623);margin:28px 0 12px;padding:0">Part 4 — Hallucination: Causes &amp; Mitigation</div>
+<div class="card-title">Hallucination: causes &amp; mitigation</div>
 
 <div class="g2">
-<div class="card ca"><div class="card-title">Why LLMs Hallucinate</div>
+<div class="card ca"><div class="card-title">Why LLMs hallucinate</div>
 <ul class="bul">
   <li><strong>Training objective mismatch:</strong> next-token prediction rewards fluency and plausibility, not factual accuracy</li>
   <li><strong>Knowledge gaps:</strong> sparse facts in training data get confabulated</li>
@@ -126,7 +126,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
   <li><strong>Context blindness:</strong> model defaults to parametric memory over provided context</li>
   <li><strong>Temporal drift:</strong> world changes after training cutoff; model returns stale facts</li>
 </ul></div>
-<div class="card cr"><div class="card-title">Mitigation Strategies</div>
+<div class="card cr"><div class="card-title">Mitigation strategies</div>
 <table class="tbl"><tr><th>Strategy</th><th>Mechanism</th><th>Limitation</th></tr>
 <tr><td>RAG</td><td>Ground answers in retrieved documents</td><td>Only helps if relevant docs are retrieved</td></tr>
 <tr><td>Calibrated uncertainty</td><td>Prompt: "Say 'I don't know' if unsure"</td><td>Sycophancy still hard to suppress</td></tr>
@@ -137,9 +137,9 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </div>
 
 <!-- PART 5 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:28px 0 12px;padding:0">Part 5 — Agentic LLM Patterns</div>
+<div class="card-title">Agentic LLM patterns</div>
 
-<div class="card"><div class="card-title">ReAct — Reasoning + Acting</div>
+<div class="card"><div class="card-title">ReAct — reasoning + acting</div>
 <div class="card-body">Interleaves Thought (explicit reasoning), Action (tool call), and Observation (tool result). Grounding reasoning in real observations reduces hallucination vs pure chain-of-thought.</div>
 <div class="anim-wrap"><div class="anim-title">ReAct loop: Thought → Action → Observation → repeat → Answer</div>
 <svg viewBox="0 0 500 110" xmlns="http://www.w3.org/2000/svg">
@@ -167,13 +167,13 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </svg></div></div>
 
 <div class="g2">
-<div class="card cp"><div class="card-title">Multi-Agent Patterns</div>
+<div class="card cp"><div class="card-title">Multi-agent patterns</div>
 <table class="tbl"><tr><th>Pattern</th><th>Structure</th><th>Use Case</th></tr>
 <tr><td>Orchestrator–Worker</td><td>Planner breaks task → specialist agents execute subtasks</td><td>Research, code generation pipelines</td></tr>
 <tr><td>Critic–Generator</td><td>Generator drafts → Critic reviews → iterate</td><td>Long-form writing, code review</td></tr>
 <tr><td>Parallelisation</td><td>Fan-out N agents same task → aggregate</td><td>Self-consistency, redundant evaluation</td></tr>
 </table></div>
-<div class="card cc"><div class="card-title">Agent Memory Types</div>
+<div class="card cc"><div class="card-title">Agent memory types</div>
 <table class="tbl"><tr><th>Type</th><th>Storage</th><th>Scope</th></tr>
 <tr><td>In-context</td><td>System prompt + conversation</td><td>Single session; context window limited</td></tr>
 <tr><td>External (episodic)</td><td>Vector DB</td><td>Persistent; searched by similarity</td></tr>
@@ -183,10 +183,10 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 </div>
 
 <!-- PART 6 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 6 — Evaluation &amp; Inference Optimization</div>
+<div class="card-title">Evaluation &amp; inference optimization</div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">LLM Benchmarks</div>
+<div class="card cb"><div class="card-title">LLM benchmarks</div>
 <table class="tbl"><tr><th>Benchmark</th><th>Tests</th><th>Notes</th></tr>
 <tr><td>MMLU</td><td>57-subject multiple choice</td><td>Standard knowledge coverage; GPT-4 ~86%</td></tr>
 <tr><td>MT-Bench</td><td>Multi-turn conversation</td><td>LLM-as-judge (GPT-4 rates 1–10)</td></tr>
@@ -194,7 +194,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
 <tr><td>RAGAS</td><td>RAG faithfulness + relevancy</td><td>Reference-free; designed for RAG</td></tr>
 <tr><td>LLM-as-Judge</td><td>Pairwise preference scoring</td><td>Correlates with human; watch positional bias</td></tr>
 </table></div>
-<div class="card ca"><div class="card-title">Inference Optimization</div>
+<div class="card ca"><div class="card-title">Inference optimization</div>
 <table class="tbl"><tr><th>Technique</th><th>Effect</th></tr>
 <tr><td>KV Cache</td><td>Avoids recomputing K/V for generated tokens</td></tr>
 <tr><td>INT4 Quantization</td><td>4× smaller; ~1% accuracy drop</td></tr>
@@ -213,7 +213,7 @@ L \propto N^{-\alpha_N} + D^{-\alpha_D} + \text{irreducible noise}
   <li><strong>Ignoring context window utilisation efficiency</strong> — LLMs attend to all tokens in context with O(n²) cost. Stuffing 100K tokens of marginally relevant context into the prompt increases latency quadratically. Retrieve only the most relevant chunks (RAG, top-k=3–5) rather than dumping entire documents</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>OpenAI (GPT-4 training pipeline):</strong> pretraining on web-scale data → SFT on high-quality demonstrations → reward model trained on human preference pairs → PPO fine-tuning maximising reward while penalising KL divergence from SFT model — this 3-stage RLHF pipeline is the blueprint for all frontier models</li>
   <li><strong>Anthropic (Constitutional AI):</strong> extends RLHF with AI feedback — a model critiques and revises its own outputs using a set of principles (the "constitution"); reduces dependence on human labellers for harmlessness and helpfulness signal</li>

@@ -4,7 +4,7 @@
 
 <!-- Why it matters -->
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Responsible AI Is Not Optional</div>
+<div class="card cb"><div class="card-title">Why responsible AI is not optional</div>
 <ul class="bul">
   <li><strong>Regulatory pressure:</strong> EU AI Act (2024), US Executive Order on AI, NYC Local Law 144 (automated employment decisions) all mandate bias audits and transparency</li>
   <li><strong>Business risk:</strong> ProPublica's COMPAS analysis, Amazon's hiring tool, Apple Card credit discrimination — all caused major reputational damage</li>
@@ -14,7 +14,7 @@
 <div class="card-body" style="margin-top:10px">The third bullet is the one to lead with in an interview, because it reframes the whole conversation. <strong>A minority group at 10% of the data contributes 10% of the loss</strong>, so a model minimising average error is <em>correctly</em> trading their accuracy for the majority's. That is not malice in the objective, it is the objective working — which is why the fix is usually a change to the loss, the sampling, or the evaluation, and why "fairness versus accuracy" is often a false dilemma rather than a real frontier.</div>
 </div>
 
-<div class="card ca"><div class="card-title">Taxonomy of Harm</div>
+<div class="card ca"><div class="card-title">Taxonomy of harm</div>
 <table class="tbl">
 <tr><th>Harm Type</th><th>Description</th><th>Example</th></tr>
 <tr><td><strong>Allocative</strong></td><td>Unfair distribution of resources/opportunities</td><td>Loan model approves men at higher rate than equally qualified women</td></tr>
@@ -27,25 +27,25 @@
 </div>
 
 <!-- Bias sources -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Sources of Bias</div>
+<div class="card-title">Sources of bias</div>
 
-<div class="card cg"><div class="card-title">Where Bias Enters the ML Pipeline</div>
+<div class="card cg"><div class="card-title">Where bias enters the ML pipeline</div>
 <div class="g3" style="margin-top:10px">
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Data Bias</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Data bias</div>
 <ul class="bul">
   <li><strong>Historical bias:</strong> training data reflects past discrimination (e.g. historical hiring data where women were underrepresented in tech)</li>
   <li><strong>Representation bias:</strong> training set doesn't represent the deployment population (e.g. facial recognition trained mostly on light-skinned faces)</li>
   <li><strong>Measurement bias:</strong> proxy features encode protected attributes (e.g. zip code encodes race; arrest records encode policing bias)</li>
   <li><strong>Label bias:</strong> human annotators apply different standards to different groups</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">Model Bias</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">Model bias</div>
 <ul class="bul">
   <li><strong>Aggregation bias:</strong> single model trained on heterogeneous groups doesn't work well for any subgroup</li>
   <li><strong>Evaluation bias:</strong> benchmarks don't represent the deployment distribution; good benchmark score ≠ fair in production</li>
   <li><strong>Algorithmic amplification:</strong> small disparities in data get amplified by models optimising for aggregate accuracy</li>
   <li><strong>Feedback loops:</strong> model predictions change future data (e.g. police model predicts crime → more policing → more arrests → model reinforced)</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Deployment Bias</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Deployment bias</div>
 <ul class="bul">
   <li><strong>Population shift:</strong> model trained on one population deployed on another</li>
   <li><strong>Automation bias:</strong> humans over-rely on model recommendations even when wrong</li>
@@ -69,7 +69,7 @@
 <div class="card-body" style="margin-top:8px">Two conclusions follow, and they are the ones that matter in practice. <strong>You must retain the protected attribute to measure fairness at all</strong> — you cannot compute a disparate-impact ratio for a group you did not record, which is the awkward tension with privacy law and the reason regulated lenders keep protected attributes in a separate, access-controlled table used only for audit. And <strong>unawareness is not a defence</strong>: disparate impact is assessed on outcomes, not intent, so "the model never saw race" is legally irrelevant if the selection rates diverge.</div></div>
 
 <!-- Fairness definitions -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Fairness Definitions &amp; Metrics</div>
+<div class="card-title">Fairness definitions &amp; metrics</div>
 
 <div class="card cp"><div class="card-title">The impossibility theorem — with the algebra that forces it</div>
 <div class="card-body">Chouldechova (2017) and Kleinberg et al. (2016) proved that calibration, equal FPR, and equal FNR cannot all hold simultaneously when base rates differ across groups. Every fairness metric is a tradeoff — choosing one often violates another.</div>
@@ -89,7 +89,7 @@
 <div class="box warn" style="margin-top:10px"><div class="bl">Practical implication</div><p>You must choose which fairness criterion matters most for your use case — there is no universally "fair" model. This is a values and policy decision, not a purely technical one. Document the choice and justify it.</p></div>
 </div>
 
-<div class="card"><div class="card-title">Fairness Metrics — Definitions &amp; When to Use</div>
+<div class="card"><div class="card-title">Fairness metrics — definitions &amp; when to use</div>
 <table class="tbl">
 <tr><th>Metric</th><th>Definition</th><th>Formula</th><th>Use when</th></tr>
 <tr><td><strong>Demographic Parity</strong></td><td>Positive prediction rates equal across groups</td><td>$P(\hat{Y}=1|G=0) = P(\hat{Y}=1|G=1)$</td><td>Resource allocation; anti-discrimination compliance</td></tr>
@@ -101,7 +101,7 @@
 </table>
 <div class="card-body" style="margin-top:10px"><strong>Demographic parity is the odd one out and the source of most confusion.</strong> It ignores $Y$ entirely, so it demands equal selection rates even where the groups genuinely differ on the outcome — which makes it the right instrument for compliance thresholds and the wrong one for accuracy claims. Everything else conditions on the truth: equal opportunity on $Y=1$, equalised odds on both, calibration on the score. If a stakeholder says "make it fair", the first question is <em>which of those conditionings do you mean</em>, because they lead to different models and, per the theorem above, cannot be combined.</div></div>
 
-<div class="card cc"><div class="card-title">Practical Fairness Metrics — What to Actually Measure</div>
+<div class="card cc"><div class="card-title">Practical fairness metrics — what to actually measure</div>
 <table class="tbl">
 <tr><th>Metric</th><th>Formula</th><th>Interpretation</th><th>Acceptable range</th></tr>
 <tr><td><strong>Disparate Impact Ratio</strong></td><td>$\frac{P(\hat{Y}=1|G=\text{minority})}{P(\hat{Y}=1|G=\text{majority})}$</td><td>Ratio of positive rates; &lt;0.8 = illegal disparate impact (US 4/5ths rule)</td><td>≥ 0.8 (US EEOC standard)</td></tr>
@@ -120,9 +120,9 @@
 <div class="card-body" style="margin-top:10px">The model never sees group membership. Audited on <strong>equal opportunity it looks excellent</strong> — a TPR gap of 0.011, well inside any threshold you would set — and on <strong>predictive parity it is severe</strong>, a 22-point PPV gap meaning a positive prediction means something quite different depending on which group you belong to. <strong>Same model, same data, opposite verdicts</strong>, and the cause is the base-rate difference rather than anything in the code. Pick your audit metric after choosing what harm you care about, not before, and never let a single passing number stand as the fairness result.</div></div>
 
 <!-- Bias detection -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 3 — Bias Detection &amp; Auditing</div>
+<div class="card-title">Bias detection &amp; auditing</div>
 
-<div class="card cr"><div class="card-title">Bias Detection Toolkit</div>
+<div class="card cr"><div class="card-title">Bias detection toolkit</div>
 <div class="g2">
 <div>
 <strong style="font-size:12px;color:var(--text)">Key libraries</strong>
@@ -165,11 +165,11 @@ print("DPD:", demographic_parity_difference(
 <div class="card-body" style="margin-top:10px"><strong>Audit intersections, not just marginals.</strong> Buolamwini and Gebru's Gender Shades result is the canonical demonstration: commercial face classifiers were near-perfect on lighter-skinned men and had error rates up to <strong>34.7%</strong> on darker-skinned women, while the one-dimensional breakdowns by gender and by skin tone each looked far less alarming. A model can be within threshold on every single attribute and badly broken on a combination, because averaging over the other dimension hides it.</div></div>
 
 <!-- Mitigation -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 4 — Bias Mitigation Techniques</div>
+<div class="card-title">Bias mitigation techniques</div>
 
-<div class="card cg"><div class="card-title">Three Stages of Mitigation</div>
+<div class="card cg"><div class="card-title">Three stages of mitigation</div>
 <div class="g3" style="margin-top:10px">
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Pre-processing (Data)</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Pre-processing (data)</div>
 <ul class="bul">
   <li><strong>Reweighting:</strong> assign higher sample weights to underrepresented groups so model treats them equally</li>
   <li><strong>Resampling:</strong> oversample minority group, undersample majority to balance training distribution</li>
@@ -177,14 +177,14 @@ print("DPD:", demographic_parity_difference(
   <li><strong>Disparate impact remover:</strong> transform features to remove correlation with protected attribute while preserving rank ordering (AIF360)</li>
   <li><strong>Remove proxy features:</strong> drop features that are highly correlated with protected attribute (zip code, school name)</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">In-processing (Model)</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">In-processing (model)</div>
 <ul class="bul">
   <li><strong>Adversarial debiasing:</strong> train predictor + adversary; adversary tries to predict protected attribute from predictions; predictor trained to fool adversary</li>
   <li><strong>Constrained optimisation:</strong> add fairness constraint to loss function; optimise accuracy subject to demographic parity ≤ ε (Fairlearn ExponentiatedGradient)</li>
   <li><strong>Meta-fair classifier:</strong> optimise directly for a fairness metric instead of accuracy</li>
   <li><strong>Prejudice remover:</strong> add fairness-aware regularisation term to penalise dependence on protected attribute</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Post-processing (Output)</div>
+<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Post-processing (output)</div>
 <ul class="bul">
   <li><strong>Threshold optimisation:</strong> set different classification thresholds per group to equalise TPR or FPR (Fairlearn ThresholdOptimizer)</li>
   <li><strong>Reject option classification:</strong> near-threshold predictions go to a human reviewer rather than being decided by the model</li>
@@ -198,9 +198,9 @@ print("DPD:", demographic_parity_difference(
 </div>
 
 <!-- Explainability -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Explainability &amp; Transparency</div>
+<div class="card-title">Explainability &amp; transparency</div>
 
-<div class="card"><div class="card-title">Explainability Methods — When to Use Which</div>
+<div class="card"><div class="card-title">Explainability methods — when to use which</div>
 <table class="tbl">
 <tr><th>Method</th><th>Scope</th><th>How it works</th><th>Best for</th></tr>
 <tr><td><strong>SHAP</strong></td><td>Global + local</td><td>Shapley values from game theory — each feature's marginal contribution averaged over all orderings</td><td>Tabular models; feature importance audit; regulators</td></tr>
@@ -214,9 +214,9 @@ print("DPD:", demographic_parity_difference(
 <div class="card-body" style="margin-top:8px">Two more cautions worth carrying. <strong>Correlated features make attributions unstable</strong> — SHAP splits credit among collinear inputs in ways that shift with the background distribution you choose, so a proxy's importance can be masked by hiding behind its correlates rather than genuinely absent. And <strong>counterfactual explanations are the only row in that table that gives a person something to do.</strong> "Income contributed −0.3 to your score" is not actionable; "approval would follow at 6,000 more annual income, or one fewer recent enquiry" is recourse, and it is what adverse-action notices under ECOA are actually trying to achieve. Prefer the actionable form whenever the explanation is going to a person rather than to an auditor.</div></div>
 
 <!-- Model cards & governance -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent,#5b7df8);margin:28px 0 12px;padding:0">Part 6 — Model Cards, Governance &amp; Regulatory Landscape</div>
+<div class="card-title">Model cards, governance &amp; regulatory landscape</div>
 
-<div class="card cp"><div class="card-title">Model Cards — Standardised Transparency Documentation</div>
+<div class="card cp"><div class="card-title">Model cards — standardised transparency documentation</div>
 <div class="card-body">Proposed by Mitchell et al. (Google, 2019). A model card is a short document accompanying a model that communicates intended use, performance characteristics by subgroup, and known limitations.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -244,7 +244,7 @@ print("DPD:", demographic_parity_difference(
 </div>
 <div class="card-body" style="margin-top:10px"><strong>The section that does the work is "out-of-scope uses".</strong> Most documented harm comes from a model applied outside the population or purpose it was validated for — a triage tool repurposed as a diagnosis, a US-trained credit model deployed in another market. Writing down what the model is <em>not</em> for is the cheapest control available, and it is the section teams skip because it reads as admitting weakness. Treat the card as a versioned artefact regenerated by the training pipeline, not a document written once at launch; a card describing a model two retrains ago is worse than none, because it is trusted.</div></div>
 
-<div class="card ca"><div class="card-title">Regulatory Landscape — What You Need to Know</div>
+<div class="card ca"><div class="card-title">Regulatory landscape — what you need to know</div>
 <table class="tbl">
 <tr><th>Regulation</th><th>Jurisdiction</th><th>Key ML requirements</th></tr>
 <tr><td><strong>EU AI Act (2024)</strong></td><td>European Union</td><td>Risk-tiered: high-risk AI (hiring, credit, healthcare) must be audited, documented, human-overseen. Banned uses include social scoring and real-time biometric surveillance. Providers must register systems and provide model cards.</td></tr>
@@ -273,7 +273,7 @@ print("DPD:", demographic_parity_difference(
 </ul></div>
 
 <!-- Used at top companies -->
-<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Google:</strong> Responsible AI Practices team; model cards published for all major model releases; Fairness Indicators tool in TensorFlow Model Analysis</li>
   <li><strong>Microsoft:</strong> Responsible AI Standard (internal policy); Fairlearn open-sourced; Azure ML has Fairness Dashboard built-in</li>

@@ -296,7 +296,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   border-bottom: 1px solid var(--border);
 }
 .tb-left { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
-.tb-menu { display: none; }   /* phones and tablets: opens the sidebar drawer (§9) */
+.tb-btn.tb-menu { display: none; }   /* phones and tablets: opens the sidebar drawer (§9) */
 .tb-crumb {
   font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--text3); flex-shrink: 0;
@@ -355,8 +355,8 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
    spans the column, so the same rules apply one level down to its children.
    Cards nested in a .g2/.g3 keep their own box and fill their grid cell.
    The home page has its own grid layout and uses the whole column.
-   !important on margin-inline: 60 "Part N" headings carry an inline
-   `margin: 28px 0 12px`, which would pin them to the column's left edge. Every
+   !important on margin-inline: many top-level blocks carry an inline
+   `margin: Npx 0`, which would pin them to the column's left edge. Every
    top-level inline margin in topics/ has 0 horizontally, so nothing is lost. */
 #topic-container > .section:not(#sec-home) > *,
 #topic-container > .section:not(#sec-home) > .card > * { max-width: var(--prose-w); margin-inline: auto !important; }
@@ -533,9 +533,9 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
    No box: a numbered heading, a hairline between sections, and generous space.
    The number is a CSS counter in the group colour, so no topic file changes.
    The card itself spans the article column; its children follow the column
-   rules in §3 (text at --prose-w, figures wide). The 60 "Part N" headings that
-   sit between sections in 11 older topics introduce the section after them, so
-   no rule is drawn there. */
+   rules in §3 (text at --prose-w, figures wide). Part headings (a .card-title
+   directly in the section, 52 + 8 in 13 older topics) introduce the section
+   after them, so no rule is drawn there. */
 .section { counter-reset: sec; }
 #topic-container > .section:not(#sec-home) > .card {
   counter-increment: sec;
@@ -558,18 +558,17 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .06em;
   color: var(--grp);
 }
-/* "Part N" headings (60, in 11 older topics) carry inline colours and sizes
-   from before the design system. Until chunk 7 rewrites them, show them as a
-   kicker in the group colour with a rule above, so a page keeps one colour.
-   !important because the values to beat are inline. */
+/* Part headings: a .card-title directly in the section (not in a card)
+   groups the sections after it. 60 of them, in 13 older topics. A kicker in
+   the group colour with a rule above, so a page keeps one colour. */
 #topic-container > .section:not(#sec-home) > .card-title {
-  font-family: var(--font-mono) !important; font-size: 12.5px !important; font-weight: 500 !important;
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 500;
   letter-spacing: .08em; text-transform: uppercase; line-height: 1.5;
-  color: var(--grp) !important;
-  margin-top: 64px !important; margin-bottom: 20px !important; padding-top: 28px !important;
+  color: var(--grp);
+  margin-top: 64px; margin-bottom: 20px; padding-top: 28px;
   border-top: 1px solid var(--border);
 }
-#topic-container > .section:not(#sec-home) > .sec-desc + .card-title { margin-top: 0 !important; padding-top: 0 !important; border-top: 0; }
+#topic-container > .section:not(#sec-home) > .sec-desc + .card-title { margin-top: 0; padding-top: 0; border-top: 0; }
 /* Blocks that sit between sections (figures, grids, the closing "In an
    interview" box) get the same breathing room. */
 #topic-container > .section:not(#sec-home) > :is(.g2, .g3, .anim-wrap, .tbl, .box, .code-runner) { margin-top: 40px; margin-bottom: 0; }
@@ -1062,7 +1061,7 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
   .main { margin-left: 0 !important; padding: 0 16px 90px; }
   #sb-expand-btn { display: none !important; }
   .tb-left { align-items: center; }
-  .tb-menu { display: inline-flex; padding: 5px 8px; }
+  .tb-btn.tb-menu { display: inline-flex; padding: 5px 8px; }
   .tb-menu svg { width: 15px; height: 15px; }
   /* The overlay is not a sibling of the sidebar (it sits outside .layout), so match on body. */
   body:has(.sidebar.open) .mob-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }

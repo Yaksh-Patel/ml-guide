@@ -4,7 +4,7 @@
 
 <!-- What is an agent -->
 <div class="g2">
-<div class="card cb"><div class="card-title">What Makes a System "Agentic"</div>
+<div class="card cb"><div class="card-title">What makes a system "agentic"</div>
 <ul class="bul">
   <li><strong>Tool use</strong> — LLM can invoke external functions (search, code execution, APIs, databases)</li>
   <li><strong>Multi-step reasoning</strong> — decisions span multiple LLM calls; output of one step feeds the next</li>
@@ -41,7 +41,7 @@
 </table>
 <p style="margin-top:10px">A 10-step agent costs <strong>5.5× the naive estimate</strong>, and prompt caching is the main reason this is survivable in practice — the unchanged prefix is billed at a discount. Budget with the quadratic, not the linear, and note that long observations (a full web page, a large query result) blow this up fast. Truncate and summarise observations before they enter the history.</p></div></div>
 
-<div class="card cg"><div class="card-title">Agent vs Chatbot vs RAG Pipeline</div>
+<div class="card cg"><div class="card-title">Agent vs chatbot vs RAG pipeline</div>
 <table class="tbl">
 <tr><th>System</th><th>Reasoning</th><th>Tool use</th><th>Multi-step</th></tr>
 <tr><td>Chatbot</td><td>Single turn</td><td>None</td><td>No</td></tr>
@@ -53,9 +53,9 @@
 </div>
 
 <!-- ReAct -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — ReAct: The Core Agentic Pattern</div>
+<div class="card-title">ReAct: the core agentic pattern</div>
 
-<div class="card ca"><div class="card-title">ReAct — Reasoning + Acting (Yao et al. 2022)</div>
+<div class="card ca"><div class="card-title">ReAct — reasoning + acting (Yao et al. 2022)</div>
 <div class="card-body">ReAct interleaves reasoning traces (Thought) with concrete actions (Action) and environmental feedback (Observation). This loop continues until the agent has enough information to produce a final answer.</div>
 <pre class="formula">User: What is the population of the capital of the country where the Eiffel Tower is?
 
@@ -73,9 +73,9 @@ Final Answer: The population of Paris, the capital of France, is approximately 2
 </div>
 
 <!-- Tool calling -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — Tool Calling (Function Calling)</div>
+<div class="card-title">Tool calling (function calling)</div>
 
-<div class="card cp"><div class="card-title">How Tool Calling Works (OpenAI / Anthropic API pattern)</div>
+<div class="card cp"><div class="card-title">How tool calling works (OpenAI / Anthropic API pattern)</div>
 <div class="g2">
 <div>
 <pre class="formula"># Define tools as JSON schema
@@ -125,7 +125,7 @@ response = client.messages.create(
 </div>
 </div></div>
 
-<div class="card"><div class="card-title">Common Tool Types &amp; Examples</div>
+<div class="card"><div class="card-title">Common tool types &amp; examples</div>
 <table class="tbl">
 <tr><th>Category</th><th>Examples</th><th>Permissions needed</th></tr>
 <tr><td><strong>Retrieval</strong></td><td>Vector DB search, web search, SQL query, document lookup</td><td>Read-only — lowest risk</td></tr>
@@ -136,9 +136,9 @@ response = client.messages.create(
 </table></div>
 
 <!-- Memory -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — Memory Architecture</div>
+<div class="card-title">Memory architecture</div>
 
-<div class="card cc"><div class="card-title">Four Types of Agent Memory</div>
+<div class="card cc"><div class="card-title">Four types of agent memory</div>
 <table class="tbl">
 <tr><th>Type</th><th>Where stored</th><th>Lifespan</th><th>Use case</th></tr>
 <tr><td><strong>In-context (working)</strong></td><td>LLM context window</td><td>Current session only</td><td>Conversation history, intermediate results, scratch pad</td></tr>
@@ -150,9 +150,9 @@ response = client.messages.create(
 </div>
 
 <!-- Multi-agent -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — Multi-Agent Orchestration</div>
+<div class="card-title">Multi-agent orchestration</div>
 
-<div class="card cr"><div class="card-title">Multi-Agent Patterns</div>
+<div class="card cr"><div class="card-title">Multi-agent patterns</div>
 <div class="card-body">Single agents are limited by context window size and specialisation. Multi-agent systems decompose complex tasks across specialised agents coordinated by an orchestrator.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -193,7 +193,7 @@ response = client.messages.create(
 </div>
 </div></div>
 
-<div class="card cg"><div class="card-title">Agent Frameworks — Landscape</div>
+<div class="card cg"><div class="card-title">Agent frameworks — landscape</div>
 <table class="tbl">
 <tr><th>Framework</th><th>Pattern</th><th>Strength</th><th>Complexity</th></tr>
 <tr><td><strong>LangChain + LCEL</strong></td><td>Chains + agents + RAG</td><td>Largest ecosystem; many integrations</td><td>High — steep learning curve</td></tr>
@@ -205,9 +205,9 @@ response = client.messages.create(
 </table></div>
 
 <!-- Guardrails -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Guardrails &amp; Safety</div>
+<div class="card-title">Guardrails &amp; safety</div>
 
-<div class="card ca"><div class="card-title">Agentic Safety — What Can Go Wrong</div>
+<div class="card ca"><div class="card-title">Agentic safety — what can go wrong</div>
 <div class="g2">
 <div>
 <strong style="font-size:12px;color:var(--text)">Failure modes</strong>
@@ -232,7 +232,7 @@ response = client.messages.create(
 </div>
 </div></div>
 
-<div class="card"><div class="card-title">Prompt Injection — The #1 Agentic Security Risk</div>
+<div class="card"><div class="card-title">Prompt injection — the #1 agentic security risk</div>
 <div class="card-body">When an agent retrieves external content (web pages, emails, documents), that content may contain instructions designed to hijack the agent's behaviour.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -266,7 +266,7 @@ response = client.messages.create(
 <div class="card-body" style="margin-top:8px"><strong>The framing worth carrying:</strong> treat every observation the loop ingests as hostile user input, and design so that a fully compromised model cannot do unacceptable damage. Any mitigation that relies on the model resisting persuasion is a soft control, not a boundary.</div></div>
 
 <!-- Evaluation -->
-<div class="card cp"><div class="card-title">Evaluating Agents — Much Harder Than Evaluating LLMs</div>
+<div class="card cp"><div class="card-title">Evaluating agents — much harder than evaluating LLMs</div>
 <div class="card-body">Single-turn LLM eval compares output to reference. Agent eval must assess multi-step trajectories where intermediate steps matter, the environment changes, and success depends on final task completion — not output quality.</div>
 <table class="tbl" style="margin-top:10px">
 <tr><th>Metric</th><th>What it measures</th><th>How</th></tr>
@@ -291,7 +291,7 @@ response = client.messages.create(
 </ul></div>
 
 <!-- Used at top companies -->
-<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Anthropic (Claude + Computer Use):</strong> agent with browser and desktop control tools; can navigate UIs, fill forms, extract data</li>
   <li><strong>OpenAI (Operator / Assistants API):</strong> tool-calling agents with code interpreter, file search, custom function tools for enterprise automation</li>

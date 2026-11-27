@@ -3,7 +3,7 @@
 <div class="sec-desc">The two failures that kill more production models than any modelling mistake are <strong>training–serving skew</strong> and <strong>point-in-time leakage</strong>, and they are the same bug wearing different clothes: the offline job can see the future and across the whole dataset, while the live service sees one row at one instant. Almost everything here — feature stores, as-of joins, table formats with time travel, idempotent partitioned writes — exists to make the offline world obey the constraints the online world cannot escape. Get that right and the modelling is the easy part; get it wrong and you ship a model with a beautiful offline score and no production value.</div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Data Engineering Is an ML Bottleneck</div>
+<div class="card cb"><div class="card-title">Why data engineering is an ML bottleneck</div>
 <ul class="bul">
   <li><strong>Data scientists spend 80% of time on data</strong> — finding, cleaning, transforming, validating — and only 20% on modelling</li>
   <li><strong>Training-serving skew:</strong> features computed differently in training pipelines vs inference APIs causes silent model degradation — the most common production ML failure</li>
@@ -12,7 +12,7 @@
 </ul>
 <div class="card-body" style="margin-top:10px">The word doing the work in the second bullet is <strong>silent</strong>. A skewed feature does not raise an exception, fail a test, or show up in the model's logs — it produces a confident prediction from a distribution the model never trained on. There is no stack trace, so the failure surfaces weeks later as an unexplained drop in a business metric, which is why the engineering answer is structural (one definition, used by both paths) rather than diligence.</div></div>
 
-<div class="card cg"><div class="card-title">The Modern ML Data Stack</div>
+<div class="card cg"><div class="card-title">The modern ML data stack</div>
 <table class="tbl">
 <tr><th>Layer</th><th>Tool examples</th><th>Purpose</th></tr>
 <tr><td><strong>Ingestion</strong></td><td>Fivetran, Airbyte, Kafka</td><td>Move raw data from source systems to data lake/warehouse</td></tr>
@@ -27,7 +27,7 @@
 </div>
 
 <!-- Spark -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Apache Spark for ML Data Pipelines</div>
+<div class="card-title">Apache Spark for ML data pipelines</div>
 
 <div class="card ca"><div class="card-title">Spark — and the three numbers that decide whether a job finishes</div>
 <div class="card-body">Spark is the dominant framework for processing data too large for pandas. It distributes computation across a cluster, processes data in-memory (vs Hadoop MapReduce's disk-based approach), and provides DataFrame, SQL, and ML APIs.</div>
@@ -91,9 +91,9 @@ df_features.write \
 </div>
 
 <!-- dbt -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Part 2 — dbt for ML Feature Engineering</div>
+<div class="card-title">dbt for ML feature engineering</div>
 
-<div class="card cp"><div class="card-title">dbt — Data Build Tool</div>
+<div class="card cp"><div class="card-title">dbt — data build tool</div>
 <div class="card-body">dbt transforms raw data in your data warehouse using SQL SELECT statements. It handles dependency ordering, incremental loading, testing, and documentation — everything you'd write boilerplate Python for, dbt handles declaratively.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -165,9 +165,9 @@ models:
 </div>
 
 <!-- Delta Lake / Iceberg -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 3 — Table Formats: Delta Lake &amp; Apache Iceberg</div>
+<div class="card-title">Table formats: Delta Lake &amp; Apache Iceberg</div>
 
-<div class="card cc"><div class="card-title">Why Table Formats Matter for ML</div>
+<div class="card cc"><div class="card-title">Why table formats matter for ML</div>
 <div class="card-body">Raw parquet files in S3 are immutable and stateless — you can't update a row, roll back, or read consistent snapshots. Delta Lake and Iceberg add ACID transactions, versioning, and time travel on top of parquet, solving critical ML data engineering problems.</div>
 <div class="card-body" style="margin-top:8px"><strong>The concrete failure that motivates all of this:</strong> a directory of parquet files has no commit point. A job halfway through writing 500 files has published 250 of them, and a training job reading that path gets a dataset that is not any version of the truth — not the old one, not the new one. Nothing errors. You train on it. A table format adds an atomic metadata pointer, so readers see the old snapshot until the new one is complete, which is the whole difference between a directory and a table.</div>
 <div class="g2" style="margin-top:10px">
@@ -211,9 +211,9 @@ DeltaTable.forPath(spark, "s3://bucket/features/") \
 </div></div>
 
 <!-- Feature pipelines -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-red,#f06767);margin:28px 0 12px;padding:0">Part 4 — Feature Pipelines: Batch vs Streaming</div>
+<div class="card-title">Feature pipelines: batch vs streaming</div>
 
-<div class="card cr"><div class="card-title">Batch Feature Pipelines</div>
+<div class="card cr"><div class="card-title">Batch feature pipelines</div>
 <div class="card-body">Compute features on a schedule (hourly, daily, weekly) from historical data. Best for features that don't need sub-minute freshness and where history matters.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -272,7 +272,7 @@ training_df = store.get_historical_features(
 <div class="card-body" style="margin-top:10px">Two details that decide whether an as-of join is actually correct. Use the timestamp at which a fact <strong>became available to your systems</strong>, not the timestamp it describes — a credit score dated 1 March but ingested on 5 March was not knowable on the 3rd, and the gap between event time and ingest time is where leakage hides after you have fixed the obvious version. And define the boundary: if a feature is stamped at exactly the label instant, decide deliberately whether it is admissible, because <code>&lt;</code> and <code>&lt;=</code> differ by exactly the events you most want to exclude.</div>
 </div>
 
-<div class="card ca"><div class="card-title">Streaming Feature Pipelines — Kafka + Flink</div>
+<div class="card ca"><div class="card-title">Streaming feature pipelines — Kafka + Flink</div>
 <div class="card-body">For features that must be fresh within seconds — fraud detection velocity signals, real-time session features, live inventory counts. Streaming pipelines consume events as they arrive and maintain continuously updated aggregations.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -325,9 +325,9 @@ t_env.execute_sql("""
 </div>
 
 <!-- Data quality -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-amber,#f5a623);margin:28px 0 12px;padding:0">Part 5 — Data Quality &amp; Contracts</div>
+<div class="card-title">Data quality &amp; contracts</div>
 
-<div class="card"><div class="card-title">Data Quality — Why It Breaks ML Pipelines</div>
+<div class="card"><div class="card-title">Data quality — why it breaks ML pipelines</div>
 <div class="g2">
 <div>
 <strong style="font-size:12px;color:var(--text)">Common data quality failures in ML</strong>
@@ -392,7 +392,7 @@ if not results.success:
 </ul></div>
 
 <!-- Used at top companies -->
-<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Uber (Michaelangelo):</strong> pioneered the ML platform concept — Spark for feature computation, centralised feature store shared across 1000+ models; Kafka + Flink for real-time features like driver location</li>
   <li><strong>Netflix:</strong> Spark + Iceberg on S3 for their entire data lake; dbt for warehouse transformations; Metaflow orchestrates ML pipelines that consume these features</li>

@@ -3,9 +3,9 @@
 <div class="sec-desc">Three ways of not training from scratch, answering different questions. <strong>Transfer learning</strong> asks how to reuse representations someone else paid for. <strong>PEFT</strong> asks how to adapt a model you cannot fit in memory. <strong>Distillation</strong> asks how to ship something smaller than what you trained. All three rest on one observation: the expensive part of a model is its general knowledge, and the task-specific part is small — small enough that LoRA captures it in a few hundredths of a percent of the weights.</div>
 
 <!-- PART 1 -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Part 1 — Transfer Learning</div>
+<div class="card-title">Transfer learning</div>
 
-<div class="card"><div class="card-title">The Paradigm Shift</div>
+<div class="card"><div class="card-title">The paradigm shift</div>
 <div class="card-body">Pre-train a large model on a massive task (ImageNet, language modeling, masked token prediction). The model learns rich, general features. Fine-tune this model on your small labeled dataset — the features transfer.</div>
 <div class="formula math-formula">$$\begin{aligned}
 &\text{Stage 1: Pre-train on large dataset (self-supervised or supervised)} \\
@@ -18,14 +18,14 @@
 \end{aligned}$$</div></div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">When to Freeze vs Fine-Tune</div>
+<div class="card cb"><div class="card-title">When to freeze vs fine-tune</div>
 <table class="tbl"><tr><th>Data</th><th>Domain</th><th>Strategy</th></tr>
 <tr><td>Small</td><td>Similar</td><td>Freeze backbone, train head only</td></tr>
 <tr><td>Small</td><td>Different</td><td>Fine-tune top layers + head</td></tr>
 <tr><td>Large</td><td>Similar</td><td>Full fine-tune with low LR</td></tr>
 <tr><td>Large</td><td>Different</td><td>Full fine-tune (consider scratch)</td></tr>
 </table></div>
-<div class="card cg"><div class="card-title">Catastrophic Forgetting</div>
+<div class="card cg"><div class="card-title">Catastrophic forgetting</div>
 <div class="card-body">When fine-tuning on a new task, the model "forgets" pre-trained knowledge. Prevention:</div>
 <ul class="bul" style="margin-top:8px">
   <li><strong>Learning rate warmup:</strong> start with very small LR, increase gradually</li>
@@ -36,9 +36,9 @@
 </div>
 
 <!-- PART 2 — PEFT (expanded) -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Part 2 — Parameter-Efficient Fine-Tuning (PEFT)</div>
+<div class="card-title">Parameter-efficient fine-tuning (PEFT)</div>
 
-<div class="card ca"><div class="card-title">Why PEFT? The GPU Memory Problem</div>
+<div class="card ca"><div class="card-title">Why PEFT? The GPU memory problem</div>
 <div class="card-body">Full fine-tuning a 7B-parameter model requires storing: model weights (~14GB at FP16) + optimizer states (~56GB for Adam) + gradients (~14GB) + activations (~variable). Total: easily 100GB+ — requires many A100s and large budgets. PEFT methods reduce trainable parameters by 100–10,000× while retaining most of the quality.</div>
 <table class="tbl" style="margin-top:8px"><tr><th>Method</th><th>Trainable Params</th><th>Memory Savings</th><th>Quality</th></tr>
 <tr><td>Full fine-tune</td><td>100%</td><td>1×</td><td>Highest</td></tr>
@@ -49,7 +49,7 @@
 <tr><td>BitFit</td><td>~0.1% (bias only)</td><td>&gt;10×</td><td>Surprisingly good; task-dependent</td></tr>
 </table></div>
 
-<div class="card"><div class="card-title">LoRA — Low-Rank Adaptation (Deep Dive)</div>
+<div class="card"><div class="card-title">LoRA — low-rank adaptation (deep dive)</div>
 <div class="card-body">The core idea: weight updates during fine-tuning are low-rank. Instead of updating the full weight matrix W ∈ ℝ^(d×k), decompose the update ΔW into two low-rank matrices.</div>
 <div class="formula math-formula">$$\begin{aligned}
 W' &= W_\text{frozen} + \Delta W = W + \underbrace{A \cdot B}_{\Delta W} \\
@@ -101,7 +101,7 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 <div class="card-body"><strong>Why a low-rank update is plausible at all.</strong> LoRA is not just a memory trick — it is a claim about fine-tuning: that adapting a pretrained model moves the weights within a <em>low-dimensional</em> subspace. That is believable precisely because the base model already holds the general capability, so the task-specific correction is small. The practical consequence is a real limit: <strong>LoRA adapts behaviour well and teaches genuinely new capability badly</strong>, because a rank-8 update cannot express a large change. If a task needs more than style, format and framing, raise the rank or fine-tune fully.</div>
 <div class="card-body" style="margin-top:8px"><strong>B is initialised to zero and A randomly.</strong> Not arbitrary: it makes ΔW = AB start at exactly zero, so the adapted model begins <em>identical</em> to the base and training departs from it smoothly. Initialise both randomly and you have corrupted the pretrained weights before step one — discarding the thing you were reusing. Symmetrically A must <em>not</em> be zero, or the gradient through B is zero and nothing learns at all.</div>
 <div class="card-body" style="margin-top:8px"><strong>The property that beats adapters:</strong> ΔW = AB has the same shape as W, so after training you can add it in. The deployed model is then an ordinary model with <strong>zero extra layers and zero added latency</strong> — unlike adapter layers, which insert real computation into every block. It also means one base model can stay resident while task-specific ΔW matrices are swapped per request, which is how multi-tenant fine-tuned serving works.</div></div>
-<div class="card cp"><div class="card-title">LoRA Hyperparameter Guide</div>
+<div class="card cp"><div class="card-title">LoRA hyperparameter guide</div>
 <table class="tbl"><tr><th>Hyperparameter</th><th>Typical Range</th><th>Effect</th></tr>
 <tr><td><strong>Rank r</strong></td><td>4, 8, 16, 32, 64</td><td>Higher r = more capacity = more params. Start with r=16.</td></tr>
 <tr><td><strong>Alpha (α)</strong></td><td>r to 2r</td><td>Scaling factor: ΔW = (α/r)·AB. α=r is common; α=2r boosts adaptation strength.</td></tr>
@@ -110,7 +110,7 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 <tr><td><strong>Learning rate</strong></td><td>1e-4 to 3e-4</td><td>Higher than full fine-tune (smaller param count → can push harder)</td></tr>
 </table>
 <div class="box story" style="margin-top:6px"><div class="bl">Rule of thumb</div><p>Start with r=16, α=32, target q_proj + v_proj. If quality is lacking, add k_proj + o_proj + FFN layers. If overfitting, reduce r or add dropout.</p></div></div>
-<div class="card cc"><div class="card-title">QLoRA — Quantised LoRA</div>
+<div class="card cc"><div class="card-title">QLoRA — quantised LoRA</div>
 <div class="card-body">Fine-tune a model quantised to 4-bit with LoRA adapters in full precision (BF16). Enables fine-tuning 65B+ models on a single 48GB GPU.</div>
 <ul class="bul" style="margin-top:8px">
   <li><strong>NF4 quantisation:</strong> Normal Float 4 — optimal for normally distributed weights (most LLMs); lower error than INT4</li>
@@ -121,7 +121,7 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 </ul></div>
 </div>
 
-<div class="card"><div class="card-title">Other PEFT Methods</div>
+<div class="card"><div class="card-title">Other PEFT methods</div>
 <div class="g2">
 <div>
 <ul class="bul">
@@ -139,9 +139,9 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 </div></div>
 
 <!-- PART 3 — DISTILLATION -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:32px 0 12px;padding:0">Part 3 — Knowledge Distillation</div>
+<div class="card-title">Knowledge distillation</div>
 
-<div class="card"><div class="card-title">The Core Idea</div>
+<div class="card"><div class="card-title">The core idea</div>
 <div class="card-body">Instead of training the student on hard labels (0 or 1), train it to match the teacher's soft probability distribution. Soft labels contain richer information — the teacher's confidence across all classes, including "wrong" but related ones.</div>
 <div class="formula math-formula">$$\begin{aligned}
 p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distribution}] \\
@@ -183,7 +183,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 </svg></div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Soft Labels Are Better</div>
+<div class="card cb"><div class="card-title">Why soft labels are better</div>
 <div class="card-body">Hard label: cat = [1, 0, 0, 0]. Teacher soft label (τ=4): [0.01, 0.72, 0.20, 0.07] — the teacher reveals that "fox" is similar to "cat". The student learns the class similarity structure for free, without ever needing labeled fox-vs-cat examples.</div>
 <div class="box story"><div class="bl">The Brilliant Tutor</div><p>The teacher says "this is likely a fox, somewhat like a cat, very unlikely a car." The student learns not just the answer, but the teacher's uncertainty and reasoning — far richer than binary right/wrong labels.</p></div></div>
 <div class="card cp"><div class="card-title">What temperature actually does, in numbers</div>
@@ -197,7 +197,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <div class="box warn"><div class="bl">multiply the soft loss by T²</div>
 <p>Dividing logits by T scales the soft-target loss gradients by roughly <strong>1/T²</strong> — a ninth at T = 3. Without correction the distillation term quietly becomes nine times weaker than the hard-label term, and you conclude distillation does not work.</p>
 <p style="margin-top:8px">Multiplying the soft loss by T² restores the balance and makes the mixing weight mean what you think it means. It is in the original paper, it is easy to miss, and it is a common reason a from-scratch implementation underperforms. Also: use the same T for teacher and student <em>during training</em>, and T = 1 at inference.</p></div></div>
-<div class="card cg"><div class="card-title">Distillation Variants</div>
+<div class="card cg"><div class="card-title">Distillation variants</div>
 <table class="tbl"><tr><th>Type</th><th>What's Transferred</th><th>Example</th></tr>
 <tr><td>Response distillation</td><td>Soft output probabilities</td><td>Hinton 2015 (original)</td></tr>
 <tr><td>Feature distillation</td><td>Intermediate hidden states</td><td>FitNets, TinyBERT</td></tr>
@@ -207,7 +207,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 </table></div>
 </div>
 
-<div class="card"><div class="card-title">Distillation in Practice</div>
+<div class="card"><div class="card-title">Distillation in practice</div>
 <table class="tbl"><tr><th>Teacher → Student</th><th>Compression</th><th>Performance Retained</th></tr>
 <tr><td>BERT-large → DistilBERT</td><td>66% smaller, 60% faster</td><td>97% of BERT-base on GLUE</td></tr>
 <tr><td>BERT-base → TinyBERT</td><td>7.5× smaller, 9.4× faster</td><td>96.8% on GLUE</td></tr>
@@ -215,7 +215,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <tr><td>Ensemble → single model</td><td>N models → 1 model</td><td>Close to ensemble performance</td></tr>
 </table></div>
 
-<div class="card"><div class="card-title">Domain Adaptation Examples</div>
+<div class="card"><div class="card-title">Domain adaptation examples</div>
 <table class="tbl"><tr><th>Base Model</th><th>Fine-Tuned For</th><th>Method</th></tr>
 <tr><td>BERT (general English)</td><td>Clinical NLP (BioBERT)</td><td>Domain-adaptive pre-training on PubMed + fine-tune with LoRA</td></tr>
 <tr><td>ResNet-50 (ImageNet)</td><td>Pathology slide classification</td><td>Full fine-tune with low LR (1e-5) + heavy augmentation</td></tr>
@@ -232,7 +232,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
   <li><strong>Using a teacher model that's too large for distillation</strong> — knowledge distillation works best when the student has enough capacity to learn the teacher's soft distributions. A 1B student from a 70B teacher often underperforms a well-tuned 3B model trained directly</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Microsoft (Azure OpenAI fine-tuning):</strong> offers GPT-3.5 and GPT-4o fine-tuning via LoRA-based PEFT; customers use it for domain adaptation (legal, medical, code style) with &lt;1000 examples — the go-to enterprise fine-tuning product</li>
   <li><strong>Google (DistilBERT / MiniLM):</strong> distillation reduced BERT-Base (110M params) to DistilBERT (66M params) at 97% BERT benchmark performance and 60% faster inference — production-deployed in latency-sensitive applications where full BERT is too slow</li>

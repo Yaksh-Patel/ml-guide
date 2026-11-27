@@ -4,7 +4,7 @@
 
 <!-- Why vector DBs -->
 <div class="g2">
-<div class="card cb"><div class="card-title">Why Vector Databases Exist</div>
+<div class="card cb"><div class="card-title">Why vector databases exist</div>
 <div class="card-body">Traditional databases query on exact values. Vector databases query on <em>semantic similarity</em> — "find the 10 documents most similar in meaning to this query." Brute-force exact similarity search is O(n·d) for n vectors of dimension d — completely infeasible at scale.</div>
 <ul class="bul" style="margin-top:8px">
   <li><strong>Dense retrieval:</strong> text/image/audio → embedding → similarity search → ranked results</li>
@@ -23,7 +23,7 @@
 <div class="box warn"><div class="bl">recall is a number you must measure, not assume</div>
 <p>Every ANN index has a recall/latency dial — <code>ef_search</code> in HNSW, <code>nprobe</code> in IVF — and every one ships with a default that is <em>not</em> recall 1.0. Nothing in the system reports the neighbours it failed to find, so a mistuned index looks exactly like a working one and surfaces only as "search quality is a bit disappointing".</p>
 <p style="margin-top:8px">The fix takes an afternoon: sample a few thousand queries, compute the true top-k by brute force, and measure what fraction your index returns. That turns recall@k into an actual number and lets you set the dial deliberately rather than inherit a library default. <strong>Do this before tuning anything else in a retrieval stack</strong> — a chunking or reranking change measured on top of unknown recall tells you nothing.</p></div></div>
-<div class="card-title">Similarity Metrics</div>
+<div class="card-title">Similarity metrics</div>
 <table class="tbl">
 <tr><th>Metric</th><th>Formula</th><th>When to use</th></tr>
 <tr><td><strong>Cosine similarity</strong></td><td>$\frac{u \cdot v}{\|u\|\|v\|}$</td><td>Text embeddings — magnitude irrelevant, direction matters</td></tr>
@@ -36,9 +36,9 @@
 </div>
 
 <!-- ANN algorithms -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-blue,#5ba4fb);margin:20px 0 12px;padding:0">Approximate Nearest Neighbour (ANN) Algorithms</div>
+<div class="card-title">Approximate nearest neighbour (ANN) algorithms</div>
 
-<div class="card ca"><div class="card-title">HNSW — Hierarchical Navigable Small World</div>
+<div class="card ca"><div class="card-title">HNSW — hierarchical navigable small world</div>
 <div class="card-body">The dominant ANN algorithm in production. Builds a multi-layer graph where the top layers are sparse (long-range navigation) and bottom layers are dense (local search). Query traverses top to bottom, pruning the search space at each layer.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -63,7 +63,7 @@
 </div></div>
 
 <div class="g2">
-<div class="card cp"><div class="card-title">IVF — Inverted File Index</div>
+<div class="card cp"><div class="card-title">IVF — inverted file index</div>
 <div class="card-body">Clusters vectors into Voronoi cells via k-means. At query time, probe only the nearest k clusters instead of all vectors.</div>
 <div class="formula">IVF index: cluster vectors into nlist centroids
 Query: find nearest nprobe centroids, search only those cells
@@ -74,7 +74,7 @@ Recall vs speed tradeoff: nprobe=1 (fast, low recall) → nprobe=nlist (exact, s
   <li>Combined with <strong>PQ (Product Quantisation)</strong>: IVF+PQ compresses vectors by 8–32× with ~5% recall drop</li>
 </ul></div>
 
-<div class="card cc"><div class="card-title">Other ANN Algorithms</div>
+<div class="card cc"><div class="card-title">Other ANN algorithms</div>
 <table class="tbl">
 <tr><th>Algorithm</th><th>Mechanism</th><th>Best for</th></tr>
 <tr><td><strong>Flat (brute-force)</strong></td><td>Exact — compute all distances</td><td>&lt;1M vectors; ground-truth recall computation</td></tr>
@@ -86,7 +86,7 @@ Recall vs speed tradeoff: nprobe=1 (fast, low recall) → nprobe=nlist (exact, s
 </div>
 
 <!-- FAISS deep dive -->
-<div class="card"><div class="card-title">FAISS — Facebook AI Similarity Search</div>
+<div class="card"><div class="card-title">FAISS — Facebook AI similarity search</div>
 <div class="card-body">The most widely used ANN library. CPU and GPU support, multiple index types, and a composable index factory string. Used internally by Pinecone, Weaviate, and most vector DBs.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -131,9 +131,9 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </div></div>
 
 <!-- Managed vector DBs -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-green,#22d3a0);margin:28px 0 12px;padding:0">Managed Vector Database Landscape</div>
+<div class="card-title">Managed vector database landscape</div>
 
-<div class="card"><div class="card-title">Vector Database Comparison</div>
+<div class="card"><div class="card-title">Vector database comparison</div>
 <table class="tbl">
 <tr><th>Database</th><th>Index</th><th>Filtering</th><th>Scale</th><th>Best for</th></tr>
 <tr><td><strong>Pinecone</strong></td><td>Proprietary (HNSW-based)</td><td>Metadata filter (pre-filter)</td><td>Billions (managed)</td><td>Fully managed; production RAG; zero ops burden</td></tr>
@@ -146,9 +146,9 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </table></div>
 
 <!-- Embedding pipelines -->
-<div class="card-title" style="font-size:16px;font-weight:700;color:var(--accent-purple,#b97cf8);margin:28px 0 12px;padding:0">Embedding Pipeline Design</div>
+<div class="card-title">Embedding pipeline design</div>
 
-<div class="card cp"><div class="card-title">End-to-End Embedding Pipeline</div>
+<div class="card cp"><div class="card-title">End-to-end embedding pipeline</div>
 <div class="g3" style="margin-top:10px">
 <div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">1. Embed</div>
 <ul class="bul">
@@ -157,13 +157,13 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
   <li>Dimension: 768–3072 for text; higher = better quality, more storage</li>
   <li><strong>Always L2-normalise</strong> before inserting if using cosine similarity</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">2. Chunk &amp; Store</div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">2. Chunk &amp; store</div>
 <ul class="bul">
   <li>Chunk documents before embedding — embedding model has a context window (usually 512–8192 tokens)</li>
   <li>Store original text + metadata alongside each vector (chunk ID, source URL, timestamp)</li>
   <li>Choose index type: HNSW for recall, IVF+PQ for billion-scale, pgvector for SQL integration</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">3. Query &amp; Retrieve</div>
+<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">3. Query &amp; retrieve</div>
 <ul class="bul">
   <li>Embed the query with the <em>same model</em> — embedding model mismatches destroy recall</li>
   <li>ANN search returns top-k candidate IDs + distances</li>
@@ -172,7 +172,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </ul></div>
 </div></div>
 
-<div class="card"><div class="card-title">Embedding Model Selection</div>
+<div class="card"><div class="card-title">Embedding model selection</div>
 <table class="tbl">
 <tr><th>Model</th><th>Dim</th><th>Context</th><th>Strength</th><th>Cost</th></tr>
 <tr><td><strong>text-embedding-3-small</strong></td><td>1536</td><td>8191 tok</td><td>Best quality/cost ratio for English text; OpenAI</td><td>$0.02/1M tokens</td></tr>
@@ -184,7 +184,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </table></div>
 
 <!-- Filtered search -->
-<div class="card cc"><div class="card-title">Filtered Vector Search — A Critical Production Concern</div>
+<div class="card cc"><div class="card-title">Filtered vector search — a critical production concern</div>
 <div class="card-body">Most real applications require filtered search: "find the 10 most similar documents <em>that are also from the last 30 days and in category X</em>." Naive approaches break recall or performance.</div>
 <div class="g2" style="margin-top:10px">
 <div>
@@ -219,7 +219,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </table>
 <div class="card-body" style="margin-top:10px">float16 is close to free and is a reasonable default. The interesting pattern is at the bottom: <strong>binary quantisation plus exact reranking</strong> — search 96 MB of binary codes by Hamming distance to get a shortlist of a few hundred, then rescore those against their full-precision vectors. You pay 32× less memory for the search and recover most of the accuracy, because full precision is only needed to <em>order</em> a shortlist rather than to find it.</div>
 <div class="card-body" style="margin-top:8px"><strong>And the graph is not free.</strong> HNSW stores neighbour lists: at M = 16 that is roughly M × 2 × 4 = <strong>128 bytes per vector</strong> of edge data. Against 768-dimensional float32 vectors that is a 4% overhead and safely ignored — against 128-dimensional vectors it is <strong>25%</strong>, and against binary-quantised vectors the graph can exceed the vectors themselves. <strong>The cheaper you make the vectors, the more the index structure dominates</strong>, which is the trap when you compress hard and find memory did not fall as expected.</div></div>
-<div class="card cg"><div class="card-title">Vector Compression — Quantisation Techniques</div>
+<div class="card cg"><div class="card-title">Vector compression — quantisation techniques</div>
 <table class="tbl">
 <tr><th>Technique</th><th>Compression</th><th>Recall Impact</th><th>How</th></tr>
 <tr><td><strong>Float32 (baseline)</strong></td><td>1×</td><td>—</td><td>4 bytes/dimension</td></tr>
@@ -242,7 +242,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 </ul></div>
 
 <!-- Used at top companies -->
-<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Meta:</strong> FAISS was created at Meta; powers billions-scale image similarity search in Instagram, video retrieval in Reels</li>
   <li><strong>Spotify:</strong> Annoy (built internally) powers music recommendation; recently migrated to HNSW for better recall</li>
