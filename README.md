@@ -203,15 +203,17 @@ go red is worse than no check.
 | `tools/svgkit.py` | shared SVG vocabulary for diagrams |
 | `tools/run_runners.py` | executes the code inside every `.code-runner` and fails if any errors |
 | `tools/smoke.mjs` | jsdom smoke test: boots the app, renders home, navigates, then asserts 13 invariants — sidebar/home/map counts against the manifest, the app globals, pager and TOC, and that **every** topic in `topics.js` resolves to a file with a matching `id="sec-<id>"` |
+| `tools/layout_check.mjs` | real-browser layout check (puppeteer-core + installed Chrome; serves the repo itself). 8 pages × 6 widths × 2 themes: no sideways scroll, nothing under the "on this page" rail, prose width, rail/dropdown by breakpoint. `--expect-fail` marks known gaps, and an entry that starts passing everywhere fails the run. `--shots DIR` saves screenshots |
 
-The `.mjs` tools need jsdom and katex, which are not vendored:
+The `.mjs` tools need jsdom, katex and puppeteer-core, which are not vendored:
 
 ```bash
-mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom katex --silent
-cp <repo>/tools/{smoke,kxstrict,kxinline}.mjs .
+mkdir -p /tmp/domtest && cd /tmp/domtest && npm init -y >/dev/null && npm i jsdom katex puppeteer-core@24.10.0 --silent
+cp <repo>/tools/{smoke,kxstrict,kxinline,layout_check}.mjs .
 node smoke.mjs <repo>      # expect: 13/13 checks passed
 node kxstrict.mjs <repo>   # 152 display formulas: 0 failures, 0 strict warnings
 node kxinline.mjs <repo>   # 174 inline formulas: 0 failures, 0 strict warnings
+node layout_check.mjs <repo> --expect-fail A3,A4   # ~3 min; same flags as CI
 ```
 
 Install those deps **outside** the repo, as above. A `package.json` at the repo root

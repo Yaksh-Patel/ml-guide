@@ -59,14 +59,15 @@ jobs:
       # jsdom and katex are not vendored; install them outside the repo so the
       # working tree stays clean (a package.json at the repo root breaks the
       # module resolution these tools rely on).
-      - name: Install jsdom + katex
+      - name: Install jsdom + katex + puppeteer-core
         run: |
           mkdir -p /tmp/nodecheck && cd /tmp/nodecheck
           npm init -y >/dev/null
-          npm install --silent --no-audit --no-fund jsdom katex
+          npm install --silent --no-audit --no-fund jsdom katex puppeteer-core@24.10.0
           cp "$GITHUB_WORKSPACE"/tools/smoke.mjs .
           cp "$GITHUB_WORKSPACE"/tools/kxstrict.mjs .
           cp "$GITHUB_WORKSPACE"/tools/kxinline.mjs .
+          cp "$GITHUB_WORKSPACE"/tools/layout_check.mjs .
 
       - name: KaTeX — every $$ block compiles under strict:'error'
         run: cd /tmp/nodecheck && node kxstrict.mjs "$GITHUB_WORKSPACE"
@@ -76,3 +77,10 @@ jobs:
 
       - name: Smoke — boot the app, render home, navigate, check the manifest
         run: cd /tmp/nodecheck && node smoke.mjs "$GITHUB_WORKSPACE"
+
+      # Real-browser layout: no sideways scroll, nothing under the "on this page"
+      # rail, prose width, rail/dropdown by breakpoint. Uses the runner's Chrome.
+      # --expect-fail lists what the visual revamp has not delivered yet; an
+      # entry that starts passing everywhere fails the build until removed.
+      - name: Layout — 8 pages × 6 widths × 2 themes in headless Chrome
+        run: cd /tmp/nodecheck && node layout_check.mjs "$GITHUB_WORKSPACE" --expect-fail A3,A4
