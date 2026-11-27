@@ -748,6 +748,28 @@ ul.bul li strong, ol.num li strong { color: var(--text); font-weight: 600; }
   background: var(--grp); vertical-align: middle; margin-right: 9px;
 }
 
+/* Small screens: a figure drawn well below its design size gets an expand
+   button (app.js markSmallFigures); the viewer shows it at readable size,
+   pannable, with native pinch zoom. */
+.anim-wrap { position: relative; }
+.fig-expand {
+  display: none; position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 32px; height: 32px; place-items: center; border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+}
+.fig-expand svg { width: 16px; height: 16px; }
+.anim-wrap.fig-small .fig-expand { display: grid; }
+.fig-viewer { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; background: var(--bg); }
+.fig-viewer[hidden] { display: none; }
+.fig-viewer-bar { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; color: var(--text2); }
+.fig-viewer-bar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fig-viewer-bar button { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); }
+.fig-viewer-bar button svg { width: 18px; height: 18px; }
+.fig-viewer-body { flex: 1; display: flex; overflow: auto; padding: 20px 16px; touch-action: pan-x pan-y pinch-zoom; background: var(--surface); }
+.fig-viewer-body > svg { display: block; flex-shrink: 0; margin: auto; height: auto; max-width: none !important; max-height: none !important; }
+.fig-viewer-hint { padding: 8px 16px 14px; font-size: 12.5px; color: var(--text3); text-align: center; background: var(--surface); }
+body.fig-open { overflow: hidden; }
+
 /* Interactive figures share one look: controls row, value chip, readout, note. */
 .anim-wrap input[type="range"] { accent-color: var(--grp); cursor: pointer; }
 .fx-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 12px; font-size: 13px; color: var(--text2); }

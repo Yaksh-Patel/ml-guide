@@ -567,6 +567,7 @@ function enhance(section, html) {
   highlight(section).catch(() => {});
   if (looksLikeMath(html)) renderMath(section).then(() => scrollHints(section)).catch(() => {});
   scrollHints(section);
+  requestAnimationFrame(() => markSmallFigures(section));
   if (section.querySelector('.code-runner')) initRunners(section);
 }
 
@@ -606,6 +607,59 @@ function normaliseFigures(section) {
   });
 }
 
+/* Small screens: figures drawn well below their design size get an expand
+   button. The viewer MOVES the svg (animations keep running, ids stay
+   unique) and puts it back on close. Figures with their own controls are
+   left alone: their controls would stay behind on the page. */
+const FIG_SMALL = 0.85;
+function markSmallFigures(root) {
+  $$('.anim-wrap', root).forEach(wrap => {
+    const svg = $(':scope > svg', wrap);
+    const vb = svg?.viewBox?.baseVal;
+    if (!vb?.width || wrap.querySelector('input, button:not(.fig-expand), select')) return;
+    const small = svg.getBoundingClientRect().width < vb.width * FIG_SMALL;
+    wrap.classList.toggle('fig-small', small);
+    if (small && !$('.fig-expand', wrap)) {
+      wrap.insertAdjacentHTML('afterbegin', '<button class="fig-expand" type="button" aria-label="Expand figure" title="Expand"><svg><use href="#i-maximize"/></svg></button>');
+    }
+  });
+}
+let figHome = null;
+function openFigure(wrap) {
+  const svg = $(':scope > svg', wrap), vb = svg.viewBox.baseVal;
+  let v = $('#fig-viewer');
+  if (!v) {
+    document.body.insertAdjacentHTML('beforeend', '<div class="fig-viewer" id="fig-viewer" hidden role="dialog" aria-modal="true">'
+      + '<div class="fig-viewer-bar"><span></span><button type="button" aria-label="Close figure"><svg><use href="#i-close"/></svg></button></div>'
+      + '<div class="fig-viewer-body"></div><div class="fig-viewer-hint">Scroll to pan · pinch to zoom · turn the phone for more room</div></div>');
+    v = $('#fig-viewer');
+    $('button', v).addEventListener('click', closeFigure);
+  }
+  figHome = { svg, wrap, next: svg.nextSibling };
+  $('span', v).textContent = $('.anim-title', wrap)?.textContent || 'Figure';
+  svg.style.width = (vb.width * 1.15) + 'px';
+  $('.fig-viewer-body', v).appendChild(svg);
+  v.hidden = false;
+  document.body.classList.add('fig-open');
+  $('button', v).focus();
+}
+function closeFigure() {
+  const v = $('#fig-viewer');
+  if (!v || v.hidden || !figHome) return;
+  const { svg, wrap, next } = figHome;
+  svg.style.width = '';
+  wrap.insertBefore(svg, next);
+  v.hidden = true;
+  document.body.classList.remove('fig-open');
+  $('.fig-expand', wrap)?.focus();
+  figHome = null;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.fig-expand');
+  if (b) openFigure(b.closest('.anim-wrap'));
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFigure(); });
+
 /* Maths and tables that are wider than the column scroll sideways. Fade the
    edge that has more content behind it, so the scroll is discoverable
    (style.css .xs-l / .xs-r). Re-measured on resize. */
@@ -624,7 +678,7 @@ function scrollHints(root) {
 let xsTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(xsTimer);
-  xsTimer = setTimeout(() => scrollHints($('.section.active')), 150);
+  xsTimer = setTimeout(() => { scrollHints($('.section.active')); markSmallFigures($('.section.active')); }, 150);
 });
 
 async function go(id, { push = true, scroll = true } = {}) {
