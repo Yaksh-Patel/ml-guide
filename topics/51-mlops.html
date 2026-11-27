@@ -228,7 +228,7 @@
 <tr><td>Post-processing</td><td>1–10ms</td><td>Move to C++ if bottleneck</td></tr>
 <tr><td>Response serialisation</td><td>1–5ms</td><td>MessagePack over JSON for heavy payloads</td></tr>
 </table>
-<div class="box story" style="margin-top:8px"><div class="bl">📖 Profiling tip</div><p>Profile P99 latency, not P50. P50 hides tail latency spikes that users actually experience. For ML pipelines, the database / feature store lookup is often the bottleneck — not the model itself.</p></div>
+<div class="box story" style="margin-top:8px"><div class="bl">Profiling tip</div><p>Profile P99 latency, not P50. P50 hides tail latency spikes that users actually experience. For ML pipelines, the database / feature store lookup is often the bottleneck — not the model itself.</p></div>
 <div class="card-body" style="margin-top:10px"><strong>Percentiles do not add, and this is the arithmetic that surprises people.</strong> If one request depends on several backend calls and each is slow 1% of the time, the chance that at least one is slow compounds:</div>
 <table class="tbl" style="margin-top:10px">
 <tr><th>Sequential calls per request</th><th>1</th><th>5</th><th>10</th><th>50</th><th>100</th></tr>
@@ -319,7 +319,7 @@
   <li><strong>Netflix (Metaflow + Meson):</strong> Metaflow (open-sourced) orchestrates training pipelines with automatic versioning; Meson handles scheduling; every model training run is reproducible from pinned data snapshots and code versions</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Open with why ML deployment is not ordinary deployment.</strong> "A model is a function of data as well as code, so it can break while every test passes and every service is green — the failure mode is silence. That is why the pipeline needs two gates software CI does not have: a data gate before training and a metric gate after it, and why reproducibility means pinning three things — git SHA, dataset version, environment."</p>
 <p style="margin-top:8px"><strong>Name training–serving skew as the top failure and say what actually fixes it.</strong> "Training computes a feature in Spark with a left join so missing customers get NULL; the service recomputes it in Python with an inner join and returns 0.0. Nothing errors. The fix is a single feature definition used by both paths — and the feature store only delivers that if the training set is built with its point-in-time API, not a hand-written latest-value join."</p>
 <p style="margin-top:8px"><strong>Have the tail-at-scale number.</strong> "Percentiles do not add. Ten sequential dependencies each slow 1% of the time make about 10% of requests slow — the service's P90 is set by its dependencies' P99. So reduce hops before optimising any single call: one batched multi-get instead of a loop, and a timeout with a default feature value, which converts a long tail into a slightly worse prediction."</p>

@@ -132,7 +132,7 @@
 <li><strong>Where it is the wrong tool:</strong> anything needing extrapolation beyond the training range (it inherits the tree staircase in full), genuine perceptual data — images, audio, raw text — and very wide sparse problems where a linear model is both faster and better</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the gradient-descent framing.</strong> "Boosting is gradient descent in function space — each tree approximates the negative gradient of the loss with respect to the current predictions, and you add a fraction η of it. For squared loss that gradient is the residual, which is why the residual story works; for log loss it is y − σ(F)." That answer immediately covers "why does it work with any loss function", which is the usual follow-up.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Boosting versus bagging." — Do not list properties; give the cause. Bagging fits independent trees and reduces variance, so it wants deep low-bias trees and cannot overfit by adding more. Boosting fits sequentially and reduces bias, so it wants shallow high-bias trees and must be early-stopped. Every other difference — parallelism, tuning effort, noise sensitivity — follows from that.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How do you choose the learning rate?" — Show you know it is not independent: error decays like (1 − η) per round, so η × <code>n_estimators</code> is roughly constant. Fix η small, set the tree count high, early-stop. Then volunteer the part most people miss — the early-stopping set has been selected on, so an honest number needs a third split.</p>

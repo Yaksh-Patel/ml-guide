@@ -137,7 +137,7 @@
 <li><strong>Model-agnostic uses worth remembering:</strong> ensemble spread as an uncertainty signal for routing low-confidence cases to human review, and deep ensembles as the strongest practical baseline for predictive uncertainty in neural networks — usually beating fancier Bayesian approximations</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Open with the three bets.</strong> "Bagging reduces variance so it wants deep base learners and cannot overfit by adding more; boosting reduces bias so it wants shallow ones and needs early stopping; stacking attacks model-selection error by learning an input-dependent weighting." One sentence, and it demonstrates you understand why they differ rather than that you can name them.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does ensembling help?" — Give the formula and use it. Var = σ²[1 + (k−1)ρ]/k, tending to ρσ². Then the numbers: at k = 5, ρ = 0.9 gives an 8% variance reduction and ρ = 0.2 gives 64%. <strong>Diversity, not count</strong> — which directly answers why averaging two XGBoosts with different seeds barely moves anything, and why the limit means five to seven members is enough.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "What is the cardinal rule of stacking?" — Out-of-fold predictions for the meta-features. Then explain the mechanism rather than just the rule: in-sample predictions from a base model are near-perfect, so the meta-model over-weights that member, and at inference the feature arrives at its real quality. You built a train/serve shift inside your own ensemble.</p>

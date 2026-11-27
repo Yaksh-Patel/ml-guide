@@ -112,7 +112,7 @@
 <li><strong>The baseline in every paper.</strong> Naive Bayes with bigrams remains the standard comparator for sentiment and topic classification. If a new architecture cannot clear it by a comfortable margin on your data, the result is about your data, not the architecture</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>The question is always some form of "why does it work when the assumption is false".</strong> Answer with the argmax argument: "classification needs the right class to win, not the probabilities to be accurate. The independence violation inflates the magnitude of the log-odds because correlated evidence gets counted twice, but it rarely flips the sign — so the ranking survives and the calibration does not. It is a well-ordered, badly-calibrated model."</p>
 <p style="margin-top:8px"><strong>Then give the reason the assumption exists</strong>, which most candidates skip: the full joint over 20 binary features is 2²⁰ ≈ a million parameters per class, and independence reduces that to 20. It is a deliberate bias-for-variance trade, not laziness. This is the answer that sounds like someone who has thought about it.</p>
 <p style="margin-top:8px"><strong>Expect the two implementation probes.</strong> Smoothing: without it one unseen word zeroes an entire class, so add-α turns an infinite veto into a finite penalty — and remember α·V in the denominator. Log space: a 200-word document multiplies out to about 10⁻⁸⁰⁰, float64 stops at 10⁻³⁰⁸, so the naive product is 0.0 for every class and the classifier silently returns a constant.</p>

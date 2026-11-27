@@ -111,7 +111,7 @@ W \sim Uniform(-\sqrt{6/n_{in}}, \sqrt{6/n_{in}})
 <li><strong>The diagnostic that catches these problems is trivial and underused:</strong> a single forward pass with per-layer activation statistics logged. A steady decay or growth across depth is visible immediately, and it costs one batch</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Derive it rather than recite it.</strong> "Var(z) = n_in · Var(w) · Var(x), so Var(w) = 1/n_in preserves the scale. Xavier balances that against the backward pass with 2/(n_in + n_out). ReLU then zeroes half the distribution and halves the variance, so He uses 2/n_in — the factor of 2 exactly cancels the halving." Two lines, and it covers both formulas and the reason they differ.</p>
 <p style="margin-top:8px"><strong>Have the compounding number.</strong> Xavier with ReLU loses half the variance per layer, so after ten layers the signal is about 1/1024 of the input. The per-layer standard deviations differ by only √2 ≈ 1.41, which is why the mistake is easy to make and severe to keep — <strong>per-layer factors are multiplicative, so small scale errors are exponential in depth.</strong> Same arithmetic as vanishing gradients, applied forward.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why not initialise to zero?" — Answer with symmetry, not scale: identical weights give identical outputs, hence identical gradients and identical updates forever, so a 512-unit layer has the capacity of one unit. Randomness exists to break the symmetry; the variance question is separate. And biases <em>should</em> be zero.</p>

@@ -105,7 +105,7 @@
   <li><strong>Credit risk / banking:</strong> ARIMA + macro overlays for IFRS 9 lifetime PD forecasting; regulatory requirement that models be interpretable and auditable prevents use of black-box ML for regulatory capital calculations</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the baseline, not the model.</strong> "First thing I fit is seasonal naive, and I report MASE — my MAE divided by the naive MAE — because a bare MAE is uninterpretable. MASE above 1 means the model is worse than assuming this Tuesday looks like last Tuesday." That answer immediately signals you have done this rather than read about it, and it is the reason the M-competitions keep finding simple methods win.</p>
 <p style="margin-top:8px"><strong>Be specific about leakage mechanisms.</strong> Shuffled splits, centred rolling windows, whole-series scaling — and then the one that separates candidates: <strong>data revisions.</strong> Sources restate history, so today's stored value for last month is not what existed last month, and no train/test split can catch it. The question to ask of every feature is what its value was <em>as at</em> the prediction time.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How would you validate a forecasting model?" — Forward-chaining: train on [0, t], validate on (t, t+h], roll forward. Then volunteer the cost and the bias: k folds is k fits, and every fold trains on less data than the final model will, so the estimate is conservative. Being able to say which direction your validation errs in is a strong signal.</p>

@@ -118,7 +118,7 @@
 <li><strong>Displaced by LightGBM above roughly half a million rows</strong>, where leaf-wise growth and GOSS give most of the accuracy at a fraction of the training time; and by CatBoost when raw high-cardinality categoricals dominate and its ordered target statistics prevent an encoding leak you would otherwise have to hand-build</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>"How does XGBoost differ from vanilla gradient boosting?" is the question, and the answer is the derivation.</strong> Take the loss to second order, and each leaf's contribution becomes a quadratic Gw + ½(H+λ)w². Minimise it: w* = −G/(H+λ), worth −½G²/(H+λ). Sum over leaves and the split gain is just the difference between structures, minus γ for the extra leaf. <strong>Leaf value, split score and pruning rule all come from one equation</strong> — that is the contribution, and being able to walk it through is the differentiator.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does the second-order term help?" — Curvature gives a step size. First-order boosting knows the direction and takes whatever step the learning rate dictates; with the Hessian, the optimal leaf value is available in closed form — large steps where the loss is flat, small where it curves.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How does it handle missing values?" — It tries both directions at each split and keeps the higher-gain one, storing that direction in the node. Then add the failure case, because it shows production experience: if nothing was missing in training, no direction was learned, and NaNs arriving later go left silently.</p>

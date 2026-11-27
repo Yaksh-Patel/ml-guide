@@ -136,7 +136,7 @@
 <li><strong>Fine-tuning uses parameter groups.</strong> Backbone at a low rate, new head an order of magnitude higher, sometimes with layerwise decay across depth. The Trainer APIs expose this because a single global rate is usually wrong for both parts</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Explain momentum with the window.</strong> "It is an exponential moving average over roughly 1/(1−β) gradients — ten at β = 0.9. Consistent directions accumulate and get amplified up to 10×, alternating ones cancel, so it accelerates and damps at the same time." Then the consequence most people miss: the effective step is α/(1−β), so raising β means lowering α.</p>
 <p style="margin-top:8px"><strong>Explain Adam by its units.</strong> "m̂/√v̂ is a gradient divided by the RMS of a gradient, so it is dimensionless and of order 1 — the step is about α no matter how large the gradients are. That is why α transfers across architectures and why sparse embeddings still get updates." A far better answer than "it adapts the learning rate per parameter".</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does Adam need bias correction, and why warmup?" — At t = 1, v is a thousandth of its proper size, so √v is 31.6× too small and the first step would be 31.6× too large. Correction fixes the mean; warmup fixes the <strong>variance</strong>, because v̂ from a handful of gradients is unreliable and you are dividing by its square root. That distinction — mean versus variance — is the answer that stands out.</p>

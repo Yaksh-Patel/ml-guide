@@ -107,7 +107,7 @@
 <li><strong>Active learning where labels are expensive.</strong> Medical imaging, document review, anything needing a specialist. Spending the budget on uncertain examples routinely beats labelling ten times as many at random</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>When handed a vague problem, frame it out loud before proposing a model.</strong> "What is the label, and when does it become available? How many labelled examples exist? Does an action change what happens next?" Those three questions choose the paradigm, and asking them is most of the signal being measured.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How would you build this with almost no labels?" — Pretrain self-supervised or start from a foundation model, fine-tune on what you have, and use active learning to spend the labelling budget where the model is least certain.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "When is reinforcement learning the right tool?" — When actions change future state and reward is delayed. If neither holds, say so and propose a bandit instead. Declining to over-reach reads as judgement, not ignorance.</p>

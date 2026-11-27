@@ -133,7 +133,7 @@
 <li><strong>Temporal features survive deep learning.</strong> Even in neural forecasting stacks, hand-built lags, rolling statistics and Fourier seasonality terms stay in the input. The network could in principle learn them; given finite data it does better when handed them</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with leakage, not with cleverness.</strong> Anyone can list encodings. Say that your first pass on any feature is the two-part test — would this value exist at prediction time, and would it have this value — and that you fit every transform inside the CV fold via a <code>Pipeline</code>. That answer is what distinguishes someone who has shipped a model from someone who has trained one.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How do you encode a high-cardinality categorical?" — Target encoding, then immediately name the trap: a singleton category's encoding <em>is</em> its own label. Fix with smoothing toward the global mean, weighted by category count, and with out-of-fold computation so a row never contributes to its own feature. Quoting the smoothing formula and a number (5% prior, m = 20, one default → 0.095 not 1.0) settles the question.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "You have 500 features, what do you do?" — Variance filter, correlation prune above 0.95, SHAP rank, then trim from the bottom while watching CV. Then volunteer the part most candidates miss: <strong>selection is model fitting, so doing it outside the fold contaminates the score</strong> — 500 noise columns and 100 rows will beat chance if you select first and validate second.</p>

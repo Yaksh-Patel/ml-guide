@@ -185,7 +185,7 @@
 <li><strong>Production monitoring watches the score distribution, not just the metric.</strong> Labels arrive late, so a shift in the predicted-score histogram is often your first warning — long before any confusion matrix can be computed</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Derive, do not recite.</strong> Asked for precision and recall, draw the four cells and say "recall divides along the actual-positive row, precision along the predicted-positive column". Deriving them takes ten seconds and is impossible to get backwards.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Your fraud model has 0.97 AUC. Are you happy?" — Not yet. Ask the base rate, then walk the 100,000-transaction arithmetic: TPR 0.90, FPR 0.009, precision 0.09. Doing that out loud is the strongest possible answer.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "What does AUC actually mean?" — The probability a random positive outranks a random negative. Then note it is invariant to monotonic transformations, which is why it says nothing about calibration.</p>

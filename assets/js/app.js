@@ -431,6 +431,7 @@ async function go(id, { push = true, scroll = true } = {}) {
 
 function paintTopbar(id) {
   const t = id === 'home' ? null : BY_ID[id];
+  $('.main')?.setAttribute('data-group', t ? t.group : 'home');   // drives --grp (style.css §1)
   $('#tb-crumb').textContent = t ? `${t.groupIcon} ${t.groupLabel}` : 'Start here';
   $('#tb-title').textContent = t ? t.title : 'Home';
   $('#tb-time').textContent  = t ? `${t.time} min` : `${TOTAL} topics`;

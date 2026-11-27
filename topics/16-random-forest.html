@@ -136,7 +136,7 @@
 <li><strong>Where XGBoost genuinely wins:</strong> peak accuracy on large tabular data, native categorical and missing handling, and probabilities you can almost use directly. If someone is scoring a leaderboard, they are not using a forest — and if someone needs a dependable answer by Friday, they might be</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the variance formula.</strong> "Averaging B correlated trees gives ρσ² + (1−ρ)σ²/B. The second term vanishes as you add trees; the first does not. So beyond a few hundred trees the only remaining lever is the correlation between them — and that is exactly what per-split feature subsampling attacks." Then the numbers: ρ = 0.7 for bagging versus 0.3 for a forest is 0.70 against 0.30 variance at 500 trees. This answer is the topic.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why 63.2%?" — Derive it rather than recite it: the chance a row survives n draws with replacement is (1 − 1/n)ⁿ → 1/e ≈ 0.368 left out, so 63.2% in. Follow with why OOB is slightly pessimistic — each row is scored by only ~37% of the trees, each trained on 63% of the data.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Can Random Forest overfit with more trees?" — No, and say why: more trees only shrink the (1−ρ)σ²/B term toward an asymptote. Then draw the contrast, because it is what the question is really probing: boosting fits residuals sequentially, so its added trees reduce bias and can eventually fit noise, which is why it needs early stopping and a forest does not.</p>

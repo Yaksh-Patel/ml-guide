@@ -273,7 +273,7 @@
   <li><strong>Financial firms:</strong> RAG over earnings transcripts, regulatory filings, internal research notes; faithfulness critical for compliance</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>What is RAG?</strong> "RAG grounds LLM outputs in retrieved knowledge. At query time: embed the question, run ANN search over indexed document embeddings, retrieve top-k chunks, inject them into the LLM context, generate a grounded answer. The key insight: the LLM's parametric memory is unreliable for facts — retrieval provides real, current, citable information."</p>
 <p style="margin-top:8px"><strong>Why hybrid search?</strong> "Dense retrieval handles semantic similarity but misses exact keywords. BM25 handles keywords but misses paraphrases. Hybrid search fuses both ranked lists via Reciprocal Rank Fusion — consistently outperforms either alone. BGE-M3 generates dense + sparse signals from a single encoder, making the combination simple."</p>
 <p style="margin-top:8px"><strong>How do you evaluate a RAG pipeline?</strong> "I use RAGAS: faithfulness (are claims supported by context?), context recall (did retrieval find the necessary info?), and answer relevance (does the answer address the question?). I build a golden dataset of 50–100 QA pairs from the actual corpus and run these metrics on every pipeline change. Faithfulness is the first metric to check — it's the hallucination measure."</p>

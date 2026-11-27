@@ -254,7 +254,7 @@ s_C &= \frac{2.362 - 3.053}{3.053} = \mathbf{-0.226}
 <li><strong>Image and colour quantisation.</strong> k-means on pixel colours to reduce a palette is compression with an objective measure of success, and one of the few uses where "is this clustering correct" has a clean answer</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>The question behind the question is always validation.</strong> Say early that clustering always returns clusters, including on noise, so the algorithm choice is the easy part. Then give three checks: silhouette (with the distribution inspected, not just the mean), stability across seeds measured by Adjusted Rand Index, and a downstream business metric that differs between clusters. Candidates who only discuss algorithms sound like they have never shipped a segmentation.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How do you choose k?" — Lead with why the elbow is weak: inertia is monotone decreasing in k and hits zero at k = n, so a drop is arithmetic rather than evidence. Silhouette has a real interior maximum and can also report "no structure" by staying near zero. Then say that k is frequently a business constraint, and that naming it as such is more honest than manufacturing an elbow.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does k-means assume spherical clusters?" — Because minimising squared distance to a centroid is fitting a spherical, equal-variance Gaussian mixture with hard assignments. The assumption is in the objective, not the implementation — which is why no amount of restarting fixes an elongated cluster, and why a GMM with full covariances does.</p>

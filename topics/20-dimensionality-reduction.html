@@ -118,7 +118,7 @@
 <li><strong>Anomaly detection by reconstruction error.</strong> Fit PCA on normal data; a point that reconstructs badly lies off the manifold the normal data occupies. Cheap, needs no anomaly labels, and works well when normal behaviour is genuinely low-dimensional</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Separate the two purposes in your first sentence.</strong> "PCA is a linear rotation into variance-ordered axes — I use it to decorrelate and compress features, and it inverts, so reconstruction error is measurable. t-SNE and UMAP are visualisation: they preserve local neighbourhoods and nothing else." That framing pre-empts most of the follow-ups.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "What does a principal component represent?" — A direction in the original feature space, chosen to maximise variance subject to being orthogonal to all previous components. The loadings say which original features make it up, and the eigenvalue is the variance along it. Add that you would read the loadings before claiming a component means something.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "How many components?" — Cumulative explained variance to a stated threshold, or the scree elbow, and never a round number without the variance attached. Then volunteer the caveat that separates people: <strong>PCA is unsupervised, so the highest-variance directions are not necessarily the predictive ones</strong> — it is a hypothesis you validate, and it frequently hurts tree models because it destroys the axis-aligned structure they split on.</p>

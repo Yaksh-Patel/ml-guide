@@ -251,7 +251,7 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
   <li><strong>OpenAI / Anthropic / LangChain ecosystem:</strong> Chroma for prototyping; Pinecone/Qdrant/Weaviate for production RAG</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>How vector search works:</strong> "We embed documents and queries into a shared high-dimensional space using the same model. At query time we embed the query and run approximate nearest-neighbour search — typically HNSW — against the indexed document vectors. HNSW builds a multi-layer navigable graph and traverses it top-down in O(log n), achieving 95–99% recall at &lt;5ms for millions of vectors."</p>
 <p style="margin-top:8px"><strong>ANN vs exact search:</strong> "Brute-force exact search is O(n·d) — infeasible at scale. HNSW trades 1–5% recall for 100–1000× speedup. In practice: measure recall@10 vs a Flat index on your specific data. If recall is sufficient (usually &gt;95%), ANN is the clear choice."</p>
 <p style="margin-top:8px"><strong>Index selection guide:</strong> "HNSW for &lt;50M vectors where RAM is available and recall matters. IVF+PQ for billion-scale where memory is constrained — 32× compression with ~5% recall loss. pgvector for teams already on Postgres who need &lt;10M vectors without new infra. Pinecone/Qdrant for managed production with metadata filtering."</p>

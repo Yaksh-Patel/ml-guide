@@ -153,7 +153,7 @@
 <li><strong>The honest summary:</strong> reach for an MLP when the input is perceptual, sequential, or already embedded, and when you have enough data to pay for the flexibility. On a spreadsheet with 20,000 rows, use the trees</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the collapse.</strong> "Without activations, W₃W₂W₁x is a single matrix — a 784-256-256-10 net has 269,322 parameters expressing something a 784×10 map expresses exactly, so all the depth is wasted. The non-linearity is what makes a layer a layer." Concrete, and it proves you understand the mechanism rather than the slogan.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does depth help more than width?" — Universal approximation guarantees one hidden layer suffices but says nothing about width, and the width required can be exponential. A sawtooth with 1,024 teeth needs about 20 units arranged deep and about 1,024 arranged flat, because layers <em>compose</em> — each folds what the one below produced. Then add the qualification that separates people: depth is a representational win and an optimisation cost, which is why residuals and normalisation had to be invented before deep networks were trainable.</p>
 <p style="margin-top:8px"><strong>Have XOR ready.</strong> A single perceptron is one hyperplane, so XOR is impossible — not hard, impossible. Two hidden ReLU units solve it because they learn OR and AND, and XOR is their difference. Being able to state the units' roles shows you understand hidden layers as feature construction rather than as extra capacity.</p>

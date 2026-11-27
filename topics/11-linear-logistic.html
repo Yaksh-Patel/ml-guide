@@ -116,7 +116,7 @@
 <li><strong>The failure mode is the giveaway.</strong> When a linear model matches a boosted ensemble to three decimal places, check for leakage before celebrating: a single feature that encodes the future will let any model, including this one, look brilliant</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the log-odds framing.</strong> "Logistic regression is a linear model — linear in the log-odds. The sigmoid is just the inverse link that maps that back to a probability, and cross-entropy is the maximum-likelihood loss for a Bernoulli outcome." That single answer covers "why is it called regression", "why the sigmoid", and "why that loss" before they are asked separately.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Interpret a coefficient of 1.2." — Exponentiate: the odds multiply by 3.3. Then volunteer the subtlety, because it is what separates candidates: the change in <em>probability</em> depends on where you start — about +0.27 near p = 0.5, only +0.07 near p = 0.9 — since the sigmoid's slope is p(1−p). Mentioning the β/4 rule shows you have used this rather than read it.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does lasso select features and ridge not?" — Answer with the geometry, not the formula: the L1 constraint region has corners on the axes and an expanding loss contour hits a corner first, so a coordinate goes exactly to zero. The L2 region is a smooth sphere with no corners, so coefficients shrink but never vanish.</p>

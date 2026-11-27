@@ -31,7 +31,7 @@
 \text{Decoder: } s_t &= \text{LSTM}(y_{t-1},\, s_{t-1},\, c),\quad y_t = \text{softmax}(W s_t) \\
 &\text{Problem: entire source sentence} \rightarrow \text{one vector } c \rightarrow \text{bottleneck}
 \end{aligned}$$</div>
-<div class="box warn"><div class="bl">⚠️ The Bottleneck Problem</div><p>Translating "The cat sat on the mat because it was tired" requires knowing that "it" refers to "the cat" — but by the time the decoder generates "it", that information has been diluted through many LSTM steps into the single vector c. Quality degrades sharply for sentences longer than ~20 words.</p></div>
+<div class="box warn"><div class="bl">The Bottleneck Problem</div><p>Translating "The cat sat on the mat because it was tired" requires knowing that "it" refers to "the cat" — but by the time the decoder generates "it", that information has been diluted through many LSTM steps into the single vector c. Quality degrades sharply for sentences longer than ~20 words.</p></div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -119,7 +119,7 @@ d_k &= \text{key/query dimension (scale factor prevents softmax saturation)}
 <tr><td><strong>Divided by √64 = 8</strong></td><td>1</td><td>0.731</td><td><strong>0.197</strong></td></tr>
 </table>
 <div class="card-body" style="margin-top:10px">The unscaled softmax puts 99.97% of its weight on one position — it has become a hard argmax — and the gradient it passes back is <strong>587× smaller</strong>. So the layer stops learning <em>which</em> positions to attend to, because it is already certain, and that certainty came from the dimension of the vectors rather than from the data. Scaling keeps the softmax in the range where it can still be taught.</div>
-<div class="box mem"><div class="bl">💡 Rule of thumb</div><p>dₖ = 64 → divide by 8. dₖ = 512 → divide by ~22.6. The divisor is always √dₖ, and note that it depends on the <em>head</em> dimension, not the model width — so it does not change as you add heads.</p></div></div>
+<div class="box mem"><div class="bl">Rule of thumb</div><p>dₖ = 64 → divide by 8. dₖ = 512 → divide by ~22.6. The divisor is always √dₖ, and note that it depends on the <em>head</em> dimension, not the model width — so it does not change as you add heads.</p></div></div>
 <div class="card cg"><div class="card-title">Self-Attention vs Cross-Attention</div>
 <ul class="bul">
   <li><strong>Self-Attention:</strong> Q, K, V all from the <em>same</em> sequence. Each token attends to all other tokens in the same sequence. Used in both Encoder and Decoder self-attention blocks.</li>
@@ -281,7 +281,7 @@ PE(\text{pos}, 2i+1) &= \cos\!\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}
 
 <div class="box info"><div class="bl">the same three architectures, as reading strategies</div><p>An RNN reads page by page keeping one running summary, so by chapter 20 chapter 1 has been overwritten. An LSTM keeps a better summary it can choose what to write into — still one page at a time. A transformer has every page open simultaneously and draws a weighted line from each passage to every other, in parallel. <strong>That is why "it" in chapter 20 can resolve to a cat named in chapter 1: the distance between them is one attention hop rather than nineteen chapters of summarising.</strong> The feed-forward layers are then what turns those underlined passages into stored knowledge.</p></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Tell it as a sequence of fixes, not a list of parts.</strong> "Seq2seq forced the whole input through one fixed vector, so long sentences failed. Attention removed that bottleneck by letting the decoder look at every encoder state and weight them per step. Once you have attention, the recurrence is no longer carrying the information — so you delete it, and you get parallel training plus an O(1) path between any two positions." That narrative answers "why transformers" and "why not RNNs" in one go.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why divide by √dₖ?" — Do not call it a trick. A dot product over dₖ unit-variance components has variance dₖ, so logits arrive with standard deviation √dₖ. At dₖ = 64 that is 8, and a logit gap of 8 puts <strong>0.9997</strong> of the softmax weight on one position with a gradient of 0.00034 — about <strong>587× smaller</strong> than the 0.197 you get after scaling. The softmax has become an argmax and stopped being teachable.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "What does multi-head buy?" — Each head attends in its own learned subspace, so one can track syntactic agreement while another tracks coreference, in parallel rather than as a compromise in a single attention distribution. Note the constraint that follows: heads split the model width, so dₖ = d_model/h, and past a point more heads means each is too narrow to represent anything — dₖ ≈ 64 is the usual floor.</p>

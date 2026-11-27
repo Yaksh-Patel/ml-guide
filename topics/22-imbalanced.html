@@ -135,7 +135,7 @@
 <li><strong>Anomaly detection when positives are too rare to model.</strong> Below a few dozen positives, one-class methods and reconstruction error need no positive labels, and distance-to-training-data doubles as the drift monitor. Reframing beats resampling in this regime</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Do not lead with SMOTE.</strong> Say that imbalance is usually a metric and threshold problem: "the model is reporting honest low probabilities; accuracy and a 0.5 cut are what is broken." That reframing is the answer they are hoping for, and candidates who open with resampling reveal they have never had to keep probabilities usable.</p>
 <p style="margin-top:8px"><strong>Have the threshold derivation ready.</strong> Flag when p &gt; C<sub>FP</sub>/(C<sub>FP</sub> + C<sub>FN</sub>). With <span>$5</span> review and <span>$500</span> loss that is 0.0099 — the default is wrong by a factor of fifty. Deriving it beats saying "I tune the threshold on validation", because it shows the threshold is a business input rather than a hyperparameter.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why not just use accuracy / AUC?" — Give the confusion matrix. A million negatives, 10,000 false positives: FPR is 0.01 and sounds great, precision is 0.083, and the analyst sees eleven false alarms per catch. The difference is that FPR's denominator is the TN pool. Add that PR-AUC's baseline is the prevalence, so it must be quoted against it.</p>

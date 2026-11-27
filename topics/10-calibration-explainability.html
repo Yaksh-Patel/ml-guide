@@ -102,7 +102,7 @@
 <li><strong>Monitoring watches calibration drift separately.</strong> A model can keep its ranking power while its probabilities go stale, which happens whenever the base rate moves. Ranking metrics will not catch it</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Separate the two properties immediately.</strong> "AUC measures ranking; calibration measures whether the probability is honest. They are independent — square every score and AUC is unchanged while calibration breaks." That one sentence answers most calibration questions before they are fully asked.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Your random forest has great AUC but the business says the probabilities are wrong." — Diagnose with a reliability curve, fix with isotonic or Platt on held-out data, and check whether anyone resampled the training set. Mention that forests are systematically under-confident at the extremes because they average votes.</p>
 <p style="margin-top:8px"><strong>On SHAP:</strong> lead with additivity — contributions sum to the prediction — then state the limit unprompted: it explains the model, not causality. Volunteering the limitation is what distinguishes a practitioner from someone who has read the README.</p>

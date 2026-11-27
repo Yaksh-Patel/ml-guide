@@ -12,7 +12,7 @@
 //   A1  no sideways scroll: documentElement.scrollWidth <= innerWidth
 //   A2  "on this page" rail never overlaps topic content: every content
 //       element's visible right edge sits >= MIN_TOC_CLEARANCE px left of it
-//   A3  prose (p, li outside wide blocks) is <= PROSE_W px wide, and wide
+//   A3  prose (p, li, .card-body, .sec-desc outside wide blocks) is <= PROSE_W px wide, and wide
 //       blocks are no wider than the article column
 //   A4  rail visible at >= TOC_MIN_W, hidden below it, with a .toc-dropdown
 //       in the top bar instead
@@ -146,7 +146,8 @@ function measure({ PROSE_W, TOC_MIN_W, MIN_TOC_CLEARANCE, TOL, isHome, deviceWid
 
   // A3 prose width, wide-block width
   let widestProse = null;
-  for (const el of section.querySelectorAll('p, li')) {
+  // Topics write most running text as div.card-body, not <p>, so those count too.
+  for (const el of section.querySelectorAll('p, li, .card-body, .sec-desc')) {
     if (el.closest(WIDE) || !visible(el)) continue;
     const w = el.getBoundingClientRect().width;
     if (w > PROSE_W + TOL && (!widestProse || w > widestProse.w)) widestProse = { w, el };

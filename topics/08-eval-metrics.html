@@ -101,7 +101,7 @@ R^2 &= 1 - \frac{\sum (y-\hat{y})^2}{\sum (y-\bar{y})^2}
 <li><strong>Segment-level reporting.</strong> One aggregate number hides a model that works on the majority group and fails on a minority one. Reporting by segment is both a fairness requirement and a good way to find broken features</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Never answer "which metric" without asking what the prediction is used for.</strong> Handed "we're detecting fraud", ask how many alerts can be reviewed per day, and what a missed fraud costs versus a false alarm. Then name the metric. The question is testing whether you connect metrics to decisions.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why is accuracy a bad metric for fraud?" — Give the 3% base rate and the 97% do-nothing model. Concrete numbers end that question immediately.</p>
 <p style="margin-top:8px"><strong>Then:</strong> "ROC-AUC or PR-AUC?" — PR-AUC when positives are rare, because FPR's denominator is enormous so ROC barely moves while precision collapses. Add that PR-AUC's baseline is the positive rate, so it is not comparable across datasets.</p>

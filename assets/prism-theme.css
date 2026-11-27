@@ -9,7 +9,7 @@
 pre[class*="language-"],
 code[class*="language-"] {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.85;
   direction: ltr;
   text-align: left;
@@ -23,17 +23,8 @@ code[class*="language-"] {
 pre[class*="language-"] {
   margin: 0;
   overflow: auto;
-  padding: 14px 16px;
-  border-radius: 0 0 9px 9px; /* flush with .formula container */
-}
-
-/* ── .formula wrapper upgrade ─────────────────────────────────── */
-/* When a .formula contains a <pre class="language-python">, 
-   override the old monochrome style */
-.formula:has(pre[class*="language-"]) {
-  padding: 0;
-  background: transparent;
-  border: none;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
 }
 
 /* Standalone .formula (plain text, no Prism) — keep as before */
@@ -44,7 +35,7 @@ pre[class*="language-"] {
 /* ── DARK THEME tokens ────────────────────────────────────────── */
 [data-theme="dark"] pre[class*="language-"],
 [data-theme="dark"] code[class*="language-"] {
-  background: var(--bg);
+  background: var(--bg3);   /* open sections sit on --bg, so --bg would vanish */
   color: var(--text);
 }
 
@@ -226,164 +217,7 @@ pre[class*="language-"] {
 [data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-track { background: var(--bg); }
 [data-theme="light"] pre[class*="language-"]::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
-
-/* ── .formula wrapper that holds language-tagged <pre> ─────────── */
-/* Give it a border+radius as a container, let Prism style inside */
-.formula-block {
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  border-radius: 9px;
-  margin: 9px 0;
-  overflow: hidden;
-  transition: background .25s;
-}
-.formula-block .formula-lang-tag {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 14px;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  color: var(--text3);
-}
-.formula-block pre[class*="language-"] {
-  border-radius: 0;
-  margin: 0;
-}
-[data-theme="light"] .formula-block {
-  background: var(--bg3);
-}
-
-/* ── Math (KaTeX) display style ──────────────────────────────── */
-.katex-display {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 6px 0;
-  margin: 4px 0;
-}
-.katex {
-  font-size: 1.05em;
-}
-
-/* Math block inside a .formula wrapper */
-.formula .katex-display {
-  padding: 8px 0;
-}
-
-/* ── Inline code (plain <code> tags) ─────────────────────────── */
-/* Keep existing style from style.css — just ensure consistency */
-code:not([class*="language-"]) {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  background: var(--bg3);
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: var(--accent2);
-  border: 1px solid var(--border);
-}
-[data-theme="light"] code:not([class*="language-"]) {
-  color: var(--accent);
-}
-
-/* ── Code runner: output area tweaks ─────────────────────────── */
-.code-runner {
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  margin: 12px 0;
-}
-.code-runner-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 12px;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-}
-.code-runner-header span {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  color: var(--text3);
-}
-.runner-btns { display: flex; gap: 6px; }
-.run-btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 11.5px;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity .15s;
-}
-.run-btn:hover { opacity: .85; }
-.run-btn:disabled { opacity: .5; cursor: not-allowed; }
-.reset-btn {
-  background: var(--bg4);
-  color: var(--text2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  transition: all .15s;
-}
-.reset-btn:hover { border-color: var(--border2); color: var(--text); }
-
-/* Raw textarea (hidden when CM is active) */
-.code-input {
-  display: block;
-  width: 100%;
-  min-height: 120px;
-  background: var(--bg);
-  color: var(--accent2);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  line-height: 1.8;
-  padding: 12px 14px;
-  border: none;
-  outline: none;
-  resize: vertical;
-  tab-size: 4;
-}
-[data-theme="light"] .code-input { color: var(--accent); }
-
-/* Output area */
-.code-output {
-  display: block;
-  padding: 10px 14px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
-  line-height: 1.7;
-  min-height: 28px;
-  border-top: 1px solid var(--border);
-  white-space: pre-wrap;
-  color: var(--text2);
-}
-.code-output.ok { color: var(--green); }
-.code-output.err { color: var(--red); }
-
-/* Colab link badge */
-.colab-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--text3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 3px 10px;
-  text-decoration: none;
-  transition: all .15s;
-}
-.colab-link:hover { border-color: var(--amber); color: var(--amber); }
+/* Runner, inline-code, .formula-block and KaTeX styles used to live here too.
+   This file loads lazily, after style.css, so it silently won and pages looked
+   different depending on whether they had static code. They are in style.css
+   (§5, §6) now; keep this file to Prism token colours and the <pre> block. */

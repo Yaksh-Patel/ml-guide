@@ -103,7 +103,7 @@
 <li><strong>What it does not do any more:</strong> large-scale tabular prediction. Boosting wins on accuracy, training time, native categorical handling, missing values, and calibrated probabilities. Choosing SVM there needs a reason beyond preference</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Open with the objective, not the kernel.</strong> "SVM maximises the margin, which is equivalent to minimising ‖w‖² subject to correct classification. Written as an unconstrained problem it is hinge loss plus L2 — so it is logistic regression with a different loss, and the flat region of hinge loss is what makes the solution sparse in support vectors." That answer connects it to something the interviewer already knows instead of treating it as a special case.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Explain the kernel trick." — Say what it <em>avoids</em>. The dual only touches data through inner products, so replacing that inner product computes in a richer space without constructing it. Then give the number: a quadratic kernel on 1,000 features implies a million-dimensional map, and K costs about a thousand operations instead. Close with RBF being infinite-dimensional, so the map cannot be built at all.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "What are support vectors?" — Points on or inside the margin; delete everything else and the boundary is unchanged. Add the practical read: if almost every point is a support vector, the model is memorising and your C/γ are wrong.</p>

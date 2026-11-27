@@ -109,7 +109,7 @@ h &= W' x = Wx + ABx \quad \text{[only A, B are trained]} \\
 <tr><td><strong>Dropout</strong></td><td>0.05–0.1</td><td>Regularisation for LoRA layers; helps on small datasets</td></tr>
 <tr><td><strong>Learning rate</strong></td><td>1e-4 to 3e-4</td><td>Higher than full fine-tune (smaller param count → can push harder)</td></tr>
 </table>
-<div class="box story" style="margin-top:6px"><div class="bl">📖 Rule of thumb</div><p>Start with r=16, α=32, target q_proj + v_proj. If quality is lacking, add k_proj + o_proj + FFN layers. If overfitting, reduce r or add dropout.</p></div></div>
+<div class="box story" style="margin-top:6px"><div class="bl">Rule of thumb</div><p>Start with r=16, α=32, target q_proj + v_proj. If quality is lacking, add k_proj + o_proj + FFN layers. If overfitting, reduce r or add dropout.</p></div></div>
 <div class="card cc"><div class="card-title">QLoRA — Quantised LoRA</div>
 <div class="card-body">Fine-tune a model quantised to 4-bit with LoRA adapters in full precision (BF16). Enables fine-tuning 65B+ models on a single 48GB GPU.</div>
 <ul class="bul" style="margin-top:8px">
@@ -185,7 +185,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
 <div class="g2">
 <div class="card cb"><div class="card-title">Why Soft Labels Are Better</div>
 <div class="card-body">Hard label: cat = [1, 0, 0, 0]. Teacher soft label (τ=4): [0.01, 0.72, 0.20, 0.07] — the teacher reveals that "fox" is similar to "cat". The student learns the class similarity structure for free, without ever needing labeled fox-vs-cat examples.</div>
-<div class="box story"><div class="bl">📖 The Brilliant Tutor</div><p>The teacher says "this is likely a fox, somewhat like a cat, very unlikely a car." The student learns not just the answer, but the teacher's uncertainty and reasoning — far richer than binary right/wrong labels.</p></div></div>
+<div class="box story"><div class="bl">The Brilliant Tutor</div><p>The teacher says "this is likely a fox, somewhat like a cat, very unlikely a car." The student learns not just the answer, but the teacher's uncertainty and reasoning — far richer than binary right/wrong labels.</p></div></div>
 <div class="card cp"><div class="card-title">What temperature actually does, in numbers</div>
 <div class="card-body">Softening the teacher's distribution is the whole mechanism, so it is worth seeing. Take teacher logits [3.0, 1.0, 0.5] and divide by T before the softmax:</div>
 <table class="tbl" style="margin-top:10px">
@@ -241,7 +241,7 @@ p_T(y|x,\tau) &= \text{softmax}(z_T/\tau) \quad [\tau > 1 \text{ smooths distrib
   <li><strong>Anthropic / OpenAI (Constitutional AI / RLHF):</strong> fine-tuning pipeline: supervised fine-tuning (SFT) → reward model training → RLHF/DPO alignment. Each stage is a targeted fine-tuning step with different objectives and data types</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>What to say:</strong> "Transfer learning is the highest-leverage technique in applied deep learning. For NLP I start with a pretrained BERT/RoBERTa or an instruction-tuned LLM, add a classification head, and fine-tune with LoRA — I can adapt a 7B LLM to a custom task on a single GPU by training only 0.1% of parameters. The intuition: lower layers learn general features (syntax, semantics), upper layers learn task-specific patterns — so for domain adaptation, only upper layers need significant updating. QLoRA extends this to 13B+ models by quantising the frozen base to 4-bit NF4 while keeping LoRA adapters in BF16 — ~70% VRAM savings at ~2% quality cost."</p>
 <p style="margin-top:8px"><strong>Common mistake to avoid saying:</strong> "I fine-tuned the model to teach it new facts." — Fine-tuning encodes behavioural patterns, not reliable factual knowledge. Facts change and fine-tuned knowledge becomes stale. Use RAG for dynamic knowledge; fine-tune only for style, format, and task-specific reasoning patterns.</p>
 <p style="margin-top:8px"><strong>Expect the follow-up:</strong> "What is the difference between LoRA and full fine-tuning?" — Answer: full fine-tuning updates all parameters (billions of gradients, requires huge GPU memory). LoRA freezes the pretrained weights and adds low-rank update matrices ΔW = AB where rank r ≪ min(d,k). Only A and B are trained — typically 0.1–1% of original parameters. The pretrained weights are unchanged so general capabilities are preserved; the adapters capture task-specific adjustments. LoRA can be merged at inference (W + AB) so there's zero latency overhead.</p>

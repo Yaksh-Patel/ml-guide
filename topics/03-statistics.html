@@ -5,7 +5,7 @@
 <div class="card cb"><div class="card-title">The p-value, stated correctly once</div>
 <div class="card-body">A p-value is the probability of seeing data <em>at least this extreme</em>, assuming the null hypothesis is true. That is the whole definition, and every common misuse comes from dropping the second half of it.</div>
 <div class="formula math-formula">$$p = \mathbb{P}(\text{data at least this extreme} \mid H_0 \text{ true})$$</div>
-<div class="box warn"><div class="bl">⚠️ three things it is not</div>
+<div class="box warn"><div class="bl">three things it is not</div>
 <p><strong>Not</strong> the probability the null is true. That would be P(H₀ | data) — the conditional the other way round, and getting it requires a prior.</p>
 <p style="margin-top:6px"><strong>Not</strong> the probability your result was luck.</p>
 <p style="margin-top:6px"><strong>Not</strong> a measure of effect size. With a large enough sample, a completely irrelevant difference reaches p &lt; 0.001. Report the effect and its interval alongside it, always.</p></div>
@@ -15,13 +15,13 @@
 <div class="g2">
 <div class="card cr"><div class="card-title">Type I error (α) — crying wolf</div>
 <div class="card-body">You reject the null when it was true. You shipped a change that does nothing, and reported a win.</div>
-<div class="box warn"><div class="bl">🔥 fire alarm, no fire</div>
+<div class="box warn"><div class="bl">fire alarm, no fire</div>
 <p>α is the rate you <em>choose</em>. Setting α = 0.05 is a decision to be wrong this way 5% of the time when there is no effect. It is a budget, not a property of the world.</p></div>
 <div class="card-body" style="margin-top:8px"><strong>Test twenty independent things at α = 0.05 and you expect one false positive by construction.</strong> That is not bad luck; it is the definition. Correct for it — Bonferroni is crude but honest, Benjamini–Hochberg is better once you have many tests.</div></div>
 
 <div class="card ca"><div class="card-title">Type II error (β) — missing it</div>
 <div class="card-body">You fail to reject when there really was an effect. The change worked and you threw it away.</div>
-<div class="box story"><div class="bl">🏠 real fire, no alarm</div>
+<div class="box story"><div class="bl">real fire, no alarm</div>
 <p>Power = 1 − β is the probability of detecting a real effect of a given size. 80% is the usual target, which means <strong>you accept a 20% chance of missing a real improvement</strong> — worth saying out loud when someone asks why the test was inconclusive.</p></div>
 <div class="card-body" style="margin-top:8px">Power depends on sample size, effect size, variance and α. Underpowered tests are the most common experimental failure in industry, and in the write-up they look identical to "no effect".</div></div>
 </div>
@@ -29,7 +29,7 @@
 <div class="card cg"><div class="card-title">Confidence intervals, and why they beat p-values</div>
 <div class="card-body">An interval tells you the size of the thing you found, not merely that you found something. "The lift is 2.3% ± 0.4%" answers the business question. "p = 0.03" does not.</div>
 <div class="formula math-formula">$$\bar{x} \pm t_{\alpha/2,\,n-1} \cdot \frac{s}{\sqrt{n}} \qquad\qquad \text{SE} = \frac{s}{\sqrt{n}}$$</div>
-<div class="box info"><div class="bl">💡 what the "95%" attaches to</div>
+<div class="box info"><div class="bl">what the "95%" attaches to</div>
 <p>It is a property of the <em>procedure</em>, not of your one interval. Repeat the whole experiment many times and 95% of the intervals you construct would contain the true value. "There is a 95% probability the true mean is in this interval" is the Bayesian statement, and it needs a prior to be true.</p></div>
 <div class="card-body" style="margin-top:10px"><strong>The √n in the denominator is the expensive part.</strong> Halving an interval takes four times the data. That is why "collect more data" stops being a strategy quickly, and why variance reduction — stratification, CUPED, paired designs — is where experienced experimenters actually spend their effort.</div>
 <div class="anim-wrap"><div class="anim-title">Central limit theorem, and why √n is expensive</div>
@@ -87,7 +87,7 @@
 <li><strong>Model comparison is an experiment too.</strong> "New model has better AUC" needs an interval. Bootstrap the metric over the test set, or compare paired predictions; a single point estimate on one split is not evidence</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Define the p-value precisely, unprompted.</strong> "The probability of data this extreme or more, given the null is true." Then say what it is not. Interviewers ask this specifically because so many candidates state the conditional backwards.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "The A/B test has run a week and just hit p = 0.04. Do you ship?" — The right answer starts with a question: was the sample size fixed in advance? If not, this is peeking and the number is not trustworthy. That reply is the thing being tested.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "How would you get a confidence interval for a median?" — Bootstrap. Naming it immediately signals practical experience.</p>

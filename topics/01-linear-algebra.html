@@ -103,7 +103,7 @@
 <li><strong>Recommenders factorise.</strong> A user–item matrix is mostly missing, so you fit user and item embedding matrices whose product reconstructs the observed entries. A recommendation is then a dot product</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>If asked why linear algebra matters:</strong> be concrete rather than reverent. "A forward pass is a chain of matrix products. Attention is a scaled dot product. PCA is the eigendecomposition of a covariance matrix. Ridge and lasso differ only in which norm they penalise." Four sentences, four load-bearing facts.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does PCA use SVD instead of eigendecomposition?" — Because forming XᵀX squares the condition number and loses precision; SVD gets the same singular directions straight from X. Say the words "condition number" and the question is over.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "Why divide attention scores by √d_k?" — Variance of the dot product grows with dimension; without the scaling, softmax saturates and gradients vanish.</p>

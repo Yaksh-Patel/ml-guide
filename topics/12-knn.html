@@ -193,7 +193,7 @@
 <li><strong>Molecular similarity in drug discovery.</strong> Nearest neighbours over Morgan fingerprints under Tanimoto/Hamming distance is how a candidate compound is matched to known actives — a domain where the interpretability of "here are the five most similar known molecules" beats a black-box score</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Do not describe it as an outdated toy.</strong> Frame it as the retrieval primitive it has become: "raw KNN is unshippable because prediction is O(nd) — a million rows at a hundred features is 10⁸ operations per query. But the idea is everywhere: embed into a dense space and query an ANN index. That is RAG, semantic search, and recommendation candidate generation." That answer tells the interviewer you know what the last five years did with this algorithm.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why does KNN break in high dimensions?" — Give the number, not the phrase. To capture 1% of the data in 10 dimensions your neighbourhood must span 63% of every feature's range; at 100 dimensions, 96%. There is no local neighbourhood left to average over. Then add the resolution: embeddings survive high dimensionality because their intrinsic dimension is low, so the fix is a better representation, not a bigger k.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Scale this to 100 million items." — HNSW or IVF-PQ, roughly 1 ms at ~99% recall, with <code>ef_search</code> as the explicit recall/latency dial. Say out loud that you would measure recall against a brute-force scan on a sample, because that is the part people forget.</p>

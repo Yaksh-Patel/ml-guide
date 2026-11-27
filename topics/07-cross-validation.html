@@ -99,7 +99,7 @@
 <li><strong>Group-aware splits are a data-contract question.</strong> Whether your unit of prediction is a row, a session or a customer determines the splitter, and getting it wrong is invisible in every offline metric</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Lead with the leak.</strong> Asked to describe cross-validation, describe it in two lines and then spend your answer on what invalidates it: preprocessing outside the fold, temporal order, and groups. That ordering shows you have debugged a suspiciously good score rather than only read the definition.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Your CV score is 0.95 and production is 0.71. What happened?" — Work through it out loud: leakage from preprocessing or feature selection, a group appearing on both sides, temporal shuffling, or genuine distribution shift since training. Naming all four and saying which you would check first is the answer.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "Why not leave-one-out?" — Nearly unbiased, high variance, and n fits. k = 5 or 10 is the practical trade.</p>

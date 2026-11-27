@@ -114,7 +114,7 @@ I_R &= 1 - (0.125^2 + 0.875^2) = 0.2188 \\
 <li><strong>As a diagnostic on your own data.</strong> A depth-2 tree that hits 0.99 AUC has found leakage, and it names the column for you. It is the fastest leak detector available and takes seconds to run</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Expect:</strong> "Why do decision trees have high variance?" — Give the mechanism, not the adjective. Splits are chosen greedily by comparing gains that can differ by less than sampling noise; when the runner-up wins the root on a resample, every subsequent split is fitted to a different partition, so the whole structure changes. The error compounds downward instead of averaging out — which is exactly why bagging pays off so well on trees and so little on linear models.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why is impurity feature importance biased?" — Because a continuous feature offers hundreds of candidate thresholds and a binary flag offers one, and the split search takes the maximum over candidates. It is multiple comparisons: more chances to fit noise, measured on training data. That is why a unique ID column ranks highly. Then give the fix — permutation importance on held-out data, or SHAP.</p>
 <p style="margin-top:8px"><strong>Have the worked split ready.</strong> Parent 50/50 has Gini 0.5; a split into 45/15 and 5/35 gives weighted impurity 0.6(0.375) + 0.4(0.219) = 0.3125, a gain of 0.1875. Being able to compute one live separates people who have used trees from people who have read about them.</p>

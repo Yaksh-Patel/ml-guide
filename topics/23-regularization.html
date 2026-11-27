@@ -127,7 +127,7 @@
 <li><strong>Augmentation as the dominant regulariser in vision.</strong> Crops, flips, colour jitter, mixup, cutmix. Worth separating from the others because it adds information — the knowledge that a label is invariant to a transform — rather than merely restricting the model. When it applies, it beats penalty tuning</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>Expect:</strong> "Why does L1 give sparsity and L2 not?" — Give the arithmetic rather than the diamond picture. With orthonormal features, lasso is soft-thresholding — subtract λ and clip at zero — while ridge multiplies by 1/(1+λ). Subtraction has a floor, multiplication does not, so anything below λ is eliminated exactly and nothing under ridge ever arrives at zero. If you want the gradient version: d|w|/dw = ±1 regardless of magnitude, while d(w²)/dw = 2w vanishes as w → 0.</p>
 <p style="margin-top:8px"><strong>Frame the choice as a prior.</strong> "L2 is a Gaussian prior on the weights, L1 a Laplace prior — so the question is whether I believe every feature contributes a little or that most contribute nothing." That reframing turns a memorised comparison into a modelling argument, and it explains why λ should be larger on small datasets.</p>
 <p style="margin-top:8px"><strong>The differentiator: know that weight decay ≠ L2 under Adam.</strong> If the penalty goes through the loss, Adam divides it by the per-parameter second-moment estimate, so parameters with the largest gradients get the least decay — the opposite of the intent. AdamW applies it outside the adaptive term. Very few candidates raise this, and it is the reason every modern transformer uses AdamW.</p>

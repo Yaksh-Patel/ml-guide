@@ -301,7 +301,7 @@ response = client.messages.create(
   <li><strong>Cognition (Devin):</strong> software engineering agent with terminal, browser, and editor tools; operates a complete development environment</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>What is an agent?</strong> "An agent is an LLM that can reason across multiple steps and take actions via tool calls — breaking a complex goal into sub-tasks, calling the right tools in sequence, incorporating results, and repeating until the task is complete. The core loop is ReAct: Thought → Action → Observation → repeat."</p>
 <p style="margin-top:8px"><strong>How does tool calling work?</strong> "You define tools as JSON schemas with name, description, and input parameters. The LLM reads the descriptions and decides which tool to call. Your code executes it, appends the result to the conversation, and sends it back to the LLM for the next step. The description quality is critical — it's what the LLM uses to select the right tool."</p>
 <p style="margin-top:8px"><strong>What are the biggest risks with agents?</strong> "Irreversible actions — agents can send emails, delete records, make purchases. Always require explicit confirmation before any write action that can't be undone. Prompt injection — malicious content in retrieved docs can hijack the agent. Separate tool outputs from system instructions. And cascading failures — one wrong step makes downstream steps wrong. Set iteration budgets, validate outputs between steps, log every action."</p>

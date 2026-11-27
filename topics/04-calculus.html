@@ -109,7 +109,7 @@ f'(x) &= \lim_{h \to 0} \frac{f(x+h) - f(x)}{h} \\
 <li><strong>The Adam variance term is diagonal curvature.</strong> Dividing by √v̂ gives each coordinate its own effective step size, which is a cheap Newton method restricted to the diagonal</li>
 </ul></div>
 
-<div class="box ideal"><div class="bl">🎯 In an interview</div>
+<div class="box ideal"><div class="bl">In an interview</div>
 <p><strong>The question is almost always the chain rule.</strong> Say that backpropagation is the chain rule applied to a computation graph, that the gradient is a product of local derivatives, and that being a product is exactly why deep networks vanish or explode. Then give the 0.25¹⁰ number — it converts a vague claim into a demonstration.</p>
 <p style="margin-top:8px"><strong>Expect:</strong> "Why not use Newton's method?" — The Hessian is n × n. Quote the number for a real model size and note that Adam approximates its diagonal for two extra vectors.</p>
 <p style="margin-top:8px"><strong>Also common:</strong> "Why can't we optimise accuracy directly?" — Zero gradient almost everywhere; cross-entropy is the differentiable surrogate.</p>

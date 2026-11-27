@@ -93,6 +93,19 @@
   --mesh:          rgba(12, 19, 23, .07);
 }
 
+/* One colour per topic, taken from its group (PLAN D3). app.js sets
+   data-group on .main; --grp drives section numbers, the active "on this
+   page" marker, the reading-progress bar, the breadcrumb dot and figure
+   captions. Callout colours stay semantic and do not use it. Same pairing as
+   the home learning-path map (.tn-*). Home and 'ref' keep the accent. */
+.main { --grp: var(--accent); --grp-bg: var(--accent-bg); --grp-bd: var(--accent-bd); }
+.main:is([data-group="math"], [data-group="mlthink"])   { --grp: var(--blue);   --grp-bg: var(--blue-bg);   --grp-bd: var(--blue-bd); }
+.main:is([data-group="classical"], [data-group="dataeng"]) { --grp: var(--green);  --grp-bg: var(--green-bg);  --grp-bd: var(--green-bd); }
+.main:is([data-group="nn"], [data-group="dl"])          { --grp: var(--purple); --grp-bg: var(--purple-bg); --grp-bd: var(--purple-bd); }
+.main[data-group="domains"]                             { --grp: var(--amber);  --grp-bg: var(--amber-bg);  --grp-bd: var(--amber-bd); }
+.main[data-group="prod"]                                { --grp: var(--cyan);   --grp-bg: var(--cyan-bg);   --grp-bd: var(--cyan-bd); }
+.main[data-group="ref"]                                 { --grp: var(--text2);  --grp-bg: var(--bg3);       --grp-bd: var(--border2); }
+
 /* ═══ 2. BASE ═════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -278,6 +291,10 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--text3); flex-shrink: 0;
 }
+.main:not([data-group="home"]) .tb-crumb::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--grp); margin-right: 7px; vertical-align: 1px;
+}
 .tb-sep { color: var(--border2); flex-shrink: 0; }
 .tb-title {
   font-family: var(--font-display); font-size: 15px; font-weight: 600;
@@ -304,7 +321,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 
 #read-progress {
   position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-  background: var(--accent); transform: scaleX(0); transform-origin: 0 50%;
+  background: var(--grp); transform: scaleX(0); transform-origin: 0 50%;
   transition: transform .1s linear;
 }
 
@@ -326,14 +343,21 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 #topic-container { min-width: 0; width: 100%; max-width: var(--wide-w); margin-inline: auto; }
 
 /* Text is capped at --prose-w and centred; wide blocks break out to the full
-   article column (≤ --wide-w). Only direct children of a topic are sized here:
-   wide blocks nested inside a card still fill the card. The home page has its
-   own grid layout and uses the whole column.
+   article column (≤ --wide-w). A top-level card is an open section (§5) that
+   spans the column, so the same rules apply one level down to its children.
+   Cards nested in a .g2/.g3 keep their own box and fill their grid cell.
+   The home page has its own grid layout and uses the whole column.
    !important on margin-inline: 60 "Part N" headings carry an inline
    `margin: 28px 0 12px`, which would pin them to the column's left edge. Every
    top-level inline margin in topics/ has 0 horizontally, so nothing is lost. */
-#topic-container > .section > * { max-width: var(--prose-w); margin-inline: auto !important; }
-#topic-container > .section > :is(.anim-wrap, .tbl, .g2, .g3, .code-runner, .cgrid) { max-width: none; }
+#topic-container > .section:not(#sec-home) > *,
+#topic-container > .section:not(#sec-home) > .card > * { max-width: var(--prose-w); margin-inline: auto !important; }
+#topic-container > .section:not(#sec-home) > :is(.card, .anim-wrap, .g2, .g3, .code-runner),
+#topic-container > .section:not(#sec-home) > .card > :is(.anim-wrap, .g2, .g3, .code-runner) { max-width: none; }
+/* Tables take the width their content needs: never narrower than the text
+   column (so their left edge lines up with it), never wider than the article. */
+#topic-container > .section:not(#sec-home) > .tbl,
+#topic-container > .section:not(#sec-home) > .card > .tbl { width: fit-content; min-width: min(100%, var(--prose-w)); max-width: 100%; }
 #topic-container > #sec-home > * { max-width: none; }
 
 /* Jumps from the rail or the dropdown land below the sticky top bar. */
@@ -362,7 +386,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   transition: color .16s var(--ease), border-color .16s var(--ease);
 }
 .toc-list a:hover { color: var(--text2); }
-.toc-list a.active { color: var(--accent); border-left-color: var(--accent); }
+.toc-list a.active { color: var(--grp); border-left-color: var(--grp); }
 
 /* Below 1280px the rail folds into an "On this page" menu in the top bar.
    Built by buildToc() from the same headings, with the same scroll-spy. */
@@ -389,7 +413,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   border-left: 2px solid transparent;
 }
 .toc-dd-panel a:hover { background: var(--bg3); color: var(--text); }
-.toc-dd-panel a.active { color: var(--accent); background: var(--accent-bg); border-left-color: var(--accent); }
+.toc-dd-panel a.active { color: var(--grp); background: var(--grp-bg); border-left-color: var(--grp); }
 
 /* ---- Prev / next ---- */
 .pager {
@@ -450,28 +474,91 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 
 .sec-title {
   font-family: var(--font-display); font-size: 28px; font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.15; color: var(--text); margin-bottom: 8px;
+  letter-spacing: -.03em; line-height: 1.15; color: var(--text); margin-bottom: 12px;
 }
-.sec-desc { font-size: 14.5px; color: var(--text2); line-height: 1.75; margin-bottom: 26px; max-width: 68ch; }
+@media (min-width: 1440px) { .sec-title { font-size: 36px; } }
+.sec-desc { font-size: 17px; color: var(--text2); line-height: 1.65; margin-bottom: 44px; }
 
+/* ---- Cards ------------------------------------------------------------------
+   A top-level card (a direct child of the topic) is an open section, styled
+   below under "Open sections". What is left here is the light card used inside
+   .g2 / .g3 side-by-side grids, where the authored colour is a thin top edge
+   because in pairs like "High bias / High variance" it means something. */
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 20px; margin-bottom: 13px;
+  border-radius: var(--radius); padding: 16px 18px; margin-bottom: 13px;
   transition: background .25s var(--ease), border-color .25s var(--ease);
 }
-.card-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -.015em; color: var(--text); margin-bottom: 8px; }
-.card-body { font-size: 14px; color: var(--text2); line-height: 1.78; }
+.card-title { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; letter-spacing: -.015em; line-height: 1.3; color: var(--text); margin-bottom: 8px; }
+.card-body { font-size: 14.5px; color: var(--text); line-height: 1.7; }
 .card-body strong, .box strong { color: var(--text); font-weight: 600; }
 
-.card.cb { border-left: 3px solid var(--blue); }
-.card.cg { border-left: 3px solid var(--green); }
-.card.ca { border-left: 3px solid var(--amber); }
-.card.cr { border-left: 3px solid var(--red); }
-.card.cp { border-left: 3px solid var(--purple); }
-.card.cc { border-left: 3px solid var(--cyan); }
+.card.cb { --edge: var(--blue); }   .card.cg { --edge: var(--green); }
+.card.ca { --edge: var(--amber); }  .card.cr { --edge: var(--red); }
+.card.cp { --edge: var(--purple); } .card.cc { --edge: var(--cyan); }
+.card:is(.cb, .cg, .ca, .cr, .cp, .cc) { border-top: 2px solid var(--edge); }
 
-.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
-.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin-bottom: 13px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 13px; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 13px; }
+.g2 > .card, .g3 > .card { margin-bottom: 0; }
+
+/* ---- Open sections (PLAN D2) --------------------------------------------------
+   No box: a numbered heading, a hairline between sections, and generous space.
+   The number is a CSS counter in the group colour, so no topic file changes.
+   The card itself spans the article column; its children follow the column
+   rules in §3 (text at --prose-w, figures wide). The 60 "Part N" headings that
+   sit between sections in 11 older topics introduce the section after them, so
+   no rule is drawn there. */
+.section { counter-reset: sec; }
+#topic-container > .section:not(#sec-home) > .card {
+  counter-increment: sec;
+  background: none; border: 0; border-radius: 0; padding: 0;
+  margin: 56px 0 0;
+}
+#topic-container > .section:not(#sec-home) > .card::before {
+  content: ''; display: block; max-width: var(--prose-w); margin: 0 auto 44px;
+  border-top: 1px solid var(--border);
+}
+#topic-container > .section:not(#sec-home) > :is(.sec-desc, .card-title) + .card { margin-top: 0; }
+#topic-container > .section:not(#sec-home) > :is(.sec-desc, .card-title) + .card::before { display: none; }
+#topic-container > .section:not(#sec-home) > .card > .card-title {
+  font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25;
+  margin-bottom: 16px;
+}
+#topic-container > .section:not(#sec-home) > .card > .card-title::before {
+  content: counter(sec, decimal-leading-zero);
+  display: block; margin-bottom: 6px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .06em;
+  color: var(--grp);
+}
+/* "Part N" headings (60, in 11 older topics) carry inline colours and sizes
+   from before the design system. Until chunk 7 rewrites them, show them as a
+   kicker in the group colour with a rule above, so a page keeps one colour.
+   !important because the values to beat are inline. */
+#topic-container > .section:not(#sec-home) > .card-title {
+  font-family: var(--font-mono) !important; font-size: 12.5px !important; font-weight: 500 !important;
+  letter-spacing: .08em; text-transform: uppercase; line-height: 1.5;
+  color: var(--grp) !important;
+  margin-top: 64px !important; margin-bottom: 20px !important; padding-top: 28px !important;
+  border-top: 1px solid var(--border);
+}
+#topic-container > .section:not(#sec-home) > .sec-desc + .card-title { margin-top: 0 !important; padding-top: 0 !important; border-top: 0; }
+/* Blocks that sit between sections (figures, grids, the closing "In an
+   interview" box) get the same breathing room. */
+#topic-container > .section:not(#sec-home) > :is(.g2, .g3, .anim-wrap, .tbl, .box, .code-runner) { margin-top: 40px; margin-bottom: 0; }
+
+/* One vertical rhythm inside a section. !important because ~700 blocks carry
+   an inline margin-top of 8-10px, which was spacing for the old card padding. */
+#topic-container > .section:not(#sec-home) > .card > * + * { margin-top: 15px !important; }
+#topic-container > .section:not(#sec-home) > .card > .card-title + * { margin-top: 0 !important; }
+#topic-container > .section:not(#sec-home) > .card > :is(.math-formula, .formula, .formula-block, pre) { margin-block: 20px !important; }
+#topic-container > .section:not(#sec-home) > .card > :is(.tbl, .box, .g2, .g3, .cgrid) { margin-block: 24px !important; }
+#topic-container > .section:not(#sec-home) > .card > :is(.anim-wrap, .code-runner) { margin-block: 32px !important; }
+#topic-container > .section:not(#sec-home) > .card > :last-child { margin-bottom: 0 !important; }
+
+/* Reading size for running text in an open section (PLAN D4). */
+#topic-container > .section:not(#sec-home) > .card > .card-body,
+#topic-container > .section:not(#sec-home) > .card > :is(ul, ol) > li { font-size: 16px; line-height: 1.72; }
 
 /* Overflow containment ------------------------------------------------------
    Grid and flex children default to min-width:auto, so one wide element (a
@@ -485,6 +572,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   overflow-x: auto;
   overflow-y: hidden;
   padding: 2px 0;          /* room for the scrollbar, so it cannot clip glyphs */
+  margin: 0;
   max-width: 100%;
 }
 .katex { max-width: 100%; }
@@ -493,34 +581,66 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 
 .card-body, .box p, .box li, .tbl td { overflow-wrap: anywhere; }
 
-.box { border-radius: var(--radius-sm); padding: 12px 15px; margin-top: 12px; }
-.box .bl { font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
-.box p, .box li { font-size: 13.5px; line-height: 1.75; color: var(--text2); }
-.box.story { background: var(--amber-bg);  border-left: 3px solid var(--amber-bd); }  .box.story .bl { color: var(--amber); }
-.box.ideal { background: var(--green-bg);  border-left: 3px solid var(--green-bd); }  .box.ideal .bl { color: var(--green); }
-.box.warn  { background: var(--red-bg);    border-left: 3px solid var(--red-bd); }    .box.warn  .bl { color: var(--red); }
-.box.info  { background: var(--blue-bg);   border-left: 3px solid var(--blue-bd); }   .box.info  .bl { color: var(--blue); }
-.box.tip   { background: var(--purple-bg); border-left: 3px solid var(--purple-bd); } .box.tip   .bl { color: var(--purple); }
-.box.mem   { background: var(--bg3); border: 1px solid var(--border); }
+/* ---- Callouts (PLAN D5) -----------------------------------------------------
+   A 3px rule in the semantic colour, a faint tint, and a label with a small
+   line icon drawn by CSS mask, so no markup changes. Colours stay semantic. */
+.box {
+  --c: var(--text3);
+  border-left: 3px solid var(--c);
+  background: color-mix(in srgb, var(--c) 6%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 14px 18px; margin-top: 12px;
+}
+.box .bl {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--c); margin-bottom: 6px;
+}
+.box .bl::before {
+  content: ''; flex: none; width: 14px; height: 14px; background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
+}
+.box p, .box li { font-size: 15px; line-height: 1.7; color: var(--text); }
+.box p + p { margin-top: .6em; }
+.box.story { --c: var(--amber);  --icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7v14'/><path d='M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z'/></svg>"); }
+.box.ideal { --c: var(--green);  --icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m9 12 2 2 4-4'/></svg>"); }
+.box.warn  { --c: var(--red);    --icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/><path d='M12 9v4'/><path d='M12 17h.01'/></svg>"); }
+.box.info  { --c: var(--blue);   --icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4'/><path d='M12 8h.01'/></svg>"); }
+.box.tip   { --c: var(--purple); --icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/><path d='M9 18h6'/><path d='M10 22h4'/></svg>"); }
+.box:not(.story, .ideal, .warn, .info, .tip, .mem) .bl::before { display: none; }
+/* .box.mem is a pull-quote: the group colour, no tint, no box. */
+.box.mem { --c: var(--grp); background: none; border-radius: 0; padding: 2px 0 2px 20px; }
 .box.mem .bl { color: var(--text3); }
-.box.mem p { color: var(--text); font-style: italic; }
+.box.mem .bl::before { display: none; }
+.box.mem p { font-size: 17px; line-height: 1.6; color: var(--text); }
 
+/* ---- Maths and pseudo-code (PLAN D5) ------------------------------------------
+   Display maths has no box: it is centred with space around it. Code-style
+   .formula blocks (pseudo-code, plain text) keep a quiet panel with no border. */
 .formula, .math-formula, .formula-block {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 13px 16px; margin: 10px 0;
-  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.9;
-  color: var(--accent); overflow-x: auto; white-space: pre;
+  background: var(--bg3); border: 0;
+  border-radius: var(--radius-sm); padding: 14px 18px; margin: 12px 0;
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.85;
+  color: var(--text); overflow-x: auto; white-space: pre;
 }
-.math-formula { white-space: normal; color: var(--text); }
+.formula.math-formula, .math-formula {
+  background: none; border-radius: 0; padding: 0; margin: 18px 0;
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  white-space: normal; text-align: center;
+}
+.formula:has(> pre[class*="language-"]) { padding: 0; background: none; }
+.formula-block { padding: 0; overflow: hidden; white-space: normal; }
 .formula-lang-tag {
-  display: inline-block; font-family: var(--font-mono); font-size: 9px;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--text3);
-  border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; margin-bottom: 6px;
+  display: block; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--text3);
+  padding: 7px 16px; border-bottom: 1px solid var(--border);
 }
-code {
+.formula-block pre[class*="language-"] { border-radius: 0; margin: 0; background: none; }
+
+code:not([class*="language-"]) {
   font-family: var(--font-mono); font-size: .86em;
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 3px; padding: 1px 5px; color: var(--accent);
+  background: var(--bg3); border: 0;
+  border-radius: 4px; padding: .12em .38em; color: var(--text);
 }
 pre code { background: none; border: 0; padding: 0; }
 
@@ -537,23 +657,25 @@ pre code { background: none; border: 0; padding: 0; }
 .tc { background: var(--cyan-bg);   color: var(--cyan);   border: 1px solid var(--cyan-bd); }
 
 ul.bul { padding-left: 1.2rem; }
-ul.bul li { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 3px; }
+ul.bul li, ol.num li { font-size: 14.5px; color: var(--text); line-height: 1.7; margin-bottom: 5px; }
 ul.bul li::marker { color: var(--text3); }
-ol.num { padding-left: 1.3rem; }
-ol.num li { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 5px; }
-ol.num li::marker { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+ol.num { padding-left: 1.4rem; }
+ol.num li::marker { font-family: var(--font-mono); font-size: .8em; color: var(--grp); }
 ul.bul li strong, ol.num li strong { color: var(--text); font-weight: 600; }
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; display: block; overflow-x: auto; }
+/* ---- Tables (PLAN D5): no outer box, hairline rows, header in sans ---------- */
+.tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; display: block; overflow-x: auto; }
 .tbl th {
-  background: var(--bg3); color: var(--text3);
-  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
-  letter-spacing: .1em; text-transform: uppercase;
-  padding: 9px 13px; text-align: left; border-bottom: 1px solid var(--border2);
+  background: none; color: var(--text2);
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; line-height: 1.4;
+  padding: 8px 14px; text-align: left; vertical-align: bottom;
+  border-bottom: 1px solid var(--border2);
 }
-.tbl td { padding: 9px 13px; color: var(--text2); border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.65; }
+.tbl td { padding: 10px 14px; color: var(--text); border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.6; }
+.tbl :is(th, td):first-child { padding-left: 2px; }
 .tbl tr:last-child td { border-bottom: none; }
-.tbl tr:hover td { background: var(--bg3); }
+.tbl tr:hover td { background: color-mix(in srgb, var(--bg3) 60%, transparent); }
 .tbl td strong { color: var(--text); font-weight: 600; }
 
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
@@ -562,44 +684,62 @@ ul.bul li strong, ol.num li strong { color: var(--text); font-weight: 600; }
 
 .cgrid {
   display: grid; grid-template-columns: 104px 1fr 1fr; gap: 1px;
-  background: var(--border); border-radius: var(--radius-sm);
-  overflow: hidden; margin: 13px 0; font-size: 13px;
+  background: var(--border); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; margin: 13px 0; font-size: 14px;
 }
-.ch { background: var(--bg3); color: var(--text3); font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 10px 12px; text-align: center; }
+.ch { background: var(--surface); color: var(--text2); font-family: var(--font-body); font-size: 12.5px; font-weight: 600; padding: 10px 12px; text-align: center; }
 .cg-cc { background: var(--surface); padding: 12px; text-align: center; line-height: 1.45; }
 .ctp, .ctn { background: var(--green-bg); color: var(--green); font-weight: 600; }
 .cfp { background: var(--red-bg);   color: var(--red);   font-weight: 600; }
 .cfn { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
 
+/* ---- Diagrams are figures (PLAN D5) ---------------------------------------------
+   A panel that breaks out to the wide column, with the title moved below as a
+   caption by flex order (no markup change). Controls (plain divs) stay under
+   the drawing. The drawing is height-capped so a 500-unit viewBox does not
+   blow its labels up to twice their size on a 1080px column. */
 .anim-wrap {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 4px; margin: 15px 0; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px 24px 16px; margin: 15px 0; overflow: hidden;
 }
-.anim-title { font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); padding: 9px 12px 5px; }
-.anim-wrap svg { display: block; width: 100%; height: auto; }
+.anim-wrap > svg { display: block; width: 100%; height: auto; max-height: 460px; }
+.anim-title {
+  order: 99; padding: 14px 0 0;
+  font-family: var(--font-body); font-size: 13px; font-weight: 400; line-height: 1.5;
+  letter-spacing: 0; text-transform: none; color: var(--text2); text-align: center;
+}
+.anim-title::before {
+  content: ''; display: inline-block; width: 14px; height: 2px; border-radius: 1px;
+  background: var(--grp); vertical-align: middle; margin-right: 9px;
+}
 
-hr.div { border: 0; border-top: 1px solid var(--border); margin: 20px 0; }
+hr.div { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
 
 /* ═══ 6. CODE RUNNERS ═════════════════════════════════════ */
+/* The single source of runner styles. prism-theme.css used to restyle these
+   too, and because it loads lazily (after this file) runners looked different
+   depending on whether the topic had static code. */
 .code-runner { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 14px 0; }
 .code-runner-header {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 8px 13px; background: var(--surface2); border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text3);
+  padding: 8px 10px 8px 16px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 500; color: var(--text2);
 }
+.code-runner-header > span { font: inherit; letter-spacing: 0; text-transform: none; color: inherit; }
 .runner-btns { display: flex; gap: 6px; }
 .run-btn, .reset-btn {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em;
-  padding: 4px 11px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border2); background: var(--surface); color: var(--text2);
+  font-family: var(--font-body); font-size: 12px; font-weight: 600; line-height: 1.4;
+  padding: 5px 13px; border-radius: var(--radius-sm);
   transition: all .16s var(--ease);
 }
-.run-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.run-btn { background: var(--grp); color: var(--on-accent); border: 1px solid transparent; }
+.run-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.reset-btn { background: none; color: var(--text2); border: 1px solid var(--border2); font-weight: 500; }
 .reset-btn:hover { border-color: var(--text3); color: var(--text); }
 .run-btn:disabled { opacity: .65; cursor: progress; }
 .code-input {
-  width: 100%; min-height: 150px; padding: 13px 15px;
+  display: block; width: 100%; min-height: 150px; padding: 13px 15px; tab-size: 4;
   background: var(--bg); border: 0; resize: vertical;
   font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; color: var(--text);
 }
@@ -804,6 +944,10 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
 /* Phones: the top bar holds title, "On this page", Mark read, Home and theme.
    Drop the reading-time tag and show Home as an icon so the title keeps room. */
 @media (max-width: 560px) {
+  .anim-wrap { padding: 14px 12px 12px; }
+  .sec-desc { font-size: 16px; margin-bottom: 32px; }
+  #topic-container > .section:not(#sec-home) > .card { margin-top: 44px; }
+  #topic-container > .section:not(#sec-home) > .card::before { margin-bottom: 36px; }
   .tb-right { gap: 5px; }
   .tb-tag { display: none; }
   #tb-home-btn { font-size: 0; gap: 0; padding: 5px 8px; }

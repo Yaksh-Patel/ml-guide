@@ -54,7 +54,8 @@ home page, and one topic had already fallen out of sync and become unreachable.
 ```
 index.html                 shell only: sidebar frame, topbar, palette, icon sprite
 assets/style.css           the whole design system (tokens at the top)
-assets/prism-theme.css     syntax colours, all driven by the same tokens
+assets/prism-theme.css     Prism token colours and the <pre> block only (lazy-loaded, so it
+                           must not restyle runners, inline code or KaTeX: style.css owns those)
 assets/js/
   topics.js                SOURCE OF TRUTH: groups, topics, metadata
   app.js                   router, generated nav, search, progress, TOC, pager
@@ -122,16 +123,16 @@ JetBrains Mono for metadata only.
 
 | Class | Use |
 |---|---|
-| `.card` + `.cb .cg .ca .cr .cp .cc` | content card, optional coloured left edge |
+| `.card` + `.cb .cg .ca .cr .cp .cc` | a top-level card renders as an open section (numbered heading, rule above, no box); inside `.g2`/`.g3` it is a light card and the colour class becomes its top edge |
 | `.card-title` `.card-body` | inside a card |
-| `.box` + `.story .ideal .mem .warn .info .tip` | callout; label goes in `.bl` |
+| `.box` + `.story .ideal .mem .warn .info .tip` | callout; label goes in `.bl`, with no emoji (CSS draws the icon). `.mem` renders as a pull-quote |
 | `.g2` `.g3` | two / three column grids (collapse on mobile) |
 | `.bul` `.num` | styled `ul` / `ol` |
 | `.tbl` | table (scrolls horizontally on small screens) |
 | `.formula` `.math-formula` `.formula-block` | maths and pseudo-code blocks |
 | `.tag` + `.tb .tg .ta .tr .tp .tc` | inline pills |
 | `.cgrid` `.ch` `.cg-cc` `.ctp .ctn .cfp .cfn` | confusion-matrix grid |
-| `.anim-wrap` `.anim-title` | wrapper for an inline SVG diagram |
+| `.anim-wrap` `.anim-title` | figure panel for an inline SVG diagram; the title shows as a caption below it |
 | `.code-runner` | interactive Python block; `data-packages="numpy,pandas"` declares what Pyodide must load |
 
 Every topic carries a diagram and a worked code example. The diagrams share one
