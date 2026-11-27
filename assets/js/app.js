@@ -16,6 +16,9 @@ const GROUP_KEY    = id => 'ml-grp-' + id;
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
+/* A sprite icon (index.html). `id` is a <symbol> id such as a group's `icon`. */
+const ico = (id, cls = '') => `<svg class="ico${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
 const store = {
   get(k, fallback = null) { try { return localStorage.getItem(k) ?? fallback; } catch { return fallback; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
@@ -57,10 +60,14 @@ function paintProgress() {
   const hbi = $('.home-progress-bar-inner'); if (hbi) hbi.style.width = pct + '%';
   const hpi = $('#home-progress-count'); if (hpi) hpi.textContent = `${done} of ${TOTAL} topics`;
 
-  // per-group counts in the sidebar
+  // per-group progress in the sidebar: a small bar plus the count
   GROUPS.forEach(g => {
-    const el = $(`.sb-gl[data-grp-id="${g.id}"] .grp-count`);
-    if (el) el.textContent = `${g.topics.filter(t => p[t.id]).length}/${g.topics.length}`;
+    const gl = $(`.sb-gl[data-grp-id="${g.id}"]`);
+    if (!gl) return;
+    const n = g.topics.filter(t => p[t.id]).length, of = g.topics.length;
+    $('.grp-count', gl).textContent = `${n} of ${of} read`;
+    $('.grp-prog-fill', gl).style.width = (n / of * 100) + '%';
+    gl.title = `${g.label}: ${n} of ${of} read`;
   });
 
   updateReadButton(current);
@@ -72,11 +79,11 @@ function buildSidebar() {
   const mount = $('#sb-groups');
   if (!mount) return;
   mount.innerHTML = GROUPS.map(g => `
-    <div class="sb-grp" data-grp="${g.id}">
+    <div class="sb-grp" data-grp="${g.id}" data-group="${g.id}">
       <button class="sb-gl" data-grp-id="${g.id}" aria-expanded="true">
-        <span class="grp-icon">${g.icon}</span>
-        <span class="grp-name">${g.label}</span>
-        <span class="grp-count"></span>
+        ${ico(g.icon, 'grp-icon')}
+        <span class="grp-name">${g.label}<span class="grp-prog" aria-hidden="true"><span class="grp-prog-fill"></span></span></span>
+        <span class="grp-count sr-only"></span>
         <svg class="grp-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="sb-items">
@@ -91,14 +98,7 @@ function buildSidebar() {
       </div>
     </div>`).join('');
 
-  // restore collapsed groups
-  GROUPS.forEach(g => {
-    if (store.get(GROUP_KEY(g.id)) === '1') {
-      const grp = $(`.sb-grp[data-grp="${g.id}"]`);
-      grp?.classList.add('grp-collapsed');
-      $('.sb-gl', grp)?.setAttribute('aria-expanded', 'false');
-    }
-  });
+  paintGroups(null);
 
   mount.addEventListener('click', e => {
     const gl = e.target.closest('.sb-gl');
@@ -117,6 +117,21 @@ function buildSidebar() {
   }, { passive: true });
 }
 
+/* Which groups are open. A group the reader toggled by hand keeps that state
+   (GROUP_KEY: '1' collapsed, '0' open). Every other group is collapsed unless it
+   holds the current topic. The current topic's group is always opened on
+   arrival, so the active entry is never hidden; that is not stored. */
+function paintGroups(currentGroup) {
+  $$('.sb-grp').forEach(grp => {
+    const saved = store.get(GROUP_KEY(grp.dataset.grp));
+    const isCur = grp.dataset.grp === currentGroup;
+    const collapsed = isCur ? false : saved !== null ? saved === '1' : true;
+    grp.classList.toggle('grp-collapsed', collapsed);
+    grp.classList.toggle('grp-current', isCur);
+    $('.sb-gl', grp)?.setAttribute('aria-expanded', String(!collapsed));
+  });
+}
+
 function setAllGroups(collapsed) {
   $$('.sb-grp').forEach(grp => {
     grp.classList.toggle('grp-collapsed', collapsed);
@@ -132,7 +147,7 @@ function buildHome() {
   if (grid && !grid.dataset.built) {
     grid.dataset.built = '1';
     grid.innerHTML = GROUPS.map(g => `
-      <div class="grp-label">${g.icon} ${g.label}</div>
+      <div class="grp-label" data-group="${g.id}">${ico(g.icon)} ${g.label}</div>
       <div class="home-grid">
         ${g.topics.map(t => `
           <a class="ht" href="#${t.id}" data-topic-id="${t.id}">
@@ -254,7 +269,7 @@ function renderPalette(q) {
       <span class="pal-num">${r.t.num}</span>
       <span class="pal-body">
         <span class="pal-title">${mark(r.t.title, q)}</span>
-        <span class="pal-meta">${r.t.groupIcon} ${r.t.groupLabel} · ${r.t.time} min${isRead(r.t.id) ? ' · read' : ''}</span>
+        <span class="pal-meta">${ico(r.t.groupIcon)} ${r.t.groupLabel} · ${r.t.time} min${isRead(r.t.id) ? ' · read' : ''}</span>
         ${r.snippet ? `<span class="pal-snippet">${mark(r.snippet, q)}</span>` : ''}
       </span>
     </a>`).join('');
@@ -412,6 +427,7 @@ async function go(id, { push = true, scroll = true } = {}) {
   const section = document.getElementById('sec-' + id);
   section?.classList.add('active');
 
+  paintGroups(id === 'home' ? null : BY_ID[id].group);
   $$('.sb-item').forEach(i => i.classList.toggle('active', i.dataset.topicId === id));
   $(`.sb-item[data-topic-id="${id}"]`)?.scrollIntoView({ block: 'nearest' });
 
@@ -432,7 +448,7 @@ async function go(id, { push = true, scroll = true } = {}) {
 function paintTopbar(id) {
   const t = id === 'home' ? null : BY_ID[id];
   $('.main')?.setAttribute('data-group', t ? t.group : 'home');   // drives --grp (style.css §1)
-  $('#tb-crumb').textContent = t ? `${t.groupIcon} ${t.groupLabel}` : 'Start here';
+  $('#tb-crumb').innerHTML = t ? `${ico(t.groupIcon)}${t.groupLabel}` : 'Start here';
   $('#tb-title').textContent = t ? t.title : 'Home';
   $('#tb-time').textContent  = t ? `${t.time} min` : `${TOTAL} topics`;
   const home = $('#tb-home-btn');
