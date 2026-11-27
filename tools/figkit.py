@@ -190,6 +190,62 @@ class Fig:
             cands += self.around(x, y, d, kw.get('size', SMALL))
         return self.label(s, cands, **kw)
 
+    # ---- boxes and connectors ------------------------------------------------------
+    def box(self, x, y, w, h, label, sub=None, stroke=BORD, color=INK, fill=SURF, size=SMALL,
+            weight=600, r=6, sub_color=MUTED, width=1.2, mono=False):
+        """A rounded box with a centred label and an optional second line.
+        Returns a Box for connect(). check() fails if the text overflows it."""
+        self.rect(x, y, w, h, fill, stroke, r, width)
+        if sub:
+            self.text(x + w / 2, y + h / 2 - 2, label, color, size, 'middle', weight, mono, halo=False)
+            self.text(x + w / 2, y + h / 2 + TINY + 3, sub, sub_color, TINY, 'middle', halo=False)
+        else:
+            self.text(x + w / 2, y + h / 2 + size * 0.33, label, color, size, 'middle', weight, mono, halo=False)
+        return Box(x, y, w, h)
+
+    def connect(self, a, b, stroke=FAINT, width=1.4, arrow=True, gap=GAP, dash=None, bend=0, opacity=None):
+        """Arrow from box a to box b, edge to edge along the line between their
+        centres. bend > 0 bows it into a smooth arc (units of sideways offset)."""
+        p, q = a.edge_toward(b.cx, b.cy), b.edge_toward(a.cx, a.cy)
+        if not bend:
+            return self.line(*p, *q, stroke, width, dash=dash, arrow=arrow, gap=gap, opacity=opacity)
+        d = math.dist(p, q) or 1
+        ux, uy = (q[0] - p[0]) / d, (q[1] - p[1]) / d
+        p = (p[0] + ux * gap, p[1] + uy * gap); q = (q[0] - ux * gap, q[1] - uy * gap)
+        c = ((p[0] + q[0]) / 2 - uy * bend, (p[1] + q[1]) / 2 + ux * bend)
+        self.qcurve(p, c, q, stroke, width, arrow=arrow, dash=dash, opacity=opacity)
+
+    def qcurve(self, p0, c, p1, stroke=FAINT, width=1.4, arrow=False, dash=None, opacity=None, extra=''):
+        """Quadratic Bézier p0 → p1 with control c (smooth arcs and hops)."""
+        da = f' stroke-dasharray="{dash}"' if dash else ''
+        op = f' opacity="{opacity}"' if opacity is not None else ''
+        mk = f' marker-end="url(#{self.marker(stroke)})"' if arrow else ''
+        self.parts.append(f'<path d="M{p0[0]:.1f},{p0[1]:.1f} Q{c[0]:.1f},{c[1]:.1f} {p1[0]:.1f},{p1[1]:.1f}" '
+                          f'fill="none" stroke="{stroke}" stroke-width="{width}" stroke-linecap="round"{da}{op}{mk}{extra}/>')
+        self._record(quad_points(p0, c, p1))
+
+    def smooth(self, pts, stroke, width=2.2, arrow=False, dash=None, opacity=None, extra=''):
+        """A smooth curve through pts (Catmull–Rom as cubic Béziers)."""
+        P = [pts[0]] + list(pts) + [pts[-1]]
+        d = f'M{P[1][0]:.1f},{P[1][1]:.1f}'
+        sampled = [P[1]]
+        for i in range(1, len(P) - 2):
+            p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
+            c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+            c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+            d += f' C{c1[0]:.1f},{c1[1]:.1f} {c2[0]:.1f},{c2[1]:.1f} {p2[0]:.1f},{p2[1]:.1f}'
+            for k in range(1, 9):
+                t = k / 8
+                sampled.append(tuple((1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * e
+                                     for a, b, c, e in zip(p1, c1, c2, p2)))
+        da = f' stroke-dasharray="{dash}"' if dash else ''
+        op = f' opacity="{opacity}"' if opacity is not None else ''
+        mk = f' marker-end="url(#{self.marker(stroke)})"' if arrow else ''
+        self.parts.append(f'<path d="{d}" fill="none" stroke="{stroke}" stroke-width="{width}" '
+                          f'stroke-linecap="round" stroke-linejoin="round"{da}{op}{mk}{extra}/>')
+        self._record(sampled)
+        return sampled
+
     # ---- plotting ----------------------------------------------------------------
     def plot_area(self, x0, y0, x1, y1, xr, yr):
         """Data → canvas mapping. y0 is the TOP edge, y1 the bottom."""
@@ -223,6 +279,23 @@ class Fig:
         body = '\n'.join(self.parts)
         return (f'<svg viewBox="0 0 {self.w} {self.h}" xmlns="http://www.w3.org/2000/svg" '
                 f'role="img" data-fig="v2"{still}>\n{defs}\n{body}\n</svg>')
+
+
+class Box:
+    def __init__(self, x, y, w, h):
+        self.x, self.y, self.w, self.h = x, y, w, h
+        self.cx, self.cy = x + w / 2, y + h / 2
+        self.l, self.r, self.t, self.b = x, x + w, y, y + h
+
+    def edge_toward(self, tx, ty):
+        """Point on this box's border on the line from its centre toward (tx, ty)."""
+        dx, dy = tx - self.cx, ty - self.cy
+        if dx == 0 and dy == 0:
+            return self.cx, self.cy
+        sx = (self.w / 2) / abs(dx) if dx else float('inf')
+        sy = (self.h / 2) / abs(dy) if dy else float('inf')
+        s = min(sx, sy)
+        return self.cx + dx * s, self.cy + dy * s
 
 
 class Plot:
