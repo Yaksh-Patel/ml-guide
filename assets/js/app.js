@@ -65,7 +65,11 @@ function paintProgress() {
   const hpl = $('.home-pct-label');      if (hpl) hpl.textContent = pct + '%';
   const hpi = $('#home-progress-count'); if (hpi) hpi.textContent = `${done} of ${TOTAL} topics`;
   const arc = $('#home-ring-arc');       // r = 21, so the circumference is 2π·21
-  if (arc) arc.style.strokeDashoffset = String(2 * Math.PI * 21 * (1 - done / TOTAL));
+  if (arc) {
+    arc.style.strokeDashoffset = String(2 * Math.PI * 21 * (1 - done / TOTAL));
+    // a zero-length arc with round caps still paints a dot: hide it at 0%
+    arc.style.visibility = done ? '' : 'hidden';
+  }
 
   // per-group progress on home: grid headers and map rows
   GROUPS.forEach(g => {

@@ -2,8 +2,8 @@
 <div class="sec-title">Python, SQL &amp; DSA</div>
 <div class="sec-desc">The round that eliminates people who can model. Three things are actually being tested: whether you reach for a vectorised operation instead of a loop, whether you know the window functions that replace the self-join you were about to write, and whether your validation code can be trusted. The third one matters long after the interview — the difference between a pipeline and a hand-rolled cross-validation is the difference between an honest score and a fictional one, and the example below scores <strong>0.892 AUC on pure noise</strong> to prove it.</div>
 
-<div class="card"><div class="card-title">Python — Must-Know Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python"># Pandas essentials
+<div class="card"><div class="card-title">Python — must-know patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python"># Pandas essentials
 df.groupby('col').agg({'target': ['mean','std','count']})
 df.merge(df2, on='id', how='left')
 df.pivot_table(values='amt', index='month', columns='category')
@@ -38,7 +38,7 @@ cv_scores = cross_val_score(pipe, X, y, cv=StratifiedKFold(5),
 <div class="card-body" style="margin-top:10px"><strong>Note which one is worst.</strong> Row-wise <code>apply</code> reads as idiomatic pandas and is dramatically slower than the explicit loop people are embarrassed to write, because it builds a Series object for every row on top of the same per-row Python dispatch. <code>apply(axis=1)</code> is not a vectorised operation with nicer syntax — it is a loop with overhead, and treating it as the "proper pandas way" is the most common version of this mistake.</div>
 <div class="card-body" style="margin-top:8px">The reason vectorised operations win is that the loop moves into C over a contiguous typed buffer: no per-element boxing, no interpreter dispatch, and the memory access pattern is one the CPU can prefetch. That also tells you when the advice stops applying — if the per-row work is genuinely irreducible Python (calling an API, parsing irregular text), vectorising buys nothing, and the answer is to reduce the number of rows or move to a real parallel framework rather than to keep looking for a clever one-liner.</div></div>
 
-<div class="card"><div class="card-title">SQL — Data Science Patterns</div>
+<div class="card"><div class="card-title">SQL — data science patterns</div>
 <div class="formula-block"><div class="formula-lang-tag"><span>🗃️ SQL</span></div><pre class="language-sql"><code class="language-sql">-- Running average payment rate (window function)
 SELECT customer_id, month,
   AVG(payment_ratio) OVER (PARTITION BY customer_id
@@ -71,7 +71,7 @@ WHERE d.customer_id IS NOT NULL;</code></pre></div>
 <div class="card-body" style="margin-top:10px">Two distinctions that get asked as follow-ups. <strong><code>RANK</code> leaves gaps after ties, <code>DENSE_RANK</code> does not, and <code>ROW_NUMBER</code> breaks ties arbitrarily</strong> — so "top 3 per group" with ties is genuinely three different answers and the right one depends on whether ties should all be kept. And <strong><code>ROWS</code> counts rows while <code>RANGE</code> counts values</strong>: on a table with gaps in the dates, <code>ROWS BETWEEN 6 PRECEDING</code> gives you the last 6 <em>rows</em>, not the last 6 <em>days</em>, which quietly produces the wrong rolling window whenever data is missing.</div>
 <div class="card-body" style="margin-top:8px">One correctness trap worth naming because it shows up in real feature pipelines: in the last query above, the date filter sits in the <code>ON</code> clause rather than the <code>WHERE</code>. <strong>On a LEFT JOIN those are not the same</strong> — a predicate on the right table in <code>WHERE</code> discards the unmatched rows and silently converts the LEFT JOIN into an INNER JOIN, dropping exactly the customers who never defaulted. That is the negative class disappearing from a training set without an error.</div></div>
 
-<div class="card"><div class="card-title">DSA — Most Common in DS Interviews</div>
+<div class="card"><div class="card-title">DSA — most common in DS interviews</div>
 <table class="tbl"><tr><th>Pattern</th><th>Example</th><th>Key Technique</th></tr>
 <tr><td>Sliding window</td><td>Max sum subarray of size k; rolling feature</td><td>Two pointers, deque</td></tr>
 <tr><td>Two pointers</td><td>Find pair with target sum in sorted array</td><td>Start at both ends, converge</td></tr>
@@ -101,8 +101,8 @@ WHERE d.customer_id IS NOT NULL;</code></pre></div>
 <div class="card-body" style="margin-top:8px">The same run makes an honest second point that the usual advice glosses over. <strong>Fitting a <code>StandardScaler</code> on the full dataset moved the score by essentially nothing</strong> (0.496 either way), because a mean and a variance estimated from a few hundred extra rows barely differ. So the risk is not uniform: <strong>leakage scales with how much the preprocessing step depends on the labels and how many choices it makes.</strong> Scaling is nearly harmless, imputation slightly worse, and anything supervised — feature selection, target encoding, resampling, threshold tuning — is catastrophic. Put everything in the pipeline anyway, because the rule is easier to follow than the exceptions are to remember.</div>
 <div class="card-body" style="margin-top:8px">Two consequences for real code. A <code>Pipeline</code> refits every step on each training fold, which is the only reason <code>cross_val_score</code> means anything — and it also serialises preprocessing and model as one artifact, which removes an entire class of training–serving skew. And <strong>if the data has a time order, use <code>TimeSeriesSplit</code></strong>: a shuffled K-fold trains on the future to predict the past, which is a leak the pipeline cannot save you from.</div></div>
 
-<div class="card"><div class="card-title">PyTorch Essential Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import torch, torch.nn as nn
+<div class="card"><div class="card-title">PyTorch essential patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">import torch, torch.nn as nn
 
 # Define model
 class MLP(nn.Module):
@@ -142,7 +142,7 @@ for epoch in range(epochs):
   <li><strong>Optimising before profiling.</strong> <code>%timeit</code> first — the slow line is regularly not the one you expected, and in ML code it is often I/O rather than compute</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Airbnb / Lyft (data science coding):</strong> SQL interview questions heavily test window functions — "find the second-highest revenue day per market" requires RANK() OVER (PARTITION BY market ORDER BY revenue DESC); candidates who write subquery equivalents are marked down for readability</li>
   <li><strong>Meta (DS interviews):</strong> Python coding round tests pandas manipulation (groupby, merge, pivot), statistical reasoning (A/B test analysis), and occasionally LeetCode Medium-level algorithms (sliding window, hashmaps). The pandas portion is where most DS candidates lose points</li>

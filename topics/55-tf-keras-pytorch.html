@@ -2,7 +2,7 @@
 <div class="sec-title">TensorFlow, Keras &amp; PyTorch</div>
 <div class="sec-desc">The framework war is effectively over — PyTorch won research and most of industry, and TensorFlow kept the deployment ecosystem. So nobody is really testing which you prefer. What the question is testing is whether you have <em>actually trained models</em>, and that shows up in four bugs: gradients that accumulate because you forgot to zero them, dropout left on at inference, a loss that returns infinity because the sigmoid saturated, and a validation loop quietly building a graph it will never use. None of the four raises an error. All four are checkable arithmetic, worked below.</div>
 
-<div class="card"><div class="card-title">Framework Comparison</div>
+<div class="card"><div class="card-title">Framework comparison</div>
 <table class="tbl"><tr><th>Dimension</th><th>PyTorch</th><th>TensorFlow 2.x</th><th>Keras (standalone)</th></tr>
 <tr><td>Philosophy</td><td>Research-first, Pythonic</td><td>Production-first, graph-based</td><td>High-level API, beginner-friendly</td></tr>
 <tr><td>Computation graph</td><td>Dynamic (define-by-run)</td><td>Dynamic (eager) + static (tf.function)</td><td>Wraps TF backend</td></tr>
@@ -15,8 +15,8 @@
 <div class="card-body" style="margin-top:10px"><strong>The row that used to decide everything — dynamic versus static graphs — has largely collapsed.</strong> TensorFlow 2 made eager execution the default and PyTorch 2 added <code>torch.compile</code>, so both now offer the same bargain: write and debug eagerly, then compile the hot path. The remaining differences are ecosystem rather than capability, and the honest summary is that <strong>your model's weights are the asset and the framework is a detail</strong> — ONNX exists precisely so that choice need not be permanent.</div>
 <div class="card-body" style="margin-top:8px">Where the choice still bites is deployment target. If the answer has to run in a browser, on Android, or on a microcontroller, TensorFlow's Lite and JS paths remain the most mature and that alone can settle it. If you are fine-tuning anything from the Hugging Face ecosystem, the decision was made for you. And on TPUs, JAX and TensorFlow are the supported route.</div></div>
 
-<div class="card"><div class="card-title">PyTorch — Core Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import torch
+<div class="card"><div class="card-title">PyTorch — core patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
@@ -75,8 +75,8 @@ class CreditDataset(torch.utils.data.Dataset):
     def __len__(self): return len(self.X)
     def __getitem__(self, idx): return self.X[idx], self.y[idx]</code></pre></div></div>
 
-<div class="card"><div class="card-title">TensorFlow 2.x — Core Patterns</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import tensorflow as tf
+<div class="card"><div class="card-title">TensorFlow 2.x — core patterns</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">import tensorflow as tf
 from tensorflow import keras
 
 # ─── 1. SEQUENTIAL API (simple) ───────────────────────────────
@@ -143,8 +143,8 @@ converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()</code></pre></div>
 <div class="card-body" style="margin-top:10px"><strong>The shape of the two code blocks is the real difference.</strong> Keras hands you a training loop and asks you to configure it through <code>compile</code> and callbacks; PyTorch hands you the pieces and asks you to write the loop. That is why Keras is faster to a working baseline and PyTorch is easier to modify when the thing you need — a custom gradient step, an unusual schedule, two optimisers — is not something the loop anticipated. Neither is better; they fail in opposite directions, and <code>train_step</code> in the subclassed model above is Keras's escape hatch back towards the PyTorch position.</div></div>
 
-<div class="card"><div class="card-title">Keras (Standalone, v3.x) — Multi-Backend</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">import keras   # Keras 3 — works with PyTorch, TF, or JAX backend
+<div class="card"><div class="card-title">Keras (standalone, v3.x) — multi-backend</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">import keras   # Keras 3 — works with PyTorch, TF, or JAX backend
                # Set backend: KERAS_BACKEND=torch python train.py
 
 # Same API, different backends — write once, run anywhere
@@ -168,7 +168,7 @@ classifier = keras_hub.models.BertClassifier.from_preset(
 )
 classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 
-<div class="card"><div class="card-title">When To Use Which Framework</div>
+<div class="card"><div class="card-title">When to use which framework</div>
 <table class="tbl"><tr><th>Scenario</th><th>Recommended</th><th>Why</th></tr>
 <tr><td>Research / novel architecture</td><td>PyTorch</td><td>Dynamic graphs = easy to debug + modify mid-computation</td></tr>
 <tr><td>Production serving at scale</td><td>TF/TF Serving or TorchServe</td><td>TF Serving is mature; TorchScript for PyTorch</td></tr>
@@ -179,10 +179,10 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 <tr><td>Existing codebase (TF 1.x legacy)</td><td>TF 2.x + compatibility mode</td><td>Migration path</td></tr></table></div>
 
 <div class="g2">
-<div class="card cb"><div class="card-title">Key Differences Deep Dive</div>
+<div class="card cb"><div class="card-title">Key differences deep dive</div>
 <ul class="bul"><li><strong>Computational graph:</strong> PyTorch builds graph dynamically as you execute (eager by default). TF 2 is also eager but <code>@tf.function</code> compiles to static graph for speed — can be hard to debug.</li><li><strong>Debugging:</strong> PyTorch = put a <code>print()</code> or breakpoint anywhere. TF graph mode = must use <code>tf.print()</code> inside the graph.</li><li><strong>GPU memory:</strong> TF claims all GPU memory upfront; set <code>tf.config.experimental.set_memory_growth(gpu, True)</code> to avoid this.</li><li><strong>DDP training:</strong> PyTorch DistributedDataParallel is cleaner API than TF's MirroredStrategy for multi-GPU.</li></ul>
 <div class="card-body" style="margin-top:10px"><strong>The debugging row has a specific trap worth stating precisely:</strong> inside a compiled function, ordinary Python statements run only during <em>tracing</em>, not on every call. So a <code>print()</code> in a <code>@tf.function</code> fires once and then never again, and a Python counter incremented there stops incrementing — which reads as the code not running when it is running fine. That is also why compiled functions want tensor operations rather than Python side effects, and why the practical rule is to debug eagerly and compile afterwards.</div></div>
-<div class="card cg"><div class="card-title">Common Gotchas</div>
+<div class="card cg"><div class="card-title">Common gotchas</div>
 <ul class="bul"><li><strong>PyTorch:</strong> forget <code>zero_grad()</code> → accumulated gradients. Forget <code>model.eval()</code> → dropout active during inference.</li><li><strong>TF/Keras:</strong> <code>training=True/False</code> controls BN and Dropout — pass it in <code>model(x, training=True)</code>. Default <code>model.predict()</code> sets <code>training=False</code>.</li><li><strong>Data shapes:</strong> PyTorch expects [B, C, H, W] (NCHW); TF expects [B, H, W, C] (NHWC) — a common transposition bug.</li><li><strong>Loss functions:</strong> PyTorch BCEWithLogitsLoss (logits) ≠ BCELoss (probs). Use the logits version — numerically stable.</li></ul>
 <div class="card-body" style="margin-top:10px">On the shapes row: a layout mismatch usually <em>does</em> raise a shape error, which is the good case. The dangerous case is when the dimensions happen to be compatible — a square image where height equals width, or a batch that coincidentally matches the channel count — so the tensor flows through and trains on transposed data. Assert the expected shape at the boundary of your data loader rather than relying on a downstream layer to complain.</div></div>
 </div>
@@ -222,7 +222,7 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
   <li><strong>Calling <code>model.predict()</code> in PyTorch.</strong> It does not exist — that is Keras and sklearn. It is <code>model.eval()</code> then a call inside <code>no_grad()</code></li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>Meta (PyTorch — research and production):</strong> PyTorch is Meta's internal ML framework; developed it from Caffe2/Torch; TorchScript and torch.compile() bridge research (dynamic graphs) and production (optimised static graphs for TorchServe or ONNX export)</li>
   <li><strong>Google (TensorFlow/Keras — production serving):</strong> TF Serving, TFLite (mobile), TF.js (browser) form the strongest production deployment ecosystem; TPU training via JAX/TF is the primary path for frontier model training at Google</li>
@@ -290,7 +290,7 @@ classifier.fit(train_ds, epochs=3)</code></pre></div></div>
 <div class="card-body">Two of the four bugs are framework-independent arithmetic, so they can be reproduced without a GPU or a training run — which is also the clearest way to see why they are silent.</div>
 <div class="code-runner" id="runner-frameworks" data-packages="numpy">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy</span>
+      <span>Python · numpy</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-frameworks')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-frameworks')">▶ Run</button>

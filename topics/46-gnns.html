@@ -177,21 +177,21 @@ class GAT(torch.nn.Module):
 <div class="card-title">GNN tasks &amp; applications</div>
 
 <div class="g3">
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">Node classification</div>
+<div class="card" style="margin:0"><div class="card-title">Node classification</div>
 <ul class="bul">
   <li>Predict a label per node from node features <em>and</em> position in the graph</li>
   <li><strong>Examples:</strong> flag accounts as fraudulent; predict a paper's topic in a citation network; classify proteins by function</li>
   <li>Usually semi-supervised: a few thousand labelled nodes, cross-entropy on those, gradients flowing back through the whole neighbourhood</li>
   <li><strong>The split is not a row split.</strong> Held-out nodes are still in the graph, so their features leak into training embeddings through message passing. That is accepted in transductive benchmarks and is a bug in a production evaluation — split by time or by component</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">Link prediction</div>
+<div class="card" style="margin:0"><div class="card-title">Link prediction</div>
 <ul class="bul">
   <li>Score whether an edge exists — or will exist next month</li>
   <li><strong>Examples:</strong> friend and product recommendation, drug–target interaction, knowledge-graph completion</li>
   <li>Score $\hat{A}_{uv} = \sigma(\mathbf{z}_u^T \mathbf{z}_v)$, trained against sampled non-edges</li>
   <li><strong>Negatives decide everything.</strong> 1M users by 100k items is $10^{11}$ candidate pairs against maybe $10^7$ observed ones — 1 pair in 10,000. A uniformly random negative is one the model already scores near zero, so it contributes almost no gradient. AUC against random negatives looks superb while recall@10 in production is poor; mine hard negatives — plausible, popular, non-interacted</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">Graph classification</div>
+<div class="card" style="margin:0"><div class="card-title">Graph classification</div>
 <ul class="bul">
   <li>One label for an entire graph</li>
   <li><strong>Examples:</strong> molecule toxicity, protein function, bug detection over a program's AST</li>
@@ -410,7 +410,7 @@ R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k}
 <div class="card-body">Message passing written as one matrix multiply, which is all a GCN layer is — then the failure mode that decides your depth: over-smoothing.</div>
 <div class="code-runner" id="runner-gnns" data-packages="numpy">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy</span>
+      <span>Python · numpy</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-gnns')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-gnns')">▶ Run</button>

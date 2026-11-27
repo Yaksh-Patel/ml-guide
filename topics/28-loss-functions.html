@@ -28,7 +28,7 @@
 <div class="card-body" style="margin-top:8px">Huber is the practical default when you are unsure: quadratic within δ, so it keeps MSE's smooth, well-behaved gradient near the optimum, and linear beyond δ, so it keeps MAE's robustness in the tails. δ is a real hyperparameter — it is the error magnitude at which you stop believing the point — and it must be set in the units of your target, so scale matters.</div>
 <div class="card-body" style="margin-top:8px"><strong>Quantile (pinball) loss</strong> deserves a mention because it does something the others cannot. Weighting under- and over-prediction asymmetrically makes the model fit a chosen <em>quantile</em> instead of a central value. Train at the 10th and 90th percentiles and you have a prediction interval rather than a point estimate — which is how demand and inventory forecasts get uncertainty bounds without a probabilistic model.</div></div>
 
-<div class="card"><div class="card-title">Why Average Cross-Entropy (ACE) Beats Classification Error and MSE</div>
+<div class="card"><div class="card-title">Why average cross-entropy (ACE) beats classification error and MSE</div>
 <div class="card-body" style="margin-bottom:10px">Consider two classifiers predicting political affiliation (Democrat / Republican / Other) — both get 2 out of 3 examples correct, so both have identical <strong>classification error = 1/3</strong>. But they are clearly not equally good:</div>
 
 <div class="g2">
@@ -66,7 +66,7 @@ For each example, only the log-prob of the <strong>TRUE class</strong> is counte
 <div class="card-body" style="margin-top:10px">ACE correctly identifies Classifier B as superior. Classification error cannot.</div>
 </div>
 
-<div class="card ca"><div class="card-title">MSE for Classifiers — Better Than Accuracy, Still Worse Than ACE</div>
+<div class="card ca"><div class="card-title">MSE for classifiers — better than accuracy, still worse than ACE</div>
 <div class="formula math-formula">$$\text{MSE} = \dfrac{1}{n}\sum_i \sum_j (y_{ij} - \hat{y}_{ij})^2 \quad \text{(summed over all output neurons)}$$</div>
 <div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
 <strong>Clf A, ex1:</strong> (0.3&minus;0)&sup2;+(0.3&minus;0)&sup2;+(0.4&minus;1)&sup2; = 0.09+0.09+0.36 = 0.54<br>
@@ -85,7 +85,7 @@ For each example, only the log-prob of the <strong>TRUE class</strong> is counte
 
 <div class="card-body" style="margin-top:8px">MSE also correctly ranks B above A, but it <strong>wastes signal on the wrong neurons</strong> — it penalizes the 0.3 and 0.4 outputs of the incorrect class, even though those are irrelevant to the decision. ACE only grades you on the probability you assigned to the true class, which is exactly the information that matters.</div></div>
 
-<div class="card cp"><div class="card-title">The Deeper Reason: MSE Causes Training to Stall Near Convergence</div>
+<div class="card cp"><div class="card-title">The deeper reason: MSE causes training to stall near convergence</div>
 <div class="formula math-formula">$$\Delta W \propto (\hat{y}-y)\cdot\underbrace{\hat{y}(1-\hat{y})}_{\sigma'(z)\text{ term}} \quad \text{(sigmoid + MSE)}$$</div>
 <div class="formula" style="font-size:13px;line-height:1.7;margin-top:6px">
 When &#375;&#770; &rarr; 1.0 (confident &amp; correct): &nbsp;0.95&middot;(1&minus;0.95) = <strong>0.0475</strong><br>
@@ -151,7 +151,7 @@ Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is
 <p>You train with cross-entropy and report accuracy, F1, or AUC. These are different objects with different jobs: the loss must be differentiable and informative about direction, the metric must be meaningful to whoever reads it. <strong>Accuracy is not differentiable, so it cannot be a training objective</strong> — its gradient is zero almost everywhere and undefined at the threshold.</p>
 <p style="margin-top:8px">The reverse mistake matters too: a falling loss and a flat metric is a real and common state. It usually means the model is becoming more confident about examples it already had right — which improves log loss and moves no predictions across the threshold. Watch both curves, and decide in advance which one gates the release.</p></div></div>
 
-<div class="card"><div class="card-title">Probabilistic &amp; Specialized Losses</div>
+<div class="card"><div class="card-title">Probabilistic &amp; specialized losses</div>
 <table class="tbl"><tr><th>Loss</th><th>Use Case</th><th>Key Property</th></tr>
 <tr><td>KL Divergence</td><td>VAEs, knowledge distillation</td><td>Asymmetric — KL(P‖Q) ≠ KL(Q‖P)</td></tr>
 <tr><td>Contrastive / Triplet</td><td>Metric learning, face recognition</td><td>Pulls same-class embeddings together</td></tr>
@@ -160,7 +160,7 @@ Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is
 <tr><td>RLHF reward</td><td>LLM alignment</td><td>Learned from human preference comparisons</td></tr>
 <tr><td>InfoNCE</td><td>Contrastive SSL (SimCLR)</td><td>Noise contrastive estimation</td></tr></table></div>
 
-<div class="card"><div class="card-title">When to Use Which</div>
+<div class="card"><div class="card-title">When to use which</div>
 <table class="tbl"><tr><th>Scenario</th><th>Training Loss</th><th>Eval Metric</th></tr>
 <tr><td>Binary classification</td><td>BCE (log loss)</td><td>Accuracy / AUC / F1</td></tr>
 <tr><td>Multi-class classification</td><td>Categorical cross-entropy</td><td>Accuracy / macro-F1</td></tr>
@@ -205,7 +205,7 @@ Gradient &prop; prediction error <em>only</em>. No stalling. The cancellation is
 <div class="card-body">The three-class example above, executable. Change the probabilities and watch which measures notice the difference and which one cannot.</div>
 <div class="code-runner" id="runner-loss" data-packages="numpy">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy</span>
+      <span>Python · numpy</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-loss')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-loss')">▶ Run</button>

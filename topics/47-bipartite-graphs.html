@@ -147,7 +147,7 @@ R &\approx \mathbf{P}\mathbf{Q}^T, \quad \mathbf{P} \in \mathbb{R}^{|U|\times k}
 <tr><td>Is graph bipartite?</td><td>Can we 2-color the graph?</td><td>BFS/DFS coloring: O(V+E)</td></tr>
 <tr><td>Recommendation</td><td>User-item interaction matrix</td><td>Matrix factorization, GNN</td></tr></table>
 <div class="card-body" style="margin-top:10px">The 2-colouring test below has one detail that is the actual interview point: <strong>the outer loop over every start node.</strong> A disconnected graph can have a bipartite component and a non-bipartite one, so colouring from a single source silently returns <code>True</code> on a graph containing a triangle it never visited.</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python"># Check if graph is bipartite (BFS 2-coloring)
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python"># Check if graph is bipartite (BFS 2-coloring)
 from collections import deque
 def is_bipartite(graph, n):
     color = [-1] * n
@@ -199,7 +199,7 @@ def is_bipartite(graph, n):
 <div class="card-body">The two claims worth checking by hand: that squaring the block adjacency separates into the user–user and item–item co-occurrence matrices, and that raw path counting recommends the popular item — with degree normalisation only narrowing the gap.</div>
 <div class="code-runner" id="runner-bipartite" data-packages="numpy">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy</span>
+      <span>Python · numpy</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-bipartite')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-bipartite')">▶ Run</button>

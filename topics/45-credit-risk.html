@@ -28,7 +28,7 @@
 <div class="card-body" style="margin-top:10px">Read three things off that table. <strong>Negative WoE means safer than the portfolio average</strong> and positive means riskier, so the sign carries meaning and the coefficient on a WoE feature should come out positive. <strong>IV = 0.254 is a strong single predictor</strong> — the conventional bands are below 0.02 useless, 0.1–0.3 strong, and above 0.5 suspicious, because a single variable that separates that well is usually a proxy for the outcome rather than a cause of it.</div>
 <div class="card-body" style="margin-top:8px">And the third, which people misread: <strong>monotonicity is required in the bad <em>rate</em>, not in the bad count share.</strong> Above, bins 1 and 4 have the same 0.240 share of bads while their default rates are 3% and 12% — the rates rise monotonically, which is what makes the scorecard defensible. Binning is chosen to enforce that monotonic rate, and a bin that breaks it is merged with a neighbour, because a scorecard where more utilisation sometimes means less risk cannot survive review no matter what it does for Gini.</div></div>
 
-<div class="card ca"><div class="card-title">Collections &amp; Behavioral Scoring</div>
+<div class="card ca"><div class="card-title">Collections &amp; behavioral scoring</div>
 <div class="card-body">Unlike application scoring (predict if new customer will default), behavioral scoring updates monthly using payment history — far more predictive.</div>
 <ul class="bul" style="margin-top:8px"><li><strong>Features:</strong> DPD (days past due) history, utilization rate, payment-to-minimum ratio, number of missed EMIs, balance trends</li><li><strong>Triggers:</strong> predict which accounts to call proactively (early intervention)</li><li><strong>Segmentation:</strong> early delinquency (1–30 DPD) vs late (90+ DPD) — different propensity models, different treatment strategies</li><li><strong>Roll-rate analysis:</strong> what % of 30-DPD accounts roll to 60-DPD? Key input to provisioning models</li></ul></div>
 
@@ -64,7 +64,7 @@
 <div class="card-body" style="margin-top:8px"><strong>The reason this matters more than it looks:</strong> PSI is a leading indicator and Gini is a lagging one. A shift in the applicant mix shows up in PSI this month and in default performance next year. Teams that monitor only discrimination discover the problem three quarters after it started, which is also three quarters of mispriced lending. Track <strong>CSI per feature</strong> alongside it — a stable overall score can hide two features drifting in offsetting directions, and knowing <em>which</em> input moved is what makes the fix tractable.</div>
 <div class="card-body" style="margin-top:8px"><a href="https://yaksh-patel.github.io/credit-scorecard-sandbox/#drift" target="_blank" rel="noopener"><strong>Try it →</strong></a> The sandbox has a scenario where two features drift hard in offsetting directions: the overall score PSI reads 0.003 — perfectly stable — while a feature CSI sits at 0.435. Watching only the aggregate you would see nothing.</div></div>
 
-<div class="card"><div class="card-title">Model Validation &amp; Regulatory Compliance</div>
+<div class="card"><div class="card-title">Model validation &amp; regulatory compliance</div>
 <table class="tbl"><tr><th>Test</th><th>What It Checks</th><th>Threshold</th></tr>
 <tr><td>Gini / AUC</td><td>Discrimination power</td><td>Gini &gt; 30% (application), &gt; 40% (behavioral)</td></tr>
 <tr><td>KS Statistic</td><td>Max separation between score distributions</td><td>KS &gt; 20 acceptable, &gt; 40 good</td></tr>
@@ -73,7 +73,7 @@
 <tr><td>Calibration test</td><td>Does predicted PD match observed default rate?</td><td>Binomial test per score band</td></tr>
 <tr><td>Backtesting</td><td>How would model have performed on historical vintage?</td><td>Gini within 5% of current = stable</td></tr></table></div>
 
-<div class="card"><div class="card-title">IFRS 9 &amp; Basel Modeling</div>
+<div class="card"><div class="card-title">IFRS 9 &amp; Basel modeling</div>
 <ul class="bul"><li><strong>IFRS 9 staging:</strong> Stage 1 (no significant deterioration) → Stage 2 (significant increase in credit risk) → Stage 3 (default). Models predict stage transitions.</li><li><strong>Lifetime PD (IFRS 9):</strong> probability of defaulting at any point over the remaining life of the loan. Requires scenario-conditional forecasting (macro overlays).</li><li><strong>Point-in-time (PIT) vs Through-the-cycle (TTC):</strong> IFRS 9 requires PIT (current conditions); Basel requires TTC (long-run average). Different calibration targets.</li><li><strong>Macro overlays:</strong> adjust base PD for GDP growth, unemployment rate, interest rate scenarios</li></ul></div>
 
 <div class="card cr"><div class="card-title">Mistakes that survive code review</div>
@@ -90,7 +90,7 @@
 <li><strong>Using a feature you cannot justify to a regulator.</strong> Legality is not the only test — proxies for protected characteristics fail on disparate impact even when the attribute itself is absent, and postcode is the classic case</li>
 </ul></div>
 
-<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How It's Used at Top Companies</div>
+<div class="card" style="border-left:3px solid var(--amber,#f5a623)"><div class="card-title">How it's used at top companies</div>
 <ul class="bul">
   <li><strong>FICO (credit bureau scoring):</strong> logistic regression with WOE features remains the industry standard for bureau scores — regulatory auditability, interpretable scorecards, adverse action notice generation using top-4 SHAP features per applicant</li>
   <li><strong>Upstart (alternative credit scoring):</strong> XGBoost with 1000+ non-traditional variables (education, employment history, cash flow patterns) for thin-file applicants; CFPB-supervised model validation ensures no disparate impact across protected groups</li>
@@ -162,7 +162,7 @@
 <div class="card-body">Weight of evidence, information value and the PSI monitor — the three calculations a scorecard actually runs on, plus the constraint that makes a GBM defensible to a regulator.</div>
 <div class="code-runner" id="runner-creditrisk" data-packages="numpy,pandas">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy, pandas</span>
+      <span>Python · numpy, pandas</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-creditrisk')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-creditrisk')">▶ Run</button>

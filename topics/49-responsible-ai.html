@@ -31,21 +31,21 @@
 
 <div class="card cg"><div class="card-title">Where bias enters the ML pipeline</div>
 <div class="g3" style="margin-top:10px">
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Data bias</div>
+<div class="card" style="margin:0"><div class="card-title">Data bias</div>
 <ul class="bul">
   <li><strong>Historical bias:</strong> training data reflects past discrimination (e.g. historical hiring data where women were underrepresented in tech)</li>
   <li><strong>Representation bias:</strong> training set doesn't represent the deployment population (e.g. facial recognition trained mostly on light-skinned faces)</li>
   <li><strong>Measurement bias:</strong> proxy features encode protected attributes (e.g. zip code encodes race; arrest records encode policing bias)</li>
   <li><strong>Label bias:</strong> human annotators apply different standards to different groups</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">Model bias</div>
+<div class="card" style="margin:0"><div class="card-title">Model bias</div>
 <ul class="bul">
   <li><strong>Aggregation bias:</strong> single model trained on heterogeneous groups doesn't work well for any subgroup</li>
   <li><strong>Evaluation bias:</strong> benchmarks don't represent the deployment distribution; good benchmark score ≠ fair in production</li>
   <li><strong>Algorithmic amplification:</strong> small disparities in data get amplified by models optimising for aggregate accuracy</li>
   <li><strong>Feedback loops:</strong> model predictions change future data (e.g. police model predicts crime → more policing → more arrests → model reinforced)</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Deployment bias</div>
+<div class="card" style="margin:0"><div class="card-title">Deployment bias</div>
 <ul class="bul">
   <li><strong>Population shift:</strong> model trained on one population deployed on another</li>
   <li><strong>Automation bias:</strong> humans over-rely on model recommendations even when wrong</li>
@@ -169,7 +169,7 @@ print("DPD:", demographic_parity_difference(
 
 <div class="card cg"><div class="card-title">Three stages of mitigation</div>
 <div class="g3" style="margin-top:10px">
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--blue)">Pre-processing (data)</div>
+<div class="card" style="margin:0"><div class="card-title">Pre-processing (data)</div>
 <ul class="bul">
   <li><strong>Reweighting:</strong> assign higher sample weights to underrepresented groups so model treats them equally</li>
   <li><strong>Resampling:</strong> oversample minority group, undersample majority to balance training distribution</li>
@@ -177,14 +177,14 @@ print("DPD:", demographic_parity_difference(
   <li><strong>Disparate impact remover:</strong> transform features to remove correlation with protected attribute while preserving rank ordering (AIF360)</li>
   <li><strong>Remove proxy features:</strong> drop features that are highly correlated with protected attribute (zip code, school name)</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--green)">In-processing (model)</div>
+<div class="card" style="margin:0"><div class="card-title">In-processing (model)</div>
 <ul class="bul">
   <li><strong>Adversarial debiasing:</strong> train predictor + adversary; adversary tries to predict protected attribute from predictions; predictor trained to fool adversary</li>
   <li><strong>Constrained optimisation:</strong> add fairness constraint to loss function; optimise accuracy subject to demographic parity ≤ ε (Fairlearn ExponentiatedGradient)</li>
   <li><strong>Meta-fair classifier:</strong> optimise directly for a fairness metric instead of accuracy</li>
   <li><strong>Prejudice remover:</strong> add fairness-aware regularisation term to penalise dependence on protected attribute</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="font-size:13px;color:var(--amber)">Post-processing (output)</div>
+<div class="card" style="margin:0"><div class="card-title">Post-processing (output)</div>
 <ul class="bul">
   <li><strong>Threshold optimisation:</strong> set different classification thresholds per group to equalise TPR or FPR (Fairlearn ThresholdOptimizer)</li>
   <li><strong>Reject option classification:</strong> near-threshold predictions go to a human reviewer rather than being decided by the model</li>
@@ -340,7 +340,7 @@ print("DPD:", demographic_parity_difference(
 <div class="card-body">Fairness metrics computed side by side — the honest presentation, because with unequal base rates they provably cannot all hold at once.</div>
 <div class="code-runner" id="runner-responsibleai" data-packages="numpy,pandas">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy, pandas</span>
+      <span>Python · numpy, pandas</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-responsibleai')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-responsibleai')">▶ Run</button>

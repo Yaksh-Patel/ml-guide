@@ -150,20 +150,20 @@ index2.nprobe = 32   # probe 32 of 4096 clusters</pre>
 
 <div class="card cp"><div class="card-title">End-to-end embedding pipeline</div>
 <div class="g3" style="margin-top:10px">
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--blue);font-size:13px">1. Embed</div>
+<div class="card" style="margin:0"><div class="card-title">1. Embed</div>
 <ul class="bul">
   <li>Choose embedding model based on task: text, code, multimodal, domain-specific</li>
   <li>Batch embed documents offline (OpenAI batch API, or local model with GPU)</li>
   <li>Dimension: 768–3072 for text; higher = better quality, more storage</li>
   <li><strong>Always L2-normalise</strong> before inserting if using cosine similarity</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--green);font-size:13px">2. Chunk &amp; store</div>
+<div class="card" style="margin:0"><div class="card-title">2. Chunk &amp; store</div>
 <ul class="bul">
   <li>Chunk documents before embedding — embedding model has a context window (usually 512–8192 tokens)</li>
   <li>Store original text + metadata alongside each vector (chunk ID, source URL, timestamp)</li>
   <li>Choose index type: HNSW for recall, IVF+PQ for billion-scale, pgvector for SQL integration</li>
 </ul></div>
-<div class="card" style="margin:0"><div class="card-title" style="color:var(--amber);font-size:13px">3. Query &amp; retrieve</div>
+<div class="card" style="margin:0"><div class="card-title">3. Query &amp; retrieve</div>
 <ul class="bul">
   <li>Embed the query with the <em>same model</em> — embedding model mismatches destroy recall</li>
   <li>ANN search returns top-k candidate IDs + distances</li>

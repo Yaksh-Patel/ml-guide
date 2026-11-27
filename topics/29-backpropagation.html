@@ -92,7 +92,7 @@
 <li><strong>Anything that breaks the graph breaks learning silently.</strong> An in-place operation on a cached tensor, a <code>.detach()</code>, a conversion to NumPy and back — the forward pass still produces a number, the loss still decreases or does not, and the gradient is simply wrong or absent. This is the most common category of deep learning bug, and it never raises an error</li>
 </ul></div>
 
-<div class="card"><div class="card-title">Concrete 2-Layer Gradient Computation (Step-by-Step)</div>
+<div class="card"><div class="card-title">Concrete 2-layer gradient computation (step-by-step)</div>
 <div class="formula math-formula">$$\begin{aligned}
 \text{Architecture: } x\,(2D) \rightarrow h\,(3D,\text{ReLU}) \rightarrow \hat{y}\,(1D,\text{sigmoid}) \\
 \textbf{--- OUTPUT LAYER ---} \\
@@ -180,8 +180,8 @@ W^1 \leftarrow W^1 - \alpha \cdot \frac{\partial L}{\partial W^1}
 <li><strong>It interacts badly with dropout.</strong> Dropout changes activation variance between training and inference, which is exactly the statistic BatchNorm estimated. Modern architectures generally pick one</li>
 </ul></div>
 
-<div class="card"><div class="card-title">The Complete Training Loop</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">for epoch in range(num_epochs):
+<div class="card"><div class="card-title">The complete training loop</div>
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">for epoch in range(num_epochs):
     for X_batch, y_batch in dataloader:        # Step 1: mini-batch
         # --- FORWARD PASS ---
         z1 = X_batch @ W1 + b1                 # Step 2a: linear transform
@@ -208,22 +208,22 @@ W^1 \leftarrow W^1 - \alpha \cdot \frac{\partial L}{\partial W^1}
         val_loss = evaluate(model, val_loader)
     model.train()</code></pre></div></div>
 
-<div class="card cb"><div class="card-title">Mini-batch vs Full-batch vs SGD</div>
+<div class="card cb"><div class="card-title">Mini-batch vs full-batch vs SGD</div>
 <table class="tbl"><tr><th>Type</th><th>Batch Size</th><th>Gradient</th><th>Speed</th></tr>
 <tr><td>Full batch GD</td><td>All N samples</td><td>Exact</td><td>Slow; stable</td></tr>
 <tr><td>Stochastic GD</td><td>1 sample</td><td>Very noisy</td><td>Fast; noisy path</td></tr>
 <tr><td>Mini-batch SGD</td><td>32–512</td><td>Approximate</td><td>Best of both ✅</td></tr></table></div>
 
-<div class="card"><div class="card-title">Learning Rate — The Most Impactful Hyperparameter</div>
+<div class="card"><div class="card-title">Learning rate — the most impactful hyperparameter</div>
 <table class="tbl"><tr><th>LR Value</th><th>Effect</th><th>Symptom</th></tr>
 <tr><td>Too high (e.g. 0.1 for Adam)</td><td>Overshoots minimum; diverges</td><td>Loss oscillates or NaN</td></tr>
 <tr><td>Too low (e.g. 1e-6)</td><td>Glacially slow convergence</td><td>Loss barely moves</td></tr>
 <tr><td>Just right (1e-3 for Adam)</td><td>Smooth descent to a good minimum</td><td>Loss steadily decreasing</td></tr>
 <tr><td>Warmup then decay</td><td>Stable start + convergence boost</td><td>Best final perf for Transformers</td></tr></table></div>
 
-<div class="card cb"><div class="card-title">What Autograd Does For You</div>
+<div class="card cb"><div class="card-title">What autograd does for you</div>
 <div class="card-body">In PyTorch, <code>loss.backward()</code> executes the entire chain automatically by traversing the computation graph in reverse. Each operation records its local gradient during the forward pass, then multiplies them in chain-rule order during backward.</div>
-<div class="formula-block"><div class="formula-lang-tag"><span>🐍 Python</span></div><pre class="language-python"><code class="language-python">x = torch.tensor([...], requires_grad=True)
+<div class="formula-block"><div class="formula-lang-tag"><span>Python</span></div><pre class="language-python"><code class="language-python">x = torch.tensor([...], requires_grad=True)
 z1 = x @ W1 + b1          # records: ∂z1/∂W1 = x
 h  = z1.clamp(min=0)       # records: ∂h/∂z1 = 1(z1&gt;0)
 z2 = h @ W2 + b2
@@ -248,7 +248,7 @@ print(W1.grad)             # ∂L/∂W1 is now populated</code></pre></div></div
 <div class="card-body">The two-layer gradient computation above, executable. Edit the weights or the input and watch which gradients change.</div>
 <div class="code-runner" id="runner-backprop" data-packages="numpy">
     <div class="code-runner-header">
-      <span>🐍 Python · numpy</span>
+      <span>Python · numpy</span>
       <div class="runner-btns">
         <button class="reset-btn" onclick="resetCode('runner-backprop')">↺ Reset</button>
         <button class="run-btn" onclick="runCode('runner-backprop')">▶ Run</button>
