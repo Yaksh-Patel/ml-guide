@@ -185,6 +185,37 @@ so they read as one guide rather than 55 unrelated illustrations. Draw new ones
 with the legacy palette hexes — section 8 of `style.css` maps those onto the
 live tokens, so a diagram follows both themes for free.
 
+### Diagrams
+
+Every `.anim-wrap` figure but one (48's power explorer, script-built) is drawn by a module in `tools/figures/` with the kit in
+`tools/figkit.py`, and swapped into its topic by `python3 tools/figures/build.py <module>`
+(only the `<svg>` changes; wrapper and caption stay). **Edit the module, never the SVG in the
+topic file**: CI runs `build.py --verify`, which fails when the two differ.
+
+- Canvas 560 wide (up to 640). app.js renders at most 1.45 px per unit, so every figure's text
+  comes out the same size; labels are 10 / 9 / 8.5 units.
+- Draw geometry first, then labels with `Fig.label()` / `Fig.along()`: they take the first spot
+  clear of every label, line and edge. `Fig.check()` fails a figure whose text touches any of
+  them; `tools/figure_lint.mjs` checks the rendered page (clipped or overlapping labels).
+- Direct labels, no legend boxes; at most one takeaway line inside the figure.
+- Arrows: one fixed-size head (`markerUnits="userSpaceOnUse"`), stopping short of the target.
+- Colours: red = error / bad, green = correct / total, blue = primary series, amber = the thing
+  to look at, purple = secondary.
+- **Correctness first.** The 2026 figure revamp found many figures contradicting their own
+  prose or code (wrong signs, hand-drawn curves with impossible numbers, mislabelled axes);
+  what was wrong and why is recorded as "History:" in each module's docstring. Check a new
+  figure against the text and code it sits next to, and when a number can be computed, compute
+  it (several modules run the topic's own code).
+- **Motion** is SMIL on one shared clock (`figkit.Anim`) with one easing. Set `Fig.still` to a
+  time whose frame shows the whole picture: under `prefers-reduced-motion` app.js freezes the
+  figure there, and it pauses animated figures while they are off screen.
+- **Interactive figures** draw their static frame with a module and keep only the moving parts
+  in their script; controls and readouts use `.fx-controls`, `.fx-chip`, `.fx-read`, `.fx-note`.
+- Each SVG's `<defs>` ids are prefixed per figure at load time, because loaded topics stay in
+  the page and duplicate ids (37 topics once shared `#ah`) make arrowheads vanish.
+- **Phones:** a figure drawn below 85% of its design size gets an expand button that opens it
+  full-screen, pannable and pinch-zoomable; the real SVG moves there and back.
+
 ### A note on diagram colours
 
 The inline SVGs across the topic files carry hardcoded hexes from the original dark
