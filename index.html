@@ -76,6 +76,9 @@
   <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/>
   </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6" fill="currentColor"/><circle cx="4.5" cy="12" r=".6" fill="currentColor"/><circle cx="4.5" cy="18" r=".6" fill="currentColor"/>
+  </symbol>
   <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M5 12.5l4.5 4.5L19 7.5"/>
   </symbol>
@@ -165,13 +168,14 @@
   <main class="main">
     <div class="topbar">
       <div class="tb-left">
+        <button class="tb-btn tb-menu" id="tb-menu" aria-label="Open topic list" title="Topics"><svg><use href="#i-menu"/></svg></button>
         <span class="tb-crumb" id="tb-crumb">Start here</span>
         <span class="tb-sep">›</span>
         <span class="tb-title" id="tb-title">Home</span>
       </div>
       <div class="tb-right">
         <details class="toc-dropdown" id="toc-dd" hidden>
-          <summary class="tb-btn">On this page <svg><use href="#i-chev-right"/></svg></summary>
+          <summary class="tb-btn" title="On this page"><svg class="tb-ico"><use href="#i-list"/></svg><span class="tb-lbl">On this page</span> <svg class="tb-chev"><use href="#i-chev-right"/></svg></summary>
           <nav class="toc-dd-panel" aria-label="On this page"></nav>
         </details>
         <span class="tb-tag" id="tb-time">55 topics</span>
@@ -210,7 +214,6 @@
   </div>
 </div>
 
-<button class="mob-tog" id="mob-tog" aria-label="Open topic list"><svg><use href="#i-menu"/></svg></button>
 <div class="mob-overlay"></div>
 
 <noscript>

@@ -296,6 +296,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   border-bottom: 1px solid var(--border);
 }
 .tb-left { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.tb-menu { display: none; }   /* phones and tablets: opens the sidebar drawer (§9) */
 .tb-crumb {
   font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--text3); flex-shrink: 0;
@@ -324,6 +325,7 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 .tb-btn svg { width: 13px; height: 13px; }
 .tb-btn[hidden] { display: none; }
 .tb-read-btn.tb-read-done { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+.tb-read-btn:not(.tb-read-done) svg { opacity: .55; }
 
 #read-progress {
   position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
@@ -409,9 +411,10 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
 .toc-dropdown[hidden] { display: none; }
 .toc-dropdown > summary { list-style: none; cursor: pointer; user-select: none; }
 .toc-dropdown > summary::-webkit-details-marker { display: none; }
-.toc-dropdown > summary svg { width: 11px; height: 11px; transform: rotate(90deg); transition: transform .16s var(--ease); }
+.toc-dropdown > summary .tb-ico { display: none; }
+.toc-dropdown > summary .tb-chev { width: 11px; height: 11px; transform: rotate(90deg); transition: transform .16s var(--ease); }
 .toc-dropdown[open] > summary { border-color: var(--accent-bd); color: var(--accent); }
-.toc-dropdown[open] > summary svg { transform: rotate(-90deg); }
+.toc-dropdown[open] > summary .tb-chev { transform: rotate(-90deg); }
 .toc-dd-panel {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
   width: min(320px, calc(100vw - 32px));
@@ -600,10 +603,17 @@ body.sb-is-collapsed #sb-expand-btn { display: grid; }
   max-width: 100%;
 }
 .katex { max-width: 100%; }
+/* Sideways-scrolling maths and tables: fade the edge with more behind it (app.js scrollHints). */
+.xs-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.xs-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.xs-l.xs-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
 
 .formula, .math-formula, .formula-block { max-width: 100%; }
 
-.card-body, .box p, .box li, .tbl td { overflow-wrap: anywhere; }
+.card-body, .box p, .box li { overflow-wrap: anywhere; }
+/* Not `anywhere` in tables: it lowers each column's minimum width, so narrow
+   screens split words letter by letter. Tables scroll sideways instead. */
+.tbl td { overflow-wrap: break-word; }
 
 /* ---- Callouts (PLAN D5) -----------------------------------------------------
    A 3px rule in the semantic colour, a faint tint, and a label with a small
@@ -713,9 +723,10 @@ ul.bul li strong, ol.num li strong { color: var(--text); font-weight: 600; }
 }
 .ch { background: var(--surface); color: var(--text2); font-family: var(--font-body); font-size: 12.5px; font-weight: 600; padding: 10px 12px; text-align: center; }
 .cg-cc { background: var(--surface); padding: 12px; text-align: center; line-height: 1.45; }
-.ctp, .ctn { background: var(--green-bg); color: var(--green); font-weight: 600; }
-.cfp { background: var(--red-bg);   color: var(--red);   font-weight: 600; }
-.cfn { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
+/* Tints are translucent: lay them over the surface, not over the grid's border-coloured gaps. */
+.ctp, .ctn { background: linear-gradient(var(--green-bg) 0 0) var(--surface); color: var(--green); font-weight: 600; }
+.cfp { background: linear-gradient(var(--red-bg) 0 0) var(--surface);   color: var(--red);   font-weight: 600; }
+.cfn { background: linear-gradient(var(--amber-bg) 0 0) var(--surface); color: var(--amber); font-weight: 600; }
 
 /* ---- Diagrams are figures (PLAN D5) ---------------------------------------------
    A panel that breaks out to the wide column, with the title moved below as a
@@ -1030,7 +1041,7 @@ svg [stroke="#f06767"] { stroke: var(--red) !important; }
 svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
 
 /* ═══ 9. RESPONSIVE ═══════════════════════════════════════ */
-.mob-tog, .mob-overlay { display: none; }
+.mob-overlay { display: none; }
 
 @media (max-width: 1279.98px) {
   .toc { display: none; }
@@ -1050,14 +1061,11 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
   .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0 !important; padding: 0 16px 90px; }
   #sb-expand-btn { display: none !important; }
-  .mob-tog {
-    display: grid; place-items: center; position: fixed; right: 16px; bottom: 16px;
-    width: 46px; height: 46px; border-radius: 50%; z-index: 200;
-    background: var(--accent); color: var(--on-accent); border: 0;
-    box-shadow: 0 6px 20px var(--shadow);
-  }
-  .mob-tog svg { width: 20px; height: 20px; }
-  .sidebar.open ~ .mob-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
+  .tb-left { align-items: center; }
+  .tb-menu { display: inline-flex; padding: 5px 8px; }
+  .tb-menu svg { width: 15px; height: 15px; }
+  /* The overlay is not a sibling of the sidebar (it sits outside .layout), so match on body. */
+  body:has(.sidebar.open) .mob-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
   .tb-crumb, .tb-sep { display: none; }
   .home-continue { flex-wrap: wrap; gap: 14px 16px; padding: 16px; }
   .hc-body { flex-basis: calc(100% - 76px); }
@@ -1075,6 +1083,14 @@ svg [stroke="#b97cf8"] { stroke: var(--purple) !important; }
   .tb-right { gap: 5px; }
   .tb-tag { display: none; }
   #tb-home-btn { font-size: 0; gap: 0; padding: 5px 8px; }
+  /* Icon-only buttons; the label stays for screen readers. */
+  .tb-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .tb-read-btn, .toc-dropdown > summary { padding: 5px 8px; gap: 0; }
+  .toc-dropdown > summary .tb-chev { display: none; }
+  .toc-dropdown > summary .tb-ico { display: block; }
+  .tb-title { font-size: 14px; }
+  /* Display maths a little smaller, so fewer formulas need to scroll. */
+  .katex-display > .katex { font-size: 1.06em; }
 }
 
 @media (prefers-reduced-motion: reduce) {

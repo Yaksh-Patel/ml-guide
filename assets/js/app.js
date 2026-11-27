@@ -564,9 +564,31 @@ async function loadTopic(id) {
    already on screen. Each is independently lazy and independently failable. */
 function enhance(section, html) {
   highlight(section).catch(() => {});
-  if (looksLikeMath(html)) renderMath(section).catch(() => {});
+  if (looksLikeMath(html)) renderMath(section).then(() => scrollHints(section)).catch(() => {});
+  scrollHints(section);
   if (section.querySelector('.code-runner')) initRunners(section);
 }
+
+/* Maths and tables that are wider than the column scroll sideways. Fade the
+   edge that has more content behind it, so the scroll is discoverable
+   (style.css .xs-l / .xs-r). Re-measured on resize. */
+function scrollHints(root) {
+  if (!root) return;
+  $$('.katex-display, .tbl', root).forEach(el => {
+    const paint = () => {
+      const over = el.scrollWidth > el.clientWidth + 1;
+      el.classList.toggle('xs-l', over && el.scrollLeft > 1);
+      el.classList.toggle('xs-r', over && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    };
+    paint();
+    if (!el.dataset.xs) { el.dataset.xs = '1'; el.addEventListener('scroll', paint, { passive: true }); }
+  });
+}
+let xsTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(xsTimer);
+  xsTimer = setTimeout(() => scrollHints($('.section.active')), 150);
+});
 
 async function go(id, { push = true, scroll = true } = {}) {
   if (id !== 'home' && !BY_ID[id]) id = 'home';
@@ -631,7 +653,8 @@ function updateReadButton(id) {
   btn.hidden = !valid;
   if (!valid) return;
   const read = isRead(id);
-  btn.textContent = read ? '✓ Read' : 'Mark read';
+  btn.innerHTML = `<svg><use href="#i-check"/></svg><span class="tb-lbl">${read ? 'Read' : 'Mark read'}</span>`;
+  btn.title = read ? 'Read. Click to mark unread (m)' : 'Mark this topic read (m)';
   btn.classList.toggle('tb-read-done', read);
   btn.onclick = () => setRead(id, !isRead(id));
 }
@@ -708,12 +731,17 @@ function toggleTheme() {
 }
 
 function toggleSidebar() {
+  // In the phone/tablet drawer, "hide" closes the drawer; it must not collapse the desktop sidebar.
+  if (window.matchMedia?.('(max-width: 768px)').matches) { $('#sidebar').classList.remove('open'); return; }
   const collapsed = $('#sidebar').classList.toggle('sb-collapsed');
   document.body.classList.toggle('sb-is-collapsed', collapsed);
   store.set(SIDEBAR_KEY, collapsed ? '1' : '0');
 }
 
 const toggleMobileSidebar = () => $('#sidebar').classList.toggle('open');
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#sidebar')?.classList.contains('open')) { $('#sidebar').classList.remove('open'); $('#tb-menu')?.focus(); }
+});
 
 /* Thin scroll-progress line under the topbar. */
 function initScrollProgress() {
@@ -767,7 +795,7 @@ function initChrome() {
   $('#sb-toggle')?.addEventListener('click', toggleSidebar);
   $('#sb-expand-btn')?.addEventListener('click', toggleSidebar);
   $('#theme-toggle')?.addEventListener('click', toggleTheme);
-  $('#mob-tog')?.addEventListener('click', toggleMobileSidebar);
+  $('#tb-menu')?.addEventListener('click', toggleMobileSidebar);
   $('.mob-overlay')?.addEventListener('click', toggleMobileSidebar);
   $('#tb-home-btn')?.addEventListener('click', () => go('home'));
   $('#search-trigger')?.addEventListener('click', () => openPalette());
