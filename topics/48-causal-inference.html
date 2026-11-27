@@ -150,8 +150,8 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
   <line id="pw-zero" y1="150" y2="160" stroke="#4e5a7a" stroke-width="1"/>
   <text id="pw-zero-lbl" y="174" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans">0</text>
   <text id="pw-line-lbl" y="26" fill="#f5a623" font-size="8.5" text-anchor="middle" font-family="DM Sans">decision line</text>
-  <text x="40" y="42" fill="#b97cf8" font-size="9" font-family="DM Sans">if the treatment does nothing</text>
-  <text x="40" y="55" fill="#22d3a0" font-size="9" font-family="DM Sans">if the effect is real</text>
+  <text id="pw-lbl-null" x="172" y="52" fill="#b97cf8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke">if the treatment does nothing</text>
+  <text id="pw-lbl-alt" x="300" y="52" fill="#22d3a0" font-size="9" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke">if the effect is real</text>
   <text id="pw-shade-lbl" y="192" fill="#4e5a7a" font-size="8.5" text-anchor="middle" font-family="DM Sans">shaded right of the line: green = power, purple = α</text>
 </svg>
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">
@@ -224,6 +224,16 @@ n = sample_size_per_group(0.10, 0.02, 0.05, 0.80)
     document.getElementById('pw-zero').setAttribute('x2',px(0).toFixed(1));
     document.getElementById('pw-zero-lbl').setAttribute('x',px(0).toFixed(1));
     document.getElementById('pw-shade-lbl').setAttribute('x',(L+R)/2);
+    // each curve labelled beside its own peak; the right-hand label flips inside near the edge
+    // one standard error out from each peak the curve is at 61% height: the label
+    // sits just above it there, outside the shaded area
+    var ln=document.getElementById('pw-lbl-null'), la=document.getElementById('pw-lbl-alt');
+    var sp=se*(R-L)/(X1-X0), ly=(BASE-H*0.6065-10).toFixed(1);
+    ln.setAttribute('x',(px(0)-sp-6).toFixed(1)); ln.setAttribute('y',ly);
+    var ax=px(d), right=ax+sp+6+la.getComputedTextLength()<R;
+    la.setAttribute('x',(right?ax+sp+6:ax-sp-6).toFixed(1));
+    la.setAttribute('text-anchor',right?'start':'end');
+    la.setAttribute('y',ly);
 
     var note;
     if(power<0.5) note='Under half the green curve clears the line, so this test is more likely to miss a real effect than to find it. It needs about '+n80.toLocaleString()+' per group for 80%.';

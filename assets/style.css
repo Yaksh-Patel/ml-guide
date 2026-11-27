@@ -748,6 +748,15 @@ ul.bul li strong, ol.num li strong { color: var(--text); font-weight: 600; }
   background: var(--grp); vertical-align: middle; margin-right: 9px;
 }
 
+/* Interactive figures share one look: controls row, value chip, readout, note. */
+.anim-wrap input[type="range"] { accent-color: var(--grp); cursor: pointer; }
+.fx-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 12px; font-size: 13px; color: var(--text2); }
+.fx-controls input[type="range"] { flex: 1; min-width: 140px; max-width: 340px; }
+.fx-chip { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.fx-read { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; margin-top: 10px; font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; }
+.fx-read b { font-weight: 600; }
+.fx-note { margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg3); font-size: 13.5px; line-height: 1.6; color: var(--text2); }
+
 hr.div { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
 
 /* ═══ 6. CODE RUNNERS ═════════════════════════════════════ */
