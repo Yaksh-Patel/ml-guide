@@ -28,48 +28,127 @@
 </table>
 <div class="card-body" style="margin-top:10px"><strong>The grouped case is the one most often missed.</strong> If your dataset has 50,000 rows from 3,000 users, plain KFold puts the same user on both sides of the split. The model learns "user 1,417 tends to convert" — which is real signal in CV and useless for a new user. Ask "what is the unit I will actually predict for?" and group by that.</div>
 <div class="anim-wrap"><div class="anim-title">5-Fold Cross-Validation — each fold takes a turn as validation</div>
-<svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg">
-<defs>
-<rect id="train" width="88" height="22" rx="4"/>
-<rect id="val" width="88" height="22" rx="4"/>
-</defs>
-<!-- Fold labels -->
-<text x="10" y="18" fill="#4e5a7a" font-size="10" font-family="DM Sans">Fold</text>
-<text x="10" y="38" fill="#4e5a7a" font-size="10" font-family="DM Sans">1</text>
-<text x="10" y="60" fill="#4e5a7a" font-size="10" font-family="DM Sans">2</text>
-<text x="10" y="82" fill="#4e5a7a" font-size="10" font-family="DM Sans">3</text>
-<text x="10" y="104" fill="#4e5a7a" font-size="10" font-family="DM Sans">4</text>
-<text x="10" y="126" fill="#4e5a7a" font-size="10" font-family="DM Sans">5</text>
-<!-- Fold 1: val=block1, train=rest -->
-<rect x="30" y="26" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="74" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
-<rect x="122" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="166" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
-<rect x="214" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="258" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
-<rect x="306" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="350" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
-<rect x="398" y="26" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="442" y="38" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
-<!-- Fold 2 -->
-<rect x="30" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/><text x="74" y="60" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">train</text>
-<rect x="122" y="48" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="166" y="60" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
-<rect x="214" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="306" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="398" y="48" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<!-- Fold 3 -->
-<rect x="30" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="122" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="214" y="70" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="258" y="82" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
-<rect x="306" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="398" y="70" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<!-- Fold 4 -->
-<rect x="30" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="122" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="214" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="306" y="92" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="350" y="104" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
-<rect x="398" y="92" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<!-- Fold 5 -->
-<rect x="30" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="122" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="214" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="306" y="114" width="88" height="18" rx="3" fill="#5ba4fb" opacity=".6"/>
-<rect x="398" y="114" width="88" height="18" rx="3" fill="#f06767" opacity=".8"/><text x="442" y="126" text-anchor="middle" fill="#fff" font-size="9" font-family="DM Sans">VAL</text>
+<svg viewBox="0 0 560 208" xmlns="http://www.w3.org/2000/svg" role="img" data-fig="v2" data-still="7.2">
+<defs><marker id="cv-ah0" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="6" refX="6.5" refY="3.0" orient="auto"><path d="M0,0 L7,3.0 L0,6 z" fill="#4e5a7a"/></marker></defs>
+<text x="106.0" y="24.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fold 1</text>
+<text x="184.0" y="24.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fold 2</text>
+<text x="262.0" y="24.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fold 3</text>
+<text x="340.0" y="24.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fold 4</text>
+<text x="418.0" y="24.0" fill="#4e5a7a" font-size="9" text-anchor="middle" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fold 5</text>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.0444;0.0944;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<text x="58.0" y="48.2" fill="#8e97b8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fit 1</text>
+<rect x="70" y="34" width="72" height="22" rx="4" fill="#f5a623" opacity="0.26"/>
+<rect x="70.0" y="34.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#f5a623" stroke-width="1.2"/>
+<text x="106.0" y="48.3" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">validate</text>
+<rect x="148" y="34" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="148.0" y="34.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="184.0" y="48.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="226" y="34" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="226.0" y="34.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="262.0" y="48.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="304" y="34" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="304.0" y="34.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="340.0" y="48.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="382" y="34" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="382.0" y="34.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="418.0" y="48.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1000;0.1500;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="472.0" y1="45.0" x2="486.0" y2="45.0" stroke="#4e5a7a" stroke-width="1.3" stroke-linecap="round" marker-end="url(#cv-ah0)"/>
+<text x="498.0" y="48.5" fill="#f5a623" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">L₁</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1611;0.2111;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<text x="58.0" y="78.2" fill="#8e97b8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fit 2</text>
+<rect x="70" y="64" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="70.0" y="64.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="106.0" y="78.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="148" y="64" width="72" height="22" rx="4" fill="#f5a623" opacity="0.26"/>
+<rect x="148.0" y="64.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#f5a623" stroke-width="1.2"/>
+<text x="184.0" y="78.3" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">validate</text>
+<rect x="226" y="64" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="226.0" y="64.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="262.0" y="78.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="304" y="64" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="304.0" y="64.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="340.0" y="78.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="382" y="64" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="382.0" y="64.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="418.0" y="78.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2167;0.2667;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="472.0" y1="75.0" x2="486.0" y2="75.0" stroke="#4e5a7a" stroke-width="1.3" stroke-linecap="round" marker-end="url(#cv-ah0)"/>
+<text x="498.0" y="78.5" fill="#f5a623" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">L₂</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.2778;0.3278;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<text x="58.0" y="108.2" fill="#8e97b8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fit 3</text>
+<rect x="70" y="94" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="70.0" y="94.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="106.0" y="108.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="148" y="94" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="148.0" y="94.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="184.0" y="108.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="226" y="94" width="72" height="22" rx="4" fill="#f5a623" opacity="0.26"/>
+<rect x="226.0" y="94.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#f5a623" stroke-width="1.2"/>
+<text x="262.0" y="108.3" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">validate</text>
+<rect x="304" y="94" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="304.0" y="94.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="340.0" y="108.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="382" y="94" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="382.0" y="94.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="418.0" y="108.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3333;0.3833;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="472.0" y1="105.0" x2="486.0" y2="105.0" stroke="#4e5a7a" stroke-width="1.3" stroke-linecap="round" marker-end="url(#cv-ah0)"/>
+<text x="498.0" y="108.5" fill="#f5a623" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">L₃</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3944;0.4444;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<text x="58.0" y="138.2" fill="#8e97b8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fit 4</text>
+<rect x="70" y="124" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="70.0" y="124.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="106.0" y="138.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="148" y="124" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="148.0" y="124.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="184.0" y="138.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="226" y="124" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="226.0" y="124.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="262.0" y="138.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="304" y="124" width="72" height="22" rx="4" fill="#f5a623" opacity="0.26"/>
+<rect x="304.0" y="124.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#f5a623" stroke-width="1.2"/>
+<text x="340.0" y="138.3" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">validate</text>
+<rect x="382" y="124" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="382.0" y="124.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="418.0" y="138.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4500;0.5000;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="472.0" y1="135.0" x2="486.0" y2="135.0" stroke="#4e5a7a" stroke-width="1.3" stroke-linecap="round" marker-end="url(#cv-ah0)"/>
+<text x="498.0" y="138.5" fill="#f5a623" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">L₄</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5111;0.5611;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<text x="58.0" y="168.2" fill="#8e97b8" font-size="9" text-anchor="end" font-family="DM Sans" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">fit 5</text>
+<rect x="70" y="154" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="70.0" y="154.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="106.0" y="168.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="148" y="154" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="148.0" y="154.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="184.0" y="168.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="226" y="154" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="226.0" y="154.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="262.0" y="168.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="304" y="154" width="72" height="22" rx="4" fill="#5ba4fb" opacity="0.14"/>
+<rect x="304.0" y="154.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#5ba4fb" stroke-width="1"/>
+<text x="340.0" y="168.3" fill="#5ba4fb" font-size="9" text-anchor="middle" font-family="DM Sans">train</text>
+<rect x="382" y="154" width="72" height="22" rx="4" fill="#f5a623" opacity="0.26"/>
+<rect x="382.0" y="154.0" width="72.0" height="22.0" rx="4" fill="none" stroke="#f5a623" stroke-width="1.2"/>
+<text x="418.0" y="168.3" fill="#f5a623" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">validate</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5667;0.6167;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="472.0" y1="165.0" x2="486.0" y2="165.0" stroke="#4e5a7a" stroke-width="1.3" stroke-linecap="round" marker-end="url(#cv-ah0)"/>
+<text x="498.0" y="168.5" fill="#f5a623" font-size="10" text-anchor="start" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">L₅</text>
+</g>
+<g><animate attributeName="opacity" dur="9.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.6444;0.6944;0.9111;0.9667;1.0000" calcMode="spline" keySplines=".45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1;.45 0 .25 1"/>
+<line x1="494.0" y1="183.0" x2="518.0" y2="183.0" stroke="#f5a623" stroke-width="1.4" stroke-linecap="round"/>
+<text x="546.0" y="200.0" fill="#22d3a0" font-size="10" text-anchor="end" font-family="DM Sans" font-weight="600" stroke="#1a1f2e" stroke-width="3" paint-order="stroke" stroke-linejoin="round">CV score = mean(L₁ … L₅) ± std</text>
+</g>
 </svg></div>
 </div>
 
